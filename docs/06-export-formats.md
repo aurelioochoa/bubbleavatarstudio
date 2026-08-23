@@ -28,10 +28,10 @@ Shape per `03-data-model.md` §6. Rules:
 ## 3. Runtime `BubbleAvatar` (FR-10.4)
 
 ```tsx
-import { BubbleAvatar } from '@helpbubble/bubble-avatar-react';
-import definition from './mango.bubble-avatar.json';
+import { BubbleAvatar } from "@helpbubble/bubble-avatar-react";
+import definition from "./mango.bubble-avatar.json";
 
-<BubbleAvatar definition={definition} loop="idle" autoplay size={240} />
+<BubbleAvatar definition={definition} loop="idle" autoplay size={240} />;
 ```
 
 - Props: `definition` (parsed JSON, validated once), `loop?` (id or name;

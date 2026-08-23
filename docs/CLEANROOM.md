@@ -8,10 +8,10 @@
 
 ## 1. What this project is
 
-Bubble Avatar Studio is an original implementation of a *concept*: a browser-based
+Bubble Avatar Studio is an original implementation of a _concept_: a browser-based
 authoring studio for procedural 2D avatars (parametric body geometry, expressions,
 animation timelines, portable exports). Concepts, ideas, features, and functionality
-are not protected by copyright. Only the specific *expression* — source code,
+are not protected by copyright. Only the specific _expression_ — source code,
 comments, and creative written prose — is.
 
 This project therefore re-implements the concept from a **functional specification**,
@@ -22,11 +22,11 @@ and visual design.
 
 The functional specification in `docs/` was derived exclusively from:
 
-| Source | Use |
-|---|---|
-| Public README of the upstream project (`github.com/smontlouis/bible-strong-avatar-lab`, README page) | Feature inventory — facts only |
-| Live deployed application (`avatars.bible-strong.app`), operated as a black box by driving it as a user would | Behavioral observation notes |
-| Upstream non-code prose docs (`CONTEXT.md`, `docs/adr/*.md`) read via public GitHub raw URLs | Facts about intent/architecture extracted into original wording |
+| Source                                                                                                        | Use                                                             |
+| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Public README of the upstream project (`github.com/smontlouis/bible-strong-avatar-lab`, README page)          | Feature inventory — facts only                                  |
+| Live deployed application (`avatars.bible-strong.app`), operated as a black box by driving it as a user would | Behavioral observation notes                                    |
+| Upstream non-code prose docs (`CONTEXT.md`, `docs/adr/*.md`) read via public GitHub raw URLs                  | Facts about intent/architecture extracted into original wording |
 
 **Rule applied to all prose sources:** every sentence in `docs/` and in this
 repository's code is original writing. Facts and ideas were extracted; no text was
@@ -55,9 +55,9 @@ from implementation duty for this repository and the incident recorded in §5 be
 
 ## 5. Contamination / incident log
 
-| Date | Incident | Resolution |
-|---|---|---|
-| — | none recorded | — |
+| Date | Incident      | Resolution |
+| ---- | ------------- | ---------- |
+| —    | none recorded | —          |
 
-*This file must be updated if any incident ever occurs. An honest log preserves the
-credibility of this protocol.*
+_This file must be updated if any incident ever occurs. An honest log preserves the
+credibility of this protocol._

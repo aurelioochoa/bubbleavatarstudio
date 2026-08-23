@@ -19,8 +19,8 @@
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_abc",
   "locale": "es",
-  "bubbles": [ /* Bubble[] */ ],
-  "starterKit": { /* Kit */ }
+  "bubbles": [/* Bubble[] */],
+  "starterKit": {/* Kit */},
 }
 ```
 
@@ -33,32 +33,58 @@
   "body": {
     "surface": {
       "kind": "blob",
-      "width": 220, "height": 200, "roundness": 0.85,
-      "x": 0, "y": 0, "rotationDeg": 0, "perspective": 0.25
+      "width": 220,
+      "height": 200,
+      "roundness": 0.85,
+      "x": 0,
+      "y": 0,
+      "rotationDeg": 0,
+      "perspective": 0.25,
     },
     "extras": [
       {
-        "id": "prim_001", "kind": "capsule",
-        "width": 40, "height": 18, "roundness": 1,
-        "x": -60, "y": 70, "rotationDeg": -20, "z": 1,
-        "colorRole": "accent", "color": "#ffffff"
-      }
-    ]
+        "id": "prim_001",
+        "kind": "capsule",
+        "width": 40,
+        "height": 18,
+        "roundness": 1,
+        "x": -60,
+        "y": 70,
+        "rotationDeg": -20,
+        "z": 1,
+        "colorRole": "accent",
+        "color": "#ffffff",
+      },
+    ],
   },
   "colors": { "body": "#6c7bff", "accent": "#ffffff", "eyes": "#1c2033" },
   "restingFace": {
     "eye": { "width": 34, "height": 52, "roundness": 1 },
-    "left":  { "offsetX": -6, "offsetY": 0, "rotationDeg": 0, "scaleX": 1, "scaleY": 1 },
-    "right": { "offsetX":  6, "offsetY": 0, "rotationDeg": 0, "scaleX": 1, "scaleY": 1 },
+    "left": {
+      "offsetX": -6,
+      "offsetY": 0,
+      "rotationDeg": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+    },
+    "right": {
+      "offsetX": 6,
+      "offsetY": 0,
+      "rotationDeg": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+    },
     "spacing": 64,
-    "linked": true
+    "linked": true,
   },
   "ambient": {
     "enabled": true,
-    "bodyAmplitude": 3, "bodyPeriodMs": 5200,
-    "eyeAmplitude": 1.2, "eyePeriodMs": 3400
+    "bodyAmplitude": 3,
+    "bodyPeriodMs": 5200,
+    "eyeAmplitude": 1.2,
+    "eyePeriodMs": 3400,
   },
-  "ownKit": null          // Kit | null — copy-on-write, see §5
+  "ownKit": null, // Kit | null — copy-on-write, see §5
 }
 ```
 
@@ -69,8 +95,8 @@ Coordinate system: face frame origin = surface center; +x right, +y **down**
 
 ```jsonc
 {
-  "moods": [ /* Mood[] */ ],
-  "loops": [ /* Loop[] */ ]
+  "moods": [/* Mood[] */],
+  "loops": [/* Loop[] */],
 }
 ```
 
@@ -80,11 +106,25 @@ Coordinate system: face frame origin = surface center; +x right, +y **down**
 {
   "id": "mood_001",
   "name": "happy",
-  "left":  { "rotationXDeg": 0, "rotationYDeg": 0, "rotationZDeg": -8,
-             "scaleX": 1.15, "scaleY": 0.8, "offsetX": 0, "offsetY": 4 },
-  "right": { "rotationXDeg": 0, "rotationYDeg": 0, "rotationZDeg": -8,
-             "scaleX": 1.15, "scaleY": 0.8, "offsetX": 0, "offsetY": 4 },
-  "colorOverride": null        // null | { "body"?: "#...", "eyes"?: "#..." }
+  "left": {
+    "rotationXDeg": 0,
+    "rotationYDeg": 0,
+    "rotationZDeg": -8,
+    "scaleX": 1.15,
+    "scaleY": 0.8,
+    "offsetX": 0,
+    "offsetY": 4,
+  },
+  "right": {
+    "rotationXDeg": 0,
+    "rotationYDeg": 0,
+    "rotationZDeg": -8,
+    "scaleX": 1.15,
+    "scaleY": 0.8,
+    "offsetX": 0,
+    "offsetY": 4,
+  },
+  "colorOverride": null, // null | { "body"?: "#...", "eyes"?: "#..." }
 }
 ```
 
@@ -97,14 +137,29 @@ positions → moods transfer across bodies (FR-4.6).
 {
   "id": "loop_001",
   "name": "idle",
-  "group": "life",                    // free label: "life" | "reaction" | ...
+  "group": "life", // free label: "life" | "reaction" | ...
   "steps": [
-    { "id": "stp_001", "moodId": "mood_001", "holdMs": 900, "transition": "spring" },
-    { "id": "stp_002", "moodId": "mood_002", "holdMs": 400, "transition": "ease" }
+    {
+      "id": "stp_001",
+      "moodId": "mood_001",
+      "holdMs": 900,
+      "transition": "spring",
+    },
+    {
+      "id": "stp_002",
+      "moodId": "mood_002",
+      "holdMs": 400,
+      "transition": "ease",
+    },
   ],
-  "mode": "loop",                     // "loop" | "once" | "pingpong"
-  "springSpeed": 1,                   // 0.1..3, multiplies transition rate
-  "blink": { "enabled": true, "minIntervalMs": 2400, "maxIntervalMs": 6000, "durationMs": 140 }
+  "mode": "loop", // "loop" | "once" | "pingpong"
+  "springSpeed": 1, // 0.1..3, multiplies transition rate
+  "blink": {
+    "enabled": true,
+    "minIntervalMs": 2400,
+    "maxIntervalMs": 6000,
+    "durationMs": 140,
+  },
 }
 ```
 
@@ -117,20 +172,20 @@ engine (not persisted per step — keeps files lean and tuning global).
 ```ts
 interface LiveState {
   headRotation: { x: number; y: number; z: number }; // from gizmo/drag
-  bubbleOffset: { x: number; y: number };            // from drag
-  displayedMoodId: string | null;                    // resting when null
-  moodProgress: number;                              // 0..1 transition blend
-  blinkPhase: number;                                // 0..1, 0 = open
+  bubbleOffset: { x: number; y: number }; // from drag
+  displayedMoodId: string | null; // resting when null
+  moodProgress: number; // 0..1 transition blend
+  blinkPhase: number; // 0..1, 0 = open
 }
 ```
 
 The stage renders `f(bubble, liveState, ambient(t))`. Playback is the subsystem
-that *produces* `displayedMoodId/moodProgress/blinkPhase` over time.
+that _produces_ `displayedMoodId/moodProgress/blinkPhase` over time.
 
 ## 5. Copy-on-write kit rule (FR-5/FR-4 interplay)
 
-- A bubble with `ownKit === null` *inherits* `starterKit` (read-only).
-- The **first** mood or loop mutation clones the *entire* starter kit into
+- A bubble with `ownKit === null` _inherits_ `starterKit` (read-only).
+- The **first** mood or loop mutation clones the _entire_ starter kit into
   `ownKit` atomically, then applies the edit there. (Keeps ID references valid.)
 - Later edits touch `ownKit` only. Duplicating a bubble deep-copies `ownKit`.
 - Effective kit = `ownKit ?? starterKit`.
@@ -141,8 +196,8 @@ that *produces* `displayedMoodId/moodProgress/blinkPhase` over time.
 {
   "version": 1,
   "kind": "bubble-avatar",
-  "bubble": { /* Bubble, with ownKit inlined (never null) */ },
-  "loops": ["loop_001", "loop_002"]   // exported subset, resolved inside bubble
+  "bubble": {/* Bubble, with ownKit inlined (never null) */},
+  "loops": ["loop_001", "loop_002"], // exported subset, resolved inside bubble
 }
 ```
 

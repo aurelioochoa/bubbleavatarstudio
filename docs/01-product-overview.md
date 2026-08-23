@@ -15,11 +15,11 @@ One studio, one file format, one renderer — used everywhere.
 
 ## 2. Users
 
-| Persona | Need |
-|---|---|
+| Persona                            | Need                                                                               |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
 | Brand/character designer (primary) | Build and refine characters visually without code; iterate moods and loops quickly |
-| Frontend engineer (secondary) | Drop an exported definition into a helpbubble app and trust it renders identically |
-| End user (indirect) | Sees a living character that feels polished and responsive |
+| Frontend engineer (secondary)      | Drop an exported definition into a helpbubble app and trust it renders identically |
+| End user (indirect)                | Sees a living character that feels polished and responsive                         |
 
 ## 3. Product pillars
 
@@ -34,6 +34,7 @@ One studio, one file format, one renderer — used everywhere.
 ## 4. Scope
 
 **In scope (v1):**
+
 - Character (bubble) CRUD with body built from a primary facial surface plus
   extra primitives; per-primitive geometry/color controls.
 - Linked or independent eye editing; pseudo-3D head rotation and perspective.

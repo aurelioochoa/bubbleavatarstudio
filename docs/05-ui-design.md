@@ -30,7 +30,9 @@
 ## 2. Panels
 
 ### Look (body & resting face)
+
 Sections as collapsible cards:
+
 1. **Surface** — width/height/roundness/perspective numeric steppers (unit
    suffixes u/×), rotation slider ±180°.
 2. **Colors** — body / accent / eyes swatch pickers (preset palette + hex input).
@@ -41,6 +43,7 @@ Sections as collapsible cards:
    scaleX/Y.
 
 ### Moods
+
 - Grid of mood cards (mini stage render + name), `+` card. Click = preview on
   stage (FR-4.4); double-click = open **Mood editor** (modal over inspector):
   per-eye delta sliders grouped Rotation (X/Y/Z ±30°), Scale (X/Y 0.3–2),
@@ -50,6 +53,7 @@ Sections as collapsible cards:
   with toast if referenced — FR-5.6), reorder via drag.
 
 ### Loops
+
 - Left: loop list grouped by `group` label (Life / Reactions custom chips);
   `+` new loop. Selecting a loop loads the **timeline**.
 - Timeline (bottom of panel, full width): horizontal step chips — mood
@@ -60,12 +64,13 @@ Sections as collapsible cards:
 - Transport "Play" always plays the selected loop.
 
 ### Share (export)
+
 - **Snapshot card:** resolution segmented (512/1024/2048), background picker
-  (transparent/solid/linear/radial + color stops), buttons *Download SVG* /
-  *Download PNG*, live mini preview of framed result.
+  (transparent/solid/linear/radial + color stops), buttons _Download SVG_ /
+  _Download PNG_, live mini preview of framed result.
 - **Character card:** shows active bubble; loop checklist (all checked);
-  *Download .bubble-avatar.json*; *Download package (.zip)*.
-- **Project card:** *Export project* / *Import project* (file picker →
+  _Download .bubble-avatar.json_; _Download package (.zip)_.
+- **Project card:** _Export project_ / _Import project_ (file picker →
   confirmation dialog with summary: N bubbles, M moods, K loops → Replace /
   Cancel) (FR-9.3).
 - **Language:** es/en segmented control (FR-9.4).

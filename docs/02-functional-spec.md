@@ -13,7 +13,7 @@
 - **FR-1.4** Reorder bubbles (list position persists).
 - **FR-1.5** Delete a bubble with confirmation; if it was active, selection moves
   to the first remaining bubble (or none if empty).
-- **FR-1.6** Exactly zero or one bubble is *active*; all editor tabs operate on it.
+- **FR-1.6** Exactly zero or one bubble is _active_; all editor tabs operate on it.
 
 ## FR-2 Body
 
@@ -68,7 +68,7 @@
 
 ## FR-6 Playback
 
-- **FR-6.1** Starting a loop enters *playback*: playback exclusively owns the
+- **FR-6.1** Starting a loop enters _playback_: playback exclusively owns the
   live state; manual canvas manipulation pauses it.
 - **FR-6.2** Transport: play (selected loop), pause/resume, stop (returns to
   resting face). Status pill shows current loop + step.

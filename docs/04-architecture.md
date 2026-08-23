@@ -47,14 +47,14 @@ Esc; structural edits rely on explicit cancel in editors (FR-4.4).
 ## 3. Rendering pipeline
 
 1. `buildScene(bubble, live, ambientOffset) → Scene` — a plain data tree
-   (`{tag, attrs, children}`) in *scene units*.
+   (`{tag, attrs, children}`) in _scene units_.
 2. `sceneToSvg(scene, {viewBox, background}) → string` — deterministic
    serializer (stable attribute order) used by both the DOM (via
    `innerHTML` on a static wrapper, then per-frame attribute patching) and
    snapshot export (FR-10.1).
 3. Per-frame updates patch only: surface `transform`, eye `transform`,
    blink `scaleY`, color fills on mood change. Scene rebuild happens only when
-   *structure* changes (body edited, bubble switched).
+   _structure_ changes (body edited, bubble switched).
 
 Determinism requirement (tested): same inputs → byte-identical SVG string.
 
@@ -83,8 +83,8 @@ corrupt data → backup copy + fresh document, never a crash). Storage key:
 - `export/avatar-file.ts` — resolves effective kit, inlines it, prunes loops to
   selection, validates, serializes (FR-10.2/3).
 - `export/snapshot.ts` — background painters (transparent/solid/linear/radial)
-  + PNG rasterization via canvas drawImage of an SVG blob (browser-only; the
-  pure parts are tested in node).
+  - PNG rasterization via canvas drawImage of an SVG blob (browser-only; the
+    pure parts are tested in node).
 - `runtime/` — `BubbleAvatar.tsx`: props `definition`, `loop?`, `autoplay`,
   `size`, `paused?`; internally reuses `render/` + `playback/`; zero app
   imports (FR-10.4).

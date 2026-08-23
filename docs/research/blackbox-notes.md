@@ -65,21 +65,23 @@ adjusting those deltas relative to resting face.
 
 Headings "Expressions" (source list) + "Motion". Count "23 ANIMATIONS".
 Grouped catalog:
+
 - **Life cycle:** sleeping, waking, idle, listening, thinking, searching, working
 - **Reactions:** excited, bored, suspicious, angry, drowsy, happy, curious,
   confused, surprised, proud, shy, sad, laughing, scared, playful, celebrate
-Timeline strip of numbered step cells 00–25 (drag/reorder implied), plus
-controls: "Spring speed↔" (transition tuning), "Blink" toggle, "Random
-expression" button. Playback runs in stage with PLAYING pill.
+  Timeline strip of numbered step cells 00–25 (drag/reorder implied), plus
+  controls: "Spring speed↔" (transition tuning), "Blink" toggle, "Random
+  expression" button. Playback runs in stage with PLAYING pill.
 
 ## Export tab
 
 Two accordions:
+
 1. **Photo Mode** — "Prepare a static image directly in the main preview."
 2. **Export Avatar** — "Choose animations, then use the same JSON definition
    with React or JavaScript." Shows selected-character summary card; Format
-   chooser with two option cards: *React / TypeScript* ("Runtime JSON +
-   createAvatar") and *JavaScript / ESM* ("Runtime JSON + avatar-web");
+   chooser with two option cards: _React / TypeScript_ ("Runtime JSON +
+   createAvatar") and _JavaScript / ESM_ ("Runtime JSON + avatar-web");
    animations selector "23/23 SELECTED" with Customize expander; "Quick Start"
    code snippet section below.
 

@@ -19,16 +19,16 @@
 
 ## 2. Domain vocabulary (facts we re-map to our own terms)
 
-| Upstream term | Meaning (fact) | Our chosen term |
-|---|---|---|
-| Avatar | Reusable character; persistent visual identity = body + colors + neutral eyes | **Bubble** |
-| Neutral appearance | Persistent base look before any expression is applied | **Resting face** |
-| Pose | Current temporary visual configuration; not persisted directly | **Live state** |
-| Base behavior library | Bundled immutable expressions/animations inherited until first customization | **Starter kit** |
-| Avatar behavior library | Per-avatar copy created atomically on first behavior edit (copy-on-write) | **Own kit** |
-| Expression | Saved preset; eye values RELATIVE to resting face; optional temporary color overrides | **Mood** |
-| Animation | Ordered mood steps + transitions + blink settings | **Loop** |
-| Playback | The running execution of an Animation; owns live state until user grabs control | **Playback** |
+| Upstream term           | Meaning (fact)                                                                        | Our chosen term  |
+| ----------------------- | ------------------------------------------------------------------------------------- | ---------------- |
+| Avatar                  | Reusable character; persistent visual identity = body + colors + neutral eyes         | **Bubble**       |
+| Neutral appearance      | Persistent base look before any expression is applied                                 | **Resting face** |
+| Pose                    | Current temporary visual configuration; not persisted directly                        | **Live state**   |
+| Base behavior library   | Bundled immutable expressions/animations inherited until first customization          | **Starter kit**  |
+| Avatar behavior library | Per-avatar copy created atomically on first behavior edit (copy-on-write)             | **Own kit**      |
+| Expression              | Saved preset; eye values RELATIVE to resting face; optional temporary color overrides | **Mood**         |
+| Animation               | Ordered mood steps + transitions + blink settings                                     | **Loop**         |
+| Playback                | The running execution of an Animation; owns live state until user grabs control       | **Playback**     |
 
 We deliberately use different words than upstream so our codebase vocabulary is ours.
 
