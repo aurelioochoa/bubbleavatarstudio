@@ -1,0 +1,128 @@
+# 02 · Functional Specification
+
+> Every requirement has an ID used by tests (TDD: a requirement is not "done"
+> until a test that encodes it exists and passes). Derived from
+> `docs/research/*` under the clean-room protocol. "Bubble" = character;
+> "mood" = expression preset; "loop" = animation; terms per `upstream-facts.md` §2.
+
+## FR-1 Characters (Bubbles)
+
+- **FR-1.1** Create a bubble from a default template; it appears selected in the list.
+- **FR-1.2** Rename inline; name is required, non-empty, trimmed.
+- **FR-1.3** Duplicate a bubble: deep copy with fresh IDs, name suffixed " copy".
+- **FR-1.4** Reorder bubbles (list position persists).
+- **FR-1.5** Delete a bubble with confirmation; if it was active, selection moves
+  to the first remaining bubble (or none if empty).
+- **FR-1.6** Exactly zero or one bubble is *active*; all editor tabs operate on it.
+
+## FR-2 Body
+
+- **FR-2.1** Body = one primary **surface** + zero or more **extra primitives**.
+- **FR-2.2** Surface params: width, height, roundness (0–1), position (x,y),
+  rotation (deg), perspective (0–1). All editable via numeric inputs.
+- **FR-2.3** Extra primitive kinds: `blob`, `capsule`, `circle`, `ring`; each has
+  its own size, roundness, position, rotation, z-order, and color role
+  (`body` | `accent` | custom hex).
+- **FR-2.4** Extras can be added, edited, reordered (z), and removed.
+- **FR-2.5** The surface carries the **face frame**: eye anchors and mood deltas
+  are expressed in it (see FR-4.6).
+
+## FR-3 Eyes
+
+- **FR-3.1** Resting eye shape: width, height, roundness (capsule-like default).
+- **FR-3.2** Placement per side: offsetX/offsetY (u), rotation (deg), scale X/Y;
+  plus a shared `spacing` between eye centers.
+- **FR-3.3** `linked` mode: editing any shape/placement property on one side
+  mirrors it to the other (offsetX and rotation mirror sign). Unlinking keeps
+  current values and allows divergence; re-linking adopts the left side.
+- **FR-3.4** Eye color editable (resting color).
+
+## FR-4 Moods
+
+- **FR-4.1** A mood stores per-eye deltas **relative to the resting face**:
+  rotationX/Y/Z (deg), scaleX/scaleY (multiplier), offsetX/offsetY (u).
+- **FR-4.2** Mood CRUD: create, rename, duplicate, delete, reorder.
+- **FR-4.3** Optional temporary **color override** per mood (body and/or eyes);
+  it applies only while that mood is displayed and never mutates resting colors.
+- **FR-4.4** Applying a mood updates the stage live; leaving mood-edit mode
+  without saving restores the previous state (edits are cancelable).
+- **FR-4.5** Mood thumbnails render a true mini-preview of the mood.
+- **FR-4.6** Because deltas are relative to the face frame, the same mood is
+  compatible with any bubble surface (test: one mood applied to two different
+  bodies yields proportionally consistent eye changes).
+
+## FR-5 Loops (animations)
+
+- **FR-5.1** A loop = ordered steps; each step references a mood **by ID**, plus
+  `holdMs` and `transition` (`linear` | `ease` | `spring` | `step`).
+- **FR-5.2** Loop CRUD: create, rename, duplicate, delete; steps add (from mood
+  list), remove, reorder; reordering never changes which mood a step references.
+- **FR-5.3** Playback modes: `loop` (repeat), `once` (stop at end), `pingpong`
+  (forward then reverse).
+- **FR-5.4** `springSpeed` (0.1–3) scales transition durations globally.
+- **FR-5.5** Blink config: enabled flag, min/max interval, blink duration; blinks
+  superimpose on any displayed mood without mutating it.
+- **FR-5.6** Deleting a mood that a step references is blocked while any step in
+  any loop of the same kit references it (or, equivalently, deletion requires
+  removing the references first — we choose: **block with a clear error**).
+
+## FR-6 Playback
+
+- **FR-6.1** Starting a loop enters *playback*: playback exclusively owns the
+  live state; manual canvas manipulation pauses it.
+- **FR-6.2** Transport: play (selected loop), pause/resume, stop (returns to
+  resting face). Status pill shows current loop + step.
+- **FR-6.3** Timing is computed from absolute timestamps (frame-rate independent):
+  advancing 1s of wall time yields identical state regardless of frame count.
+- **FR-6.4** Switching the active bubble keeps the current loop and its position
+  when the target bubble can play it (same kit lineage), otherwise stops cleanly.
+- **FR-6.5** Ambient motion (FR-8) composes with playback output.
+
+## FR-7 Ambient idle motion
+
+- **FR-7.1** Config: enabled, body amplitude/period, eye amplitude/period.
+- **FR-7.2** Output is a smooth sinusoidal offset applied to surface position and
+  eye offsets, zero at t=0, deterministic given (t, config) — no per-frame drift.
+
+## FR-8 Direct manipulation (stage)
+
+- **FR-8.1** Drag anywhere on the stage translates the whole bubble (surface +
+  extras + eyes) within bounds.
+- **FR-8.2** A rotation control (on-canvas handle or gizmo) sets head rotation
+  X/Y/Z; projection foreshortens the surface and shifts eye anchors accordingly.
+- **FR-8.3** Any direct manipulation pauses playback (FR-6.1) and is undoable
+  (single-level undo of the drag is acceptable v1: restore pre-drag values on Esc).
+
+## FR-9 Studio shell & persistence
+
+- **FR-9.1** Layout: bubbles rail (left), stage (center), inspector (right) with
+  tabs **Look / Moods / Loops / Share**; transport dock on the stage.
+- **FR-9.2** Autosave: every committed document mutation persists to local
+  storage synchronously (debounce ≤ 300 ms for burst edits); no save button.
+- **FR-9.3** Project backup: export full document as `.bubble-studio.json`;
+  import replaces the document **after explicit confirmation**, and is rejected
+  with a readable error if invalid/unknown version.
+- **FR-9.4** Locale switch es/en; default es; choice persists.
+
+## FR-10 Export & runtime
+
+- **FR-10.1** Snapshot: current stage as SVG string and PNG raster at chosen
+  resolution (512/1024/2048) with background: transparent | solid color |
+  linear gradient | radial gradient (two stops, configurable).
+- **FR-10.2** Character file: one bubble + its effective kit (own kit if present,
+  else starter kit) → `*.bubble-avatar.json` (schema in `03-data-model.md`).
+- **FR-10.3** Loop picker for export: choose which loops are embedded (default all).
+- **FR-10.4** Runtime: `<BubbleAvatar definition={...} loop="name" autoplay size={n}/>`
+  React component; pure function of props; no storage/network access; renders
+  identical SVG to the studio stage for the same definition + state.
+- **FR-10.5** Export package (ZIP): definition JSON + README + minimal usage
+  example. (Runtime ships as a package, not inlined per export.)
+
+## FR-11 Non-functional
+
+- **FR-11.1** All domain logic (geometry, document ops, playback) is pure
+  TypeScript with **zero React/DOM imports**.
+- **FR-11.2** Playback/ambient animation writes go straight to DOM via refs —
+  no React re-render per frame (React renders only on durable state changes).
+- **FR-11.3** Validation gate: `pnpm check` = engine freshness (n/a v1), format,
+  typecheck strict, full tests, production build.
