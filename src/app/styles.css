@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-stage: #0b0d16;
+  --color-panel: #121527;
+  --color-panel-2: #181c33;
+  --color-primary: #6c7bff;
+  --color-accent: #8be9ff;
+  --color-ink: #e8eaf6;
+  --color-ink-dim: #9aa0c3;
+  --color-danger: #ff5d73;
+  --radius-card: 14px;
+}
