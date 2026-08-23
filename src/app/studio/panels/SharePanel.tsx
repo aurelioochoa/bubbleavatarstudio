@@ -11,6 +11,7 @@ import {
   snapshotPng,
   snapshotSvg,
 } from "../../../export/avatar";
+import { createZip, textEntry } from "../../../export/zip";
 import { validateDocument } from "../../../domain/document/validate";
 import type { MessageKey } from "../../i18n";
 
@@ -50,6 +51,19 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
       `${bubble.name.toLowerCase().replace(/\s+/g, "-")}.bubble-avatar.json`,
       JSON.stringify(avatar, null, 2),
     );
+  };
+
+  const exportZip = () => {
+    const avatar = buildPortableAvatar(bubble, doc);
+    const zip = createZip([
+      textEntry("bubble.bubble-avatar.json", JSON.stringify(avatar, null, 2)),
+      textEntry("bubble.svg", snapshotSvg(bubble, { size: 1024, background })),
+      textEntry(
+        "README.txt",
+        "Bubble Avatar package\nbubble.bubble-avatar.json — portable definition (runtime)\nbubble.svg — 1024px snapshot\n",
+      ),
+    ]);
+    download("bubble-avatar.zip", zip);
   };
 
   const exportProject = () => {
@@ -147,6 +161,13 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
           className="w-full rounded bg-[#6c7bff] px-2 py-1.5 text-white"
         >
           .bubble-avatar.json
+        </button>
+        <button
+          type="button"
+          onClick={exportZip}
+          className="w-full rounded bg-white/5 px-2 py-1.5"
+        >
+          ZIP
         </button>
       </section>
 
