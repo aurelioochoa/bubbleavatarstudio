@@ -1,0 +1,221 @@
+// Extra primitives: add, edit, reorder in z, remove (FR-2.3, FR-2.4).
+import { ColorField, NumberField, SectionTitle, type SectionProps } from "./fields";
+import type {
+  ColorRole,
+  ExtraKind,
+  ExtraPrimitive,
+} from "../../../../domain/document/types";
+
+const KINDS: ExtraKind[] = ["blob", "capsule", "circle", "ring"];
+const ROLES: ColorRole[] = ["body", "accent", "custom"];
+
+/** A new primitive starts visible and in front of everything already there. */
+function newExtra(kind: ExtraKind, z: number): Omit<ExtraPrimitive, "id"> {
+  return {
+    kind,
+    width: 48,
+    height: 48,
+    roundness: 0.9,
+    x: 0,
+    y: 0,
+    rotationDeg: 0,
+    z,
+    colorRole: "accent",
+    color: "#8be9ff",
+  };
+}
+
+export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
+  // Back-to-front, the same order the renderer draws them in.
+  const extras = [...bubble.body.extras].sort((a, b) => a.z - b.z);
+
+  /** Swaps z with the neighbour, so ordering stays a property of the data. */
+  const swapZ = (index: number, delta: number) => {
+    const current = extras.at(index);
+    const neighbour = extras.at(index + delta);
+    if (!current || !neighbour) return;
+    dispatch({
+      type: "extra/update",
+      extraId: current.id,
+      patch: { z: neighbour.z },
+    });
+    dispatch({
+      type: "extra/update",
+      extraId: neighbour.id,
+      patch: { z: current.z },
+    });
+  };
+
+  return (
+    <section className="space-y-2">
+      <SectionTitle>{t("look.extras")}</SectionTitle>
+
+      <label className="flex items-center justify-between text-xs text-[#9aa0c3]">
+        {t("look.addExtra")}
+        <select
+          value=""
+          aria-label={t("look.addExtra")}
+          onChange={(e) => {
+            const kind = e.target.value as ExtraKind | "";
+            if (!kind) return;
+            const topZ = extras.at(-1)?.z ?? -1;
+            dispatch({ type: "extra/add", extra: newExtra(kind, topZ + 1) });
+          }}
+          className="rounded bg-white/5 px-2 py-1 text-xs text-[#e8eaf6]"
+        >
+          <option value="">+</option>
+          {KINDS.map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {extras.map((extra, index) => (
+        <fieldset
+          key={extra.id}
+          aria-label={`${extra.kind} ${String(index + 1)}`}
+          className="space-y-1.5 rounded border border-white/10 p-2"
+        >
+          <legend className="px-1 text-[10px] tracking-wide text-[#9aa0c3] uppercase">
+            {extra.kind} {index + 1}
+          </legend>
+
+          <div className="flex gap-1">
+            <button
+              type="button"
+              aria-label={t("look.zUp")}
+              disabled={index === extras.length - 1}
+              onClick={() => {
+                swapZ(index, 1);
+              }}
+              className="rounded bg-white/5 px-2 py-1 text-xs disabled:opacity-40"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              aria-label={t("look.zDown")}
+              disabled={index === 0}
+              onClick={() => {
+                swapZ(index, -1);
+              }}
+              className="rounded bg-white/5 px-2 py-1 text-xs disabled:opacity-40"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              aria-label={t("common.remove")}
+              onClick={() => {
+                dispatch({ type: "extra/remove", extraId: extra.id });
+              }}
+              className="ml-auto rounded bg-red-500/20 px-2 py-1 text-xs text-red-300"
+            >
+              ✕
+            </button>
+          </div>
+
+          <NumberField
+            label={t("look.width")}
+            value={extra.width}
+            min={1}
+            unit="u"
+            onChange={(v) => {
+              dispatch({
+                type: "extra/update",
+                extraId: extra.id,
+                patch: { width: v },
+              });
+            }}
+          />
+          <NumberField
+            label={t("look.height")}
+            value={extra.height}
+            min={1}
+            unit="u"
+            onChange={(v) => {
+              dispatch({
+                type: "extra/update",
+                extraId: extra.id,
+                patch: { height: v },
+              });
+            }}
+          />
+          <NumberField
+            label={t("look.x")}
+            value={extra.x}
+            unit="u"
+            onChange={(v) => {
+              dispatch({
+                type: "extra/update",
+                extraId: extra.id,
+                patch: { x: v },
+              });
+            }}
+          />
+          <NumberField
+            label={t("look.y")}
+            value={extra.y}
+            unit="u"
+            onChange={(v) => {
+              dispatch({
+                type: "extra/update",
+                extraId: extra.id,
+                patch: { y: v },
+              });
+            }}
+          />
+          <NumberField
+            label={t("look.rotation")}
+            value={extra.rotationDeg}
+            unit="°"
+            onChange={(v) => {
+              dispatch({
+                type: "extra/update",
+                extraId: extra.id,
+                patch: { rotationDeg: v },
+              });
+            }}
+          />
+
+          <label className="flex items-center justify-between text-xs text-[#9aa0c3]">
+            {t("look.colorRole")}
+            <select
+              value={extra.colorRole}
+              aria-label={`${t("look.colorRole")} ${String(index + 1)}`}
+              onChange={(e) => {
+                dispatch({
+                  type: "extra/update",
+                  extraId: extra.id,
+                  patch: { colorRole: e.target.value as ColorRole },
+                });
+              }}
+              className="rounded bg-white/5 px-2 py-1 text-xs text-[#e8eaf6]"
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </label>
+          {extra.colorRole === "custom" && (
+            <ColorField
+              label={`${t("look.colorRole")} ${String(index + 1)} hex`}
+              value={extra.color}
+              onChange={(v) => {
+                dispatch({
+                  type: "extra/update",
+                  extraId: extra.id,
+                  patch: { color: v },
+                });
+              }}
+            />
+          )}
+        </fieldset>
+      ))}
+    </section>
+  );
+}

@@ -19,6 +19,32 @@ export type MessageKey =
   | "look.eyes"
   | "look.spacing"
   | "look.linked"
+  | "look.position"
+  | "look.x"
+  | "look.y"
+  | "look.accentColor"
+  | "look.eyeShape"
+  | "look.eyeWidth"
+  | "look.eyeHeight"
+  | "look.eyeRoundness"
+  | "look.leftEye"
+  | "look.rightEye"
+  | "look.offsetX"
+  | "look.offsetY"
+  | "look.scaleX"
+  | "look.scaleY"
+  | "look.eyeRotation"
+  | "look.extras"
+  | "look.addExtra"
+  | "look.colorRole"
+  | "look.zUp"
+  | "look.zDown"
+  | "look.ambient"
+  | "look.ambientEnabled"
+  | "look.bodyAmplitude"
+  | "look.bodyPeriod"
+  | "look.eyeAmplitude"
+  | "look.eyePeriod"
   | "moods.title"
   | "moods.add"
   | "moods.name"
@@ -62,6 +88,32 @@ const es: Record<MessageKey, string> = {
   "look.eyes": "Ojos",
   "look.spacing": "Separación",
   "look.linked": "Vinculados",
+  "look.position": "Posición",
+  "look.x": "X",
+  "look.y": "Y",
+  "look.accentColor": "Color de acento",
+  "look.eyeShape": "Forma del ojo",
+  "look.eyeWidth": "Ancho del ojo",
+  "look.eyeHeight": "Alto del ojo",
+  "look.eyeRoundness": "Redondez del ojo",
+  "look.leftEye": "Ojo izquierdo",
+  "look.rightEye": "Ojo derecho",
+  "look.offsetX": "Desplazamiento X",
+  "look.offsetY": "Desplazamiento Y",
+  "look.scaleX": "Escala X",
+  "look.scaleY": "Escala Y",
+  "look.eyeRotation": "Rotación del ojo",
+  "look.extras": "Primitivas extra",
+  "look.addExtra": "Añadir primitiva",
+  "look.colorRole": "Color",
+  "look.zUp": "Traer al frente",
+  "look.zDown": "Enviar atrás",
+  "look.ambient": "Movimiento en reposo",
+  "look.ambientEnabled": "Activar movimiento",
+  "look.bodyAmplitude": "Amplitud del cuerpo",
+  "look.bodyPeriod": "Periodo del cuerpo (ms)",
+  "look.eyeAmplitude": "Amplitud de los ojos",
+  "look.eyePeriod": "Periodo de los ojos (ms)",
   "moods.title": "Ánimos",
   "moods.add": "Nuevo ánimo",
   "moods.name": "Nombre",
@@ -106,6 +158,32 @@ const en: Record<MessageKey, string> = {
   "look.eyes": "Eyes",
   "look.spacing": "Spacing",
   "look.linked": "Linked",
+  "look.position": "Position",
+  "look.x": "X",
+  "look.y": "Y",
+  "look.accentColor": "Accent color",
+  "look.eyeShape": "Eye shape",
+  "look.eyeWidth": "Eye width",
+  "look.eyeHeight": "Eye height",
+  "look.eyeRoundness": "Eye roundness",
+  "look.leftEye": "Left eye",
+  "look.rightEye": "Right eye",
+  "look.offsetX": "Offset X",
+  "look.offsetY": "Offset Y",
+  "look.scaleX": "Scale X",
+  "look.scaleY": "Scale Y",
+  "look.eyeRotation": "Eye rotation",
+  "look.extras": "Extra primitives",
+  "look.addExtra": "Add primitive",
+  "look.colorRole": "Color",
+  "look.zUp": "Bring forward",
+  "look.zDown": "Send backward",
+  "look.ambient": "Idle motion",
+  "look.ambientEnabled": "Enable idle motion",
+  "look.bodyAmplitude": "Body amplitude",
+  "look.bodyPeriod": "Body period (ms)",
+  "look.eyeAmplitude": "Eye amplitude",
+  "look.eyePeriod": "Eye period (ms)",
   "moods.title": "Moods",
   "moods.add": "New mood",
   "moods.name": "Name",
