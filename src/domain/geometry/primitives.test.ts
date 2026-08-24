@@ -9,6 +9,18 @@ import {
   lerp,
 } from "./primitives";
 
+/**
+ * How close the path comes to the bounding-box corner, 0..1: 1 is a rectangle,
+ * an ellipse sits near 0.7.
+ */
+function cornerReach(path: string): number {
+  const points = [...path.matchAll(/(-?[0-9.]+) (-?[0-9.]+)/g)].map((m) => ({
+    x: Number(m[1]) / 100,
+    y: Number(m[2]) / 50,
+  }));
+  return Math.max(...points.map((p) => Math.min(Math.abs(p.x), Math.abs(p.y))));
+}
+
 describe("blobPath", () => {
   it("is deterministic", () => {
     const a = blobPath({ width: 220, height: 200, roundness: 0.85 });
@@ -16,18 +28,28 @@ describe("blobPath", () => {
     expect(a).toBe(b);
   });
 
-  it("roundness 1 approximates the bounding box extents", () => {
+  it("roundness 1 is an ellipse through the bounding box extents", () => {
     const p = blobPath({ width: 200, height: 100, roundness: 1 });
     expect(p).toContain("M 100 0");
     expect(p).toContain("L -100 0");
+    // A quarter turn around an ellipse lands near the diagonal, well inside
+    // the corner a rectangle would reach.
+    const corner = cornerReach(p);
+    expect(corner).toBeLessThan(0.8);
   });
 
-  it("roundness 0 stays inside the box corners", () => {
+  it("roundness 0 squares off toward the box corners", () => {
     const p = blobPath({ width: 200, height: 100, roundness: 0 });
-    // rectangle corner sample must not exceed half-extents
-    expect(p.startsWith("M")).toBe(true);
+    expect(cornerReach(p)).toBeGreaterThan(0.9);
     const nums = p.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
     for (const n of nums) expect(Math.abs(n)).toBeLessThanOrEqual(100.01);
+  });
+
+  it("reads as increasingly round as roundness rises", () => {
+    const reach = (r: number) =>
+      cornerReach(blobPath({ width: 200, height: 100, roundness: r }));
+    expect(reach(0)).toBeGreaterThan(reach(0.5));
+    expect(reach(0.5)).toBeGreaterThan(reach(1));
   });
 });
 

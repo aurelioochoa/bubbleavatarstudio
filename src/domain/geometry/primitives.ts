@@ -18,7 +18,9 @@ export function blobPath({
   roundness,
   samples = 64,
 }: BlobOptions): string {
-  const n = lerp(2, 16, clamp(roundness, 0, 1));
+  // Superellipse exponent: 2 is an ellipse, large is a rectangle. Roundness
+  // reads as "how round", so it counts up toward the ellipse.
+  const n = lerp(16, 2, clamp(roundness, 0, 1));
   const a = width / 2;
   const b = height / 2;
   const pts: string[] = [];

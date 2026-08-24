@@ -8,7 +8,8 @@ import {
   fmt,
 } from "../domain/geometry/primitives";
 import { projectFace, type FaceProjection } from "../domain/geometry/projection";
-import { ambientAt, blinkAt } from "../domain/playback/ambient";
+import { ambientAt, blinkAt, RESTING_BLINK } from "../domain/playback/ambient";
+import { darken, lighten, luminance } from "./color";
 import { LoopPlayer, type MoodSample } from "../domain/playback/LoopPlayer";
 import type {
   Bubble,
@@ -37,6 +38,23 @@ export interface ShapeRender {
   path: string;
   fill: string;
   transform: string;
+  /** Volume shading; null renders as a flat fill. */
+  shading?: Shading | null;
+}
+
+/**
+ * Radial shading that makes the silhouette read as a volume: a lit crown, the
+ * base colour through the middle, and a darker terminator at the rim. Positions
+ * are fractions of the shape's bounding box.
+ */
+export interface Shading {
+  id: string;
+  cx: number;
+  cy: number;
+  radius: number;
+  crown: string;
+  base: string;
+  edge: string;
 }
 
 export interface Scene {
@@ -109,15 +127,16 @@ function eyeRender(
   bubble: Bubble,
   side: "left" | "right",
   moodEye: MoodEye,
-  ambientEyeY: number,
+  ambientEye: { x: number; y: number },
   blink: number,
   projection: FaceProjection,
 ): EyeRender {
   const face = bubble.restingFace;
   const place = face[side];
   const dir = side === "left" ? -1 : 1;
-  const flatX = dir * (face.spacing / 2) + place.offsetX + moodEye.offsetX;
-  const flatY = place.offsetY + moodEye.offsetY + ambientEyeY;
+  const flatX =
+    dir * (face.spacing / 2) + place.offsetX + moodEye.offsetX + ambientEye.x;
+  const flatY = place.offsetY + moodEye.offsetY + ambientEye.y;
   const anchor = projection.project(flatX, flatY);
   const surface = surfaceScale(projection, flatX, flatY);
   // Wrapping past the equator hides the eye; the last stretch fades so it does
@@ -149,6 +168,36 @@ function eyeRender(
     scaleY: place.scaleY * moodEye.scaleY * (1 - blink),
     fill: bubble.colors.eyes,
   };
+}
+
+/**
+ * Light sits up and to the left of the viewer and stays put as the character
+ * turns, so the lit crown slides across the surface — that travel is most of
+ * what sells the volume.
+ */
+function shadingFor(
+  fill: string,
+  head: { x: number; y: number; z: number },
+): Shading {
+  const lit = luminance(fill);
+  // Pale characters need a deeper terminator, dark ones a stronger crown, or
+  // the shading either blows out or disappears.
+  const crown = lighten(fill, 0.34 - lit * 0.16);
+  const edge = darken(fill, 0.2 + lit * 0.22);
+  const cx = 0.5 - 0.15 - (head.y / 90) * 0.22;
+  const cy = 0.5 - 0.18 - (head.x / 90) * 0.2;
+  const id = `bs-${hashId(`${fill}:${fmt(cx)}:${fmt(cy)}`)}`;
+  return { id, cx, cy, radius: 0.78, crown, base: fill, edge };
+}
+
+/** Short stable id so two avatars on one page never share a gradient. */
+function hashId(seed: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
 }
 
 export function buildScene(bubble: Bubble, live: LiveInput): Scene {
@@ -185,7 +234,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       bubble,
       "left",
       live.mood.left,
-      live.ambient.eyeY,
+      { x: live.ambient.eyeX, y: live.ambient.eyeY },
       live.blink,
       projection,
     ),
@@ -196,7 +245,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       bubble,
       "right",
       live.mood.right,
-      live.ambient.eyeY,
+      { x: live.ambient.eyeX, y: live.ambient.eyeY },
       live.blink,
       projection,
     ),
@@ -215,8 +264,11 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
         roundness: surface.roundness,
       }),
       fill: bodyFill,
-      // Turning the head foreshortens the silhouette rather than shearing it.
-      transform: `scale(${fmt(projection.scaleX)} ${fmt(projection.scaleY)})`,
+      shading: shadingFor(bodyFill, live.headRotation),
+      // Turning the head foreshortens the silhouette; breathing swells it.
+      transform: `scale(${fmt(projection.scaleX * live.ambient.bodyScale)} ${fmt(
+        projection.scaleY * live.ambient.bodyScale,
+      )})`,
     },
     extras,
     eyes: { left, right },
@@ -267,7 +319,7 @@ export function moodScene(
   return buildScene(bubble, {
     tAbsMs,
     mood,
-    blink: 0,
+    blink: blinkAt(RESTING_BLINK, bubble.id, tAbsMs),
     ambient: ambientAt(bubble.ambient, tAbsMs),
     headRotation,
   });
@@ -288,7 +340,8 @@ export function restingScene(
   return buildScene(bubble, {
     tAbsMs,
     mood,
-    blink: 0,
+    // A resting character still blinks (FR-5.5 covers loops; this is idle).
+    blink: blinkAt(RESTING_BLINK, bubble.id, tAbsMs),
     ambient,
     headRotation,
   });

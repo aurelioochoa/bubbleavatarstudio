@@ -200,6 +200,37 @@ describe("ambientAt (FR-7)", () => {
       bodyY: 0,
       bodyRotationDeg: 0,
       eyeY: 0,
+      eyeX: 0,
+      // Neutral for a multiplier is 1, not 0.
+      bodyScale: 1,
     });
+  });
+
+  it("is still at t=0 so a first frame never jumps (FR-7.2)", () => {
+    const at0 = ambientAt(cfg, 0);
+    expect(at0.eyeX).toBe(0);
+    expect(at0.bodyY).toBe(0);
+    expect(at0.bodyScale).toBe(1);
+  });
+
+  it("darts the gaze and holds it, deterministically (FR-7.2)", () => {
+    const seen = new Set<number>();
+    for (let t = 0; t < 12_000; t += 100) {
+      const x = ambientAt(cfg, t).eyeX;
+      expect(Math.abs(x)).toBeLessThanOrEqual(cfg.eyeAmplitude * 1.6 + 1e-9);
+      seen.add(Math.round(x * 100));
+    }
+    // It moves, but spends most of its time holding a handful of positions.
+    expect(seen.size).toBeGreaterThan(3);
+    expect(seen.size).toBeLessThan(60);
+    expect(ambientAt(cfg, 7321).eyeX).toBe(ambientAt(cfg, 7321).eyeX);
+  });
+
+  it("breathes around unity (FR-7.2)", () => {
+    const scales = [0, 900, 1800, 2700, 3600].map(
+      (t) => ambientAt(cfg, t).bodyScale,
+    );
+    for (const s of scales) expect(Math.abs(s - 1)).toBeLessThan(0.05);
+    expect(new Set(scales).size).toBeGreaterThan(1);
   });
 });

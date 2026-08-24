@@ -4,6 +4,7 @@ import { createBubble } from "../domain/document/create";
 import { ambientAt } from "../domain/playback/ambient";
 import { buildScene, restingScene, liveFrame } from "./scene";
 import { sceneToSvg } from "./svg";
+import { luminance } from "./color";
 import type { Bubble, MoodEye, StudioDocument } from "../domain/document/types";
 import full from "../test/fixtures/full.json";
 
@@ -62,6 +63,77 @@ describe("backgrounds (FR-10)", () => {
   });
 });
 
+describe("volume: the surface is shaded", () => {
+  const bubble: Bubble = doc.bubbles[0];
+
+  it("fills the body with a lit-to-shadow gradient rather than a flat colour", () => {
+    const svg = sceneToSvg(restingScene(bubble, 0));
+    expect(svg).toContain("radialGradient");
+    expect(svg).toMatch(/<path id="body"[^>]*fill="url\(#bs-[a-z0-9]+\)"/);
+    const stops = [...svg.matchAll(/stop-color="([^"]+)"/g)].map((m) => m[1]);
+    expect(stops).toHaveLength(3);
+    const [crown, base, edge] = stops;
+    expect(luminance(crown ?? "")).toBeGreaterThan(luminance(base ?? ""));
+    expect(luminance(edge ?? "")).toBeLessThan(luminance(base ?? ""));
+  });
+
+  it("slides the lit crown as the head turns", () => {
+    const cx = (yaw: number) => {
+      const svg = sceneToSvg(
+        buildScene(bubble, {
+          tAbsMs: 0,
+          mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+          blink: 0,
+          ambient: {
+            bodyY: 0,
+            bodyRotationDeg: 0,
+            eyeY: 0,
+            eyeX: 0,
+            bodyScale: 1,
+          },
+          headRotation: { x: 0, y: yaw, z: 0 },
+        }),
+      );
+      return Number(/radialGradient[^>]*cx="([-0-9.]+)"/.exec(svg)?.[1] ?? "0");
+    };
+    // The light stays where it is, so the crown travels against the turn.
+    expect(cx(40)).toBeLessThan(cx(0));
+    expect(cx(-40)).toBeGreaterThan(cx(0));
+  });
+
+  it("gives two differently coloured characters their own gradient", () => {
+    const other: Bubble = {
+      ...bubble,
+      colors: { ...bubble.colors, body: "#f0c419" },
+    };
+    const idOf = (b: Bubble) =>
+      /radialGradient id="([^"]+)"/.exec(sceneToSvg(restingScene(b, 0)))?.[1];
+    expect(idOf(bubble)).not.toBe(idOf(other));
+  });
+});
+
+describe("liveness: a resting character keeps moving (FR-7)", () => {
+  const bubble: Bubble = doc.bubbles[0];
+
+  it("blinks while nothing is playing", () => {
+    const heights = new Set<string>();
+    for (let t = 0; t < 12_000; t += 50) {
+      const scene = restingScene(bubble, t);
+      heights.add(scene.eyes.left.height.toFixed(2));
+    }
+    // A never-blinking resting face would only ever show one eye height.
+    expect(heights.size).toBeGreaterThan(3);
+  });
+
+  it("holds the eyes open on the first frame, so snapshots are not caught mid-blink", () => {
+    const open = restingScene(bubble, 0).eyes.left.height;
+    expect(open).toBeCloseTo(
+      bubble.restingFace.eye.height * bubble.restingFace.left.scaleY,
+      1,
+    );
+  });
+});
+
 describe("volume: the face sits on a surface (FR-8.2)", () => {
   const base: Bubble = doc.bubbles[0];
   // perspective 1 turns the face fully; the fixture's own 0.25 is exercised by
@@ -85,7 +157,7 @@ describe("volume: the face sits on a surface (FR-8.2)", () => {
         colorOverride: null,
       },
       blink: 0,
-      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0 },
+      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale: 1 },
       headRotation: rotation,
     });
 
@@ -144,7 +216,7 @@ describe("mood eye rotation (FR-4.1)", () => {
         colorOverride: null,
       },
       blink: 0,
-      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0 },
+      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale: 1 },
       headRotation: { x: 0, y: 0, z: 0 },
     }).eyes.left;
 

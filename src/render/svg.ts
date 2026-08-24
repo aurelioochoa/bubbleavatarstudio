@@ -62,6 +62,17 @@ export function sceneToSvg(
 
   const box = fmt(opts.size ?? scene.size);
   const center = fmt(scene.size / 2);
+  const shading = scene.body.shading;
+  // objectBoundingBox units: the gradient tracks the silhouette whatever its
+  // size, so one definition works for every character.
+  const shadeDefs = shading
+    ? `<defs><radialGradient id="${shading.id}" cx="${fmt(shading.cx)}" cy="${fmt(shading.cy)}" r="${fmt(shading.radius)}">` +
+      `<stop offset="0" stop-color="${shading.crown}"/>` +
+      `<stop offset="0.55" stop-color="${shading.base}"/>` +
+      `<stop offset="1" stop-color="${shading.edge}"/>` +
+      `</radialGradient></defs>`
+    : "";
+  const bodyFill = shading ? `url(#${shading.id})` : scene.body.fill;
   const extras = scene.extras
     .map(
       (e) =>
@@ -79,7 +90,8 @@ export function sceneToSvg(
     // The head group owns position and roll; body, extras and eyes are all
     // expressed in the face frame and inherit it.
     `<g id="head" transform="${scene.head.transform}">` +
-    `<path id="body" d="${scene.body.path}" fill="${scene.body.fill}" transform="${scene.body.transform}"/>` +
+    shadeDefs +
+    `<path id="body" d="${scene.body.path}" fill="${bodyFill}" transform="${scene.body.transform}"/>` +
     extras +
     eyes +
     "</g></g></svg>"
