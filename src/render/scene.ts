@@ -69,6 +69,17 @@ function extraPath(kind: ExtraPrimitive["kind"], w: number, h: number): string {
   }
 }
 
+const DEG = Math.PI / 180;
+
+/**
+ * An eye turned away from the viewer foreshortens along the axis it turns
+ * about (FR-4.1). |cos| keeps opposite angles symmetric and never inverts the
+ * shape, the same flattening idea the body applies via skew for head rotation.
+ */
+function foreshorten(deg: number): number {
+  return Math.abs(Math.cos(deg * DEG));
+}
+
 function eyeRender(
   bubble: Bubble,
   side: "left" | "right",
@@ -84,8 +95,17 @@ function eyeRender(
   return {
     x,
     y,
-    width: face.eye.width * place.scaleX * moodEye.scaleX,
-    height: face.eye.height * place.scaleY * moodEye.scaleY * (1 - blink),
+    width:
+      face.eye.width *
+      place.scaleX *
+      moodEye.scaleX *
+      foreshorten(moodEye.rotationYDeg),
+    height:
+      face.eye.height *
+      place.scaleY *
+      moodEye.scaleY *
+      (1 - blink) *
+      foreshorten(moodEye.rotationXDeg),
     rotationDeg: place.rotationDeg + moodEye.rotationZDeg,
     roundness: face.eye.roundness,
     scaleX: place.scaleX * moodEye.scaleX,

@@ -2,9 +2,9 @@
 import { describe, expect, it } from "vitest";
 import { createBubble } from "../domain/document/create";
 import { ambientAt } from "../domain/playback/ambient";
-import { restingScene, liveFrame } from "./scene";
+import { buildScene, restingScene, liveFrame } from "./scene";
 import { sceneToSvg } from "./svg";
-import type { Bubble, StudioDocument } from "../domain/document/types";
+import type { Bubble, MoodEye, StudioDocument } from "../domain/document/types";
 import full from "../test/fixtures/full.json";
 
 const doc = full as unknown as StudioDocument;
@@ -49,6 +49,50 @@ describe("backgrounds (FR-10)", () => {
       expect(svg.startsWith("<svg")).toBe(true);
       expect(svg.endsWith("</svg>")).toBe(true);
     }
+  });
+});
+
+describe("mood eye rotation (FR-4.1)", () => {
+  const ZERO_EYE: MoodEye = {
+    rotationXDeg: 0,
+    rotationYDeg: 0,
+    rotationZDeg: 0,
+    scaleX: 1,
+    scaleY: 1,
+    offsetX: 0,
+    offsetY: 0,
+  };
+
+  const leftEye = (delta: Partial<MoodEye>) =>
+    buildScene(doc.bubbles[0], {
+      tAbsMs: 0,
+      mood: {
+        left: { ...ZERO_EYE, ...delta },
+        right: ZERO_EYE,
+        colorOverride: null,
+      },
+      blink: 0,
+      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0 },
+      headRotation: { x: 0, y: 0, z: 0 },
+    }).eyes.left;
+
+  it("foreshortens the eye as it turns away from the viewer", () => {
+    const resting = leftEye({});
+    // Pitch turns the eye about its horizontal axis, so height shortens.
+    const pitched = leftEye({ rotationXDeg: 60 });
+    expect(pitched.height).toBeCloseTo(resting.height * 0.5);
+    expect(pitched.width).toBeCloseTo(resting.width);
+    // Yaw turns it about its vertical axis, so width narrows.
+    const yawed = leftEye({ rotationYDeg: 60 });
+    expect(yawed.width).toBeCloseTo(resting.width * 0.5);
+    expect(yawed.height).toBeCloseTo(resting.height);
+  });
+
+  it("treats opposite angles symmetrically and never inverts", () => {
+    expect(leftEye({ rotationXDeg: -40 }).height).toBeCloseTo(
+      leftEye({ rotationXDeg: 40 }).height,
+    );
+    expect(leftEye({ rotationYDeg: 200 }).width).toBeGreaterThanOrEqual(0);
   });
 });
 
