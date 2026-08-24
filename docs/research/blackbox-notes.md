@@ -95,3 +95,61 @@ selectable items (the export picker).
 - Canvas manipulation: gizmo implies orbit-style head rotation; direct drag
   supported per README (not exercised headlessly).
 - Autosave: no explicit save button anywhere → persistence is automatic.
+
+## Session 2 — 2026-08-23 (behavior-only)
+
+> Method: the live app driven as an ordinary user in a normal Chrome window.
+> Only rendered output was consulted — screenshots and on-screen text. No source,
+> bundle, network payload or exported file was opened. Screenshots kept out of the
+> repo. Purpose: settle behavioral questions before finishing our own studio; our
+> visual design remains our own per `05-ui-design.md`.
+
+### Transport has three states, not two
+
+The status pill reads PLAYING, PAUSED or STOPPED, and the dock carries a
+play/pause toggle plus a separate square stop control. Stopping does three things
+at once: the pill flips to STOPPED, the step strip snaps back to its first cell,
+and the character returns to a neutral face. Pausing simply freezes where it is.
+Our transport currently models only a play/pause boolean.
+
+### Dragging the canvas rotates the head — it does not move the character
+
+Dragging across the stage left the silhouette centred where it was and instead
+turned the head: the eyes travelled across the face, the body foreshortened, and
+the small three-ring orientation widget in the stage corner followed the drag. A
+reset control sits beside that widget. Nothing observed moved the character's
+position by dragging, which contradicts our FR-8.1 as written.
+
+### Head rotation composes with, and survives, playback
+
+A rotation set by dragging persisted while an animation played, across a tab
+change, and across a character switch — it behaves as live view state layered on
+top of the animation rather than something playback overwrites.
+
+### Applying an expression takes ownership of the live state
+
+Clicking an expression card while an animation was running flipped the pill from
+PLAYING to PAUSED. Manual expression selection pauses playback, the same
+exclusivity rule our FR-6.1 states.
+
+### Playback continues across character switches
+
+Selecting a different character mid-playback kept the same animation running by
+name, and the dock's step thumbnails re-rendered in the new character's colours.
+The characters share one preset library, so the animation remains applicable.
+
+### Blink settings live inside the per-animation editor
+
+Opening an animation's editor (double-click) replaces the panel with a dedicated
+editing view: name and description, a playback-mode dropdown, a timeline of step
+cells that reorder by dragging with a duration field for the selected step, and a
+blink card — an enable switch, a first-blink delay, minimum and maximum interval,
+and blink duration, all in milliseconds. Its footer offers delete, duplicate and
+save. Leaving the editor resumed playback on its own. Note our `BlinkConfig` has
+no first-blink delay; FR-5.5 does not require one.
+
+### Cards everywhere are live mini-renders
+
+Character cards, expression presets and animation entries all draw the actual
+character rather than an icon, and expression/animation catalogues are grouped and
+counted ("27 presets", "23 animations", life-cycle versus reactions).
