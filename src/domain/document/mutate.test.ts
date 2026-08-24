@@ -8,6 +8,8 @@ import {
   addMood,
   addStep,
   duplicateBubble,
+  duplicateLoop,
+  duplicateMood,
   effectiveKit,
   freshDocument,
   removeBubble,
@@ -15,6 +17,8 @@ import {
   removeLoop,
   removeMood,
   renameBubble,
+  reorderBubbles,
+  reorderMoods,
   reorderSteps,
   resetKit,
   setActiveBubble,
@@ -35,8 +39,10 @@ import type { Random } from "../ids";
 import type { StudioDocument } from "./types";
 
 const seedRandom = (): Random => {
-  let i = 0;
-  return () => (i = (i + 1) % 10) / 10;
+  // Non-degenerate sequence: newId consumes 10 draws per id, so a short
+  // period would make every generated id identical.
+  let i = 7;
+  return () => (i = (i * 37 + 11) % 1000) / 1000;
 };
 
 const doc0 = () => createDefaultDocument();
@@ -105,6 +111,18 @@ describe("FR-1 bubble CRUD", () => {
     const base = doc0();
     unwrap(renameBubble(base, base.bubbles[0].id, "X"));
     expect(base.bubbles[0].name).toBe("Bubble");
+  });
+
+  it("reorders bubbles and keeps the active selection (FR-1.4)", () => {
+    const base = unwrap(addBubble(doc0(), "Two"));
+    const first = base.bubbles[0].id;
+    const second = base.bubbles[1].id;
+    const doc = unwrap(reorderBubbles(base, [second, first]));
+    expect(doc.bubbles.map((b) => b.id)).toEqual([second, first]);
+    expect(doc.activeBubbleId).toBe(base.activeBubbleId);
+    expect(validateDocument(doc).ok).toBe(true);
+    expect(err(reorderBubbles(base, [first]))).toBe("E_NOT_FOUND");
+    expect(err(reorderBubbles(base, [first, "nope"]))).toBe("E_NOT_FOUND");
   });
 });
 
@@ -351,6 +369,61 @@ describe("FR-5 loops", () => {
     expect(kitOf(updated, updated.bubbles[0].id).loops[0].steps[1].holdMs).toBe(
       42,
     );
+  });
+
+  it("duplicates a mood with a fresh id, suffixed name, forking the kit (FR-4.2)", () => {
+    const base = doc0();
+    const bid = base.bubbles[0].id;
+    const happy = base.starterKit.moods[0];
+    const doc = unwrap(
+      duplicateMood(base, bid, happy.id, { random: seedRandom() }),
+    );
+    const moods = kitOf(doc, bid).moods;
+    const copy = moods.find((m) => m.name === "happy copy");
+    if (!copy) throw new Error("happy copy missing");
+    expect(copy.id).not.toBe(happy.id);
+    expect(moods.findIndex((m) => m.id === copy.id)).toBe(
+      moods.findIndex((m) => m.id === happy.id) + 1,
+    );
+    expect(doc.bubbles[0].ownKit).not.toBeNull();
+    expect(validateDocument(doc).ok).toBe(true);
+    expect(err(duplicateMood(base, bid, "nope"))).toBe("E_NOT_FOUND");
+  });
+
+  it("reorders moods (FR-4.2)", () => {
+    const base = doc0();
+    const bid = base.bubbles[0].id;
+    const ids = base.starterKit.moods.map((m) => m.id);
+    const doc = unwrap(
+      reorderMoods(base, bid, [ids[3], ids[0], ids[1], ids[2]]),
+    );
+    expect(kitOf(doc, bid).moods.map((m) => m.id)).toEqual([
+      ids[3],
+      ids[0],
+      ids[1],
+      ids[2],
+    ]);
+    expect(validateDocument(doc).ok).toBe(true);
+  });
+
+  it("duplicates a loop with fresh loop and step ids, keeping mood refs (FR-5.2)", () => {
+    const base = doc0();
+    const bid = base.bubbles[0].id;
+    const greet = base.starterKit.loops[1];
+    const doc = unwrap(
+      duplicateLoop(base, bid, greet.id, { random: seedRandom() }),
+    );
+    const copy = kitOf(doc, bid).loops.find((l) => l.name === "greet copy");
+    if (!copy) throw new Error("greet copy missing");
+    expect(copy.id).not.toBe(greet.id);
+    expect(copy.steps.map((s) => s.id)).not.toEqual(
+      greet.steps.map((s) => s.id),
+    );
+    expect(copy.steps.map((s) => s.moodId)).toEqual(
+      greet.steps.map((s) => s.moodId),
+    );
+    expect(validateDocument(doc).ok).toBe(true);
+    expect(err(duplicateLoop(base, bid, "nope"))).toBe("E_NOT_FOUND");
   });
 });
 

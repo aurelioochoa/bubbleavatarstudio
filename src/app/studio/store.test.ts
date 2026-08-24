@@ -13,6 +13,12 @@ import { effectiveKit } from "../../domain/document/mutate";
 describe("studioReducer", () => {
   const state = initialStudioState();
 
+  const kitOf = (st: ReturnType<typeof initialStudioState>) => {
+    const b = st.doc.bubbles.find((x) => x.id === st.doc.activeBubbleId);
+    if (!b) throw new Error("no active bubble");
+    return effectiveKit(b, st.doc);
+  };
+
   it("adds a bubble and activates it", () => {
     const next = studioReducer(state, { type: "bubble/add", name: "Pip" });
     expect(next.doc.bubbles).toHaveLength(2);
@@ -57,6 +63,79 @@ describe("studioReducer", () => {
     const s = studioReducer(state, { type: "locale", locale: "en" });
     expect(s.doc.locale).toBe("en");
     expect(s.doc.bubbles).toEqual(state.doc.bubbles);
+  });
+
+  it("reorders bubbles (FR-1.4)", () => {
+    let s = studioReducer(state, { type: "bubble/add", name: "Two" });
+    const ids = s.doc.bubbles.map((b) => b.id);
+    s = studioReducer(s, { type: "bubble/reorder", ids: [ids[1], ids[0]] });
+    expect(s.doc.bubbles.map((b) => b.id)).toEqual([ids[1], ids[0]]);
+  });
+
+  it("extra add/update/remove round-trip (FR-2.4)", () => {
+    let s = studioReducer(state, {
+      type: "extra/add",
+      extra: {
+        kind: "circle",
+        width: 24,
+        height: 24,
+        roundness: 1,
+        x: 0,
+        y: -70,
+        rotationDeg: 0,
+        z: 1,
+        colorRole: "accent",
+        color: "#ff0055",
+      },
+    });
+    const active = () =>
+      s.doc.bubbles.find((b) => b.id === s.doc.activeBubbleId);
+    expect(active()?.body.extras).toHaveLength(1);
+    const extraId = active()?.body.extras[0].id;
+    if (!extraId) throw new Error("extra id missing");
+    s = studioReducer(s, {
+      type: "extra/update",
+      extraId,
+      patch: { width: 40 },
+    });
+    expect(active()?.body.extras[0].width).toBe(40);
+    s = studioReducer(s, { type: "extra/remove", extraId });
+    expect(active()?.body.extras).toHaveLength(0);
+  });
+
+  it("reorders steps via action (FR-5.2)", () => {
+    const loop = state.doc.starterKit.loops[0];
+    const stepIds = loop.steps.map((st) => st.id);
+    const s = studioReducer(state, {
+      type: "step/reorder",
+      loopId: loop.id,
+      stepIds: [stepIds[1], stepIds[0], stepIds[2]],
+    });
+    const reordered = kitOf(s).loops.find((l) => l.id === loop.id);
+    expect(reordered?.steps.map((st) => st.id)).toEqual([
+      stepIds[1],
+      stepIds[0],
+      stepIds[2],
+    ]);
+  });
+
+  it("duplicates and reorders moods, duplicates loops (FR-4.2, FR-5.2)", () => {
+    const happy = state.doc.starterKit.moods[0];
+    let s = studioReducer(state, { type: "mood/duplicate", moodId: happy.id });
+    expect(kitOf(s).moods.map((m) => m.name)).toContain("happy copy");
+
+    const greet = state.doc.starterKit.loops[1];
+    s = studioReducer(s, { type: "loop/duplicate", loopId: greet.id });
+    expect(kitOf(s).loops.map((l) => l.name)).toContain("greet copy");
+
+    const currentMoods = kitOf(s).moods.map((m) => m.id);
+    s = studioReducer(s, {
+      type: "mood/reorder",
+      ids: currentMoods.slice().reverse(),
+    });
+    expect(kitOf(s).moods.map((m) => m.id)).toEqual(
+      currentMoods.slice().reverse(),
+    );
   });
 });
 

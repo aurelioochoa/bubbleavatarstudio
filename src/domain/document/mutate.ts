@@ -114,6 +114,24 @@ export function renameBubble(
   }));
 }
 
+/** Reorders items by id; ids must be an exact permutation of current ids. */
+function permute<T>(items: T[], ids: string[], keyOf: (t: T) => string) {
+  if (ids.length !== items.length) return null;
+  const byId = new Map(items.map((t) => [keyOf(t), t]));
+  const out = ids.map((i) => byId.get(i));
+  if (out.some((t) => t === undefined)) return null;
+  return out as T[];
+}
+
+export function reorderBubbles(
+  doc: StudioDocument,
+  ids: string[],
+): MutationResult {
+  const bubbles = permute(doc.bubbles, ids, (b) => b.id);
+  if (!bubbles) return fail("E_NOT_FOUND", "bubbles");
+  return { ok: true, doc: { ...doc, bubbles } };
+}
+
 /** Duplicating a bubble copies its effective kit (own kit, or a clone of starter). */
 export function duplicateBubble(
   doc: StudioDocument,
@@ -389,6 +407,46 @@ export function removeMood(
   }));
 }
 
+export function duplicateMood(
+  doc: StudioDocument,
+  bubbleId: string,
+  moodId: string,
+  deps?: MutationDeps,
+): MutationResult {
+  const ctx: Ctx = { doc, deps: deps ?? {} };
+  const bubble = doc.bubbles.find((b) => b.id === bubbleId);
+  if (!bubble) return fail("E_NOT_FOUND", `bubble ${bubbleId}`);
+  const source = effectiveKit(bubble, doc).moods.find((m) => m.id === moodId);
+  if (!source) return fail("E_NOT_FOUND", `mood ${moodId}`);
+  const copy: Mood = {
+    ...structuredClone(source),
+    id: id(ctx, "mood"),
+    name: `${source.name} copy`,
+  };
+  return withOwnKit(ctx, bubbleId, (kit) => {
+    const moods = [...kit.moods];
+    moods.splice(moods.findIndex((m) => m.id === moodId) + 1, 0, copy);
+    return { ...kit, moods };
+  });
+}
+
+export function reorderMoods(
+  doc: StudioDocument,
+  bubbleId: string,
+  ids: string[],
+): MutationResult {
+  const ctx: Ctx = { doc, deps: {} };
+  const bubble = doc.bubbles.find((b) => b.id === bubbleId);
+  if (!bubble) return fail("E_NOT_FOUND", `bubble ${bubbleId}`);
+  if (!permute(effectiveKit(bubble, doc).moods, ids, (m) => m.id)) {
+    return fail("E_NOT_FOUND", "moods");
+  }
+  return withOwnKit(ctx, bubbleId, (kit) => ({
+    ...kit,
+    moods: permute(kit.moods, ids, (m) => m.id) ?? kit.moods,
+  }));
+}
+
 // ── FR-5 loops ──────────────────────────────────────────────────────────────
 
 export function addLoop(
@@ -536,6 +594,30 @@ export function reorderSteps(
       return { ...l, steps };
     }),
   );
+}
+
+export function duplicateLoop(
+  doc: StudioDocument,
+  bubbleId: string,
+  loopId: string,
+  deps?: MutationDeps,
+): MutationResult {
+  const ctx: Ctx = { doc, deps: deps ?? {} };
+  const bubble = doc.bubbles.find((b) => b.id === bubbleId);
+  if (!bubble) return fail("E_NOT_FOUND", `bubble ${bubbleId}`);
+  const source = effectiveKit(bubble, doc).loops.find((l) => l.id === loopId);
+  if (!source) return fail("E_NOT_FOUND", `loop ${loopId}`);
+  const copy: Loop = {
+    ...structuredClone(source),
+    id: id(ctx, "loop"),
+    name: `${source.name} copy`,
+    steps: source.steps.map((s) => ({ ...s, id: id(ctx, "stp") })),
+  };
+  return withOwnKit(ctx, bubbleId, (kit) => {
+    const loops = [...kit.loops];
+    loops.splice(loops.findIndex((l) => l.id === loopId) + 1, 0, copy);
+    return { ...kit, loops };
+  });
 }
 
 /** Reset a bubble back to the shared starter kit (drops its own kit). */

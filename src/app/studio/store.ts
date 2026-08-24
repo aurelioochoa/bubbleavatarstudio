@@ -16,8 +16,16 @@ export type Action =
   | { type: "bubble/duplicate"; id: string }
   | { type: "bubble/remove"; id: string }
   | { type: "bubble/active"; id: string }
+  | { type: "bubble/reorder"; ids: string[] }
   | { type: "surface/patch"; patch: Parameters<typeof M.updateSurface>[2] }
   | { type: "colors/patch"; patch: Parameters<typeof M.updateColors>[2] }
+  | { type: "extra/add"; extra: Parameters<typeof M.addExtra>[2] }
+  | {
+      type: "extra/update";
+      extraId: string;
+      patch: Parameters<typeof M.updateExtra>[3];
+    }
+  | { type: "extra/remove"; extraId: string }
   | { type: "eye/shape"; patch: Parameters<typeof M.updateEyeShape>[2] }
   | {
       type: "eye/placement";
@@ -34,6 +42,8 @@ export type Action =
       patch: Parameters<typeof M.updateMood>[3];
     }
   | { type: "mood/remove"; moodId: string }
+  | { type: "mood/duplicate"; moodId: string }
+  | { type: "mood/reorder"; ids: string[] }
   | { type: "loop/add"; init?: Parameters<typeof M.addLoop>[2] }
   | {
       type: "loop/update";
@@ -41,6 +51,7 @@ export type Action =
       patch: Parameters<typeof M.updateLoop>[3];
     }
   | { type: "loop/remove"; loopId: string }
+  | { type: "loop/duplicate"; loopId: string }
   | { type: "step/add"; loopId: string; step: Parameters<typeof M.addStep>[3] }
   | {
       type: "step/update";
@@ -49,6 +60,7 @@ export type Action =
       patch: Parameters<typeof M.updateStep>[4];
     }
   | { type: "step/remove"; loopId: string; stepId: string }
+  | { type: "step/reorder"; loopId: string; stepIds: string[] }
   | { type: "kit/reset" };
 
 /** Applies a mutation result transactionally; failures keep the current doc. */
@@ -88,10 +100,18 @@ export function studioReducer(state: StudioState, action: Action): StudioState {
       return apply(M.removeBubble(doc, action.id));
     case "bubble/active":
       return apply(M.setActiveBubble(doc, action.id));
+    case "bubble/reorder":
+      return apply(M.reorderBubbles(doc, action.ids));
     case "surface/patch":
       return apply(M.updateSurface(doc, bubbleId, action.patch));
     case "colors/patch":
       return apply(M.updateColors(doc, bubbleId, action.patch));
+    case "extra/add":
+      return apply(M.addExtra(doc, bubbleId, action.extra));
+    case "extra/update":
+      return apply(M.updateExtra(doc, bubbleId, action.extraId, action.patch));
+    case "extra/remove":
+      return apply(M.removeExtra(doc, bubbleId, action.extraId));
     case "eye/shape":
       return apply(M.updateEyeShape(doc, bubbleId, action.patch));
     case "eye/placement":
@@ -110,12 +130,18 @@ export function studioReducer(state: StudioState, action: Action): StudioState {
       return apply(M.updateMood(doc, bubbleId, action.moodId, action.patch));
     case "mood/remove":
       return apply(M.removeMood(doc, bubbleId, action.moodId));
+    case "mood/duplicate":
+      return apply(M.duplicateMood(doc, bubbleId, action.moodId));
+    case "mood/reorder":
+      return apply(M.reorderMoods(doc, bubbleId, action.ids));
     case "loop/add":
       return apply(M.addLoop(doc, bubbleId, action.init));
     case "loop/update":
       return apply(M.updateLoop(doc, bubbleId, action.loopId, action.patch));
     case "loop/remove":
       return apply(M.removeLoop(doc, bubbleId, action.loopId));
+    case "loop/duplicate":
+      return apply(M.duplicateLoop(doc, bubbleId, action.loopId));
     case "step/add":
       return apply(M.addStep(doc, bubbleId, action.loopId, action.step));
     case "step/update":
@@ -124,6 +150,10 @@ export function studioReducer(state: StudioState, action: Action): StudioState {
       );
     case "step/remove":
       return apply(M.removeStep(doc, bubbleId, action.loopId, action.stepId));
+    case "step/reorder":
+      return apply(
+        M.reorderSteps(doc, bubbleId, action.loopId, action.stepIds),
+      );
     case "kit/reset":
       return apply(M.resetKit(doc, bubbleId));
   }
