@@ -75,6 +75,9 @@ describe("SharePanel project import (FR-9.3)", () => {
   it("replaces the document after confirmation", async () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     await upload(projectJsonNamed("Importado"));
-    expect(await screen.findByText("Importado")).toBeTruthy();
+    // The rail identifies a bubble by its render, so assert on its name.
+    expect(
+      await screen.findByRole("button", { name: "Importado" }),
+    ).toBeTruthy();
   });
 });

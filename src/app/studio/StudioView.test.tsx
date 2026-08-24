@@ -16,6 +16,19 @@ beforeEach(() => {
   vi.stubGlobal("cancelAnimationFrame", () => {});
 });
 
+/** Opens the rail context menu for the nth bubble (docs/05 §1). */
+async function openRailMenu(
+  user: ReturnType<typeof userEvent.setup>,
+  index: number,
+) {
+  const kebabs = screen.getAllByRole("button", {
+    name: "Acciones de la burbuja",
+  });
+  const kebab = kebabs[index];
+  if (!kebab) throw new Error(`no rail kebab at ${String(index)}`);
+  await user.click(kebab);
+}
+
 /** Height of the first eye rect the stage is currently showing. */
 function eyeHeight(stage: HTMLElement): number {
   return Number(stage.querySelector("rect")?.getAttribute("height") ?? "0");
@@ -30,27 +43,27 @@ describe("StudioView", () => {
     for (const tab of ["Aspecto", "Ánimos", "Ciclos", "Compartir"]) {
       expect(screen.getByRole("tab", { name: tab })).toBeTruthy();
     }
-    expect(screen.getByText("Bubble")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Bubble" })).toBeTruthy();
   });
 
   it("switches locale es→en", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
-    await user.selectOptions(screen.getByLabelText("locale"), "en");
+    await user.click(screen.getByRole("button", { name: "en" }));
     expect(screen.getByRole("tab", { name: "Look" })).toBeTruthy();
   });
 
   it("adds a bubble from the rail", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
-    await user.click(screen.getByRole("button", { name: "+ Nueva burbuja" }));
-    expect(screen.getAllByText("Bubble")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "Nueva burbuja" }));
+    expect(screen.getAllByRole("button", { name: "Bubble" })).toHaveLength(2);
   });
 
   it("flushes autosave on pagehide so quick reloads keep edits (FR-9.2)", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
-    await user.click(screen.getByRole("button", { name: "+ Nueva burbuja" }));
+    await user.click(screen.getByRole("button", { name: "Nueva burbuja" }));
     globalThis.dispatchEvent(new Event("pagehide"));
     const raw = globalThis.localStorage.getItem(
       "bubble-studio.document.v1",
@@ -62,13 +75,17 @@ describe("StudioView", () => {
   it("asks for confirmation before deleting a bubble (FR-1.5)", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
-    await user.click(screen.getByRole("button", { name: "+ Nueva burbuja" }));
+    await user.click(screen.getByRole("button", { name: "Nueva burbuja" }));
+
     vi.stubGlobal("confirm", vi.fn(() => false));
-    await user.click(screen.getByRole("button", { name: "Eliminar" }));
-    expect(screen.getAllByText("Bubble")).toHaveLength(2);
+    await openRailMenu(user, 1);
+    await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
+    expect(screen.getAllByRole("button", { name: "Bubble" })).toHaveLength(2);
+
     vi.stubGlobal("confirm", vi.fn(() => true));
-    await user.click(screen.getByRole("button", { name: "Eliminar" }));
-    expect(screen.getAllByText("Bubble")).toHaveLength(1);
+    await openRailMenu(user, 1);
+    await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
+    expect(screen.getAllByRole("button", { name: "Bubble" })).toHaveLength(1);
   });
 
   it("Look tab shows surface controls", async () => {
@@ -159,6 +176,61 @@ describe("StudioView", () => {
     globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutLoops));
     render(<StudioView />);
     expect(screen.getByLabelText("bubble stage")).toBeTruthy();
+  });
+
+  it("rail shows a live mini-render per bubble (docs/05 §1)", () => {
+    render(<StudioView />);
+    const thumb = screen.getByRole("button", { name: "Bubble" });
+    expect(thumb.querySelector("svg")).toBeTruthy();
+    expect(thumb.getAttribute("aria-current")).toBe("true");
+  });
+
+  it("rail menu renames a bubble", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await openRailMenu(user, 0);
+    const input = screen.getByRole("textbox", { name: "Renombrar" });
+    await user.clear(input);
+    await user.type(input, "Nube{Enter}");
+    expect(screen.getByRole("button", { name: "Nube" })).toBeTruthy();
+  });
+
+  it("rail menu duplicates a bubble", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await openRailMenu(user, 0);
+    await user.click(screen.getByRole("menuitem", { name: "Duplicar" }));
+    expect(
+      screen.getAllByRole("button", { name: /Bubble/ }).length,
+    ).toBeGreaterThan(1);
+  });
+
+  it("rail menu reorders bubbles, with the ends disabled", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("button", { name: "Nueva burbuja" }));
+    await openRailMenu(user, 0);
+    expect(
+      screen
+        .getByRole("menuitem", { name: "Subir burbuja" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+
+    const names = () =>
+      screen
+        .getAllByRole("button", { name: /Bubble/ })
+        .map((b) => b.getAttribute("aria-label"));
+    await user.click(screen.getByRole("menuitem", { name: "Bajar burbuja" }));
+    expect(names()).toHaveLength(2);
+  });
+
+  it("Escape closes the rail menu", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await openRailMenu(user, 0);
+    expect(screen.getByRole("menu")).toBeTruthy();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).toBeNull();
   });
 
   it("deleting a referenced mood surfaces the E_REF error alert", async () => {

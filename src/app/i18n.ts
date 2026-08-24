@@ -3,6 +3,11 @@ export type MessageKey =
   | "app.title"
   | "rail.bubbles"
   | "rail.add"
+  | "rail.rename"
+  | "rail.menu"
+  | "rail.moveUp"
+  | "rail.moveDown"
+  | "empty.title"
   | "tab.look"
   | "tab.moods"
   | "tab.loops"
@@ -72,6 +77,11 @@ const es: Record<MessageKey, string> = {
   "app.title": "Bubble Avatar Studio",
   "rail.bubbles": "Burbujas",
   "rail.add": "Nueva burbuja",
+  "rail.rename": "Renombrar",
+  "rail.menu": "Acciones de la burbuja",
+  "rail.moveUp": "Subir burbuja",
+  "rail.moveDown": "Bajar burbuja",
+  "empty.title": "Crea tu primera bubble",
   "tab.look": "Aspecto",
   "tab.moods": "Ánimos",
   "tab.loops": "Ciclos",
@@ -142,6 +152,11 @@ const en: Record<MessageKey, string> = {
   "app.title": "Bubble Avatar Studio",
   "rail.bubbles": "Bubbles",
   "rail.add": "New bubble",
+  "rail.rename": "Rename",
+  "rail.menu": "Bubble actions",
+  "rail.moveUp": "Move bubble up",
+  "rail.moveDown": "Move bubble down",
+  "empty.title": "Create your first bubble",
   "tab.look": "Look",
   "tab.moods": "Moods",
   "tab.loops": "Loops",

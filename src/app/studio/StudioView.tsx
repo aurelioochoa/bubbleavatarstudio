@@ -8,9 +8,9 @@ import { MoodsPanel } from "./panels/MoodsPanel";
 import { LoopsPanel } from "./panels/LoopsPanel";
 import { SharePanel } from "./panels/SharePanel";
 import { useStudio } from "./store";
+import { BubbleRail } from "./BubbleRail";
 import type { StageMode } from "../stage/StageEngine";
 import { createAutosaver, loadDocument } from "../persistence";
-import type { Locale } from "../../domain/document/types";
 import type { MoodSample } from "../../domain/playback/LoopPlayer";
 
 type Tab = "look" | "moods" | "loops" | "share";
@@ -75,93 +75,64 @@ export function StudioView() {
 
   if (kit === null) {
     return (
-      <div className="grid h-dvh place-items-center bg-[#0b0d16] text-[#e8eaf6]">
-        <button
-          type="button"
-          onClick={() => {
-            dispatch({ type: "bubble/add", name: "Bubble" });
-          }}
-          className="rounded bg-[#6c7bff] px-4 py-2 text-sm text-white"
-        >
-          {t("rail.add")}
-        </button>
+      <div className="grid h-dvh place-items-center bg-stage text-ink">
+        {/* docs/05 §3: an empty studio invites the first bubble. */}
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-ink-dim">{t("empty.title")}</p>
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({ type: "bubble/add", name: "Bubble" });
+            }}
+            className="rounded-field bg-primary px-4 py-2 text-sm text-white transition-colors duration-150 ease-out hover:bg-primary-hi"
+          >
+            + {t("rail.add")}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-[#0b0d16] text-[#e8eaf6]">
-      <header className="flex items-center gap-3 border-b border-white/10 px-4 py-2">
-        <h1 className="text-sm font-semibold">{t("app.title")}</h1>
-        <select
-          value={state.doc.locale}
-          onChange={(e) => {
-            dispatch({ type: "locale", locale: e.target.value as Locale });
-          }}
-          className="ml-auto rounded bg-white/5 px-2 py-1 text-xs"
-          aria-label="locale"
-        >
-          <option value="es">es</option>
-          <option value="en">en</option>
-        </select>
+    <div className="flex h-dvh flex-col bg-stage text-ink">
+      <header className="flex shrink-0 items-center gap-3 border-b border-line bg-panel px-4 py-2.5">
+        <span
+          aria-hidden="true"
+          className="h-4 w-4 rounded-full bg-gradient-to-br from-primary-hi to-primary"
+        />
+        <h1 className="text-sm font-semibold tracking-tight">
+          {t("app.title")}
+        </h1>
+        <span className="ml-auto flex items-center gap-1 rounded-field bg-panel-2 p-0.5">
+          {(["es", "en"] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => {
+                dispatch({ type: "locale", locale: l });
+              }}
+              aria-pressed={state.doc.locale === l}
+              className={`rounded-[6px] px-2 py-0.5 text-xs uppercase transition-colors duration-150 ease-out ${
+                state.doc.locale === l
+                  ? "bg-primary text-white"
+                  : "text-ink-dim hover:text-ink"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </span>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <nav className="w-44 shrink-0 space-y-2 overflow-y-auto border-r border-white/10 p-3">
-          <h2 className="text-xs font-semibold tracking-wide text-[#9aa0c3] uppercase">
-            {t("rail.bubbles")}
-          </h2>
-          {state.doc.bubbles.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => {
-                dispatch({ type: "bubble/active", id: b.id });
-              }}
-              className={`block w-full truncate rounded px-2 py-1.5 text-left text-xs ${
-                b.id === bubble.id ? "bg-[#6c7bff] text-white" : "bg-white/5"
-              }`}
-            >
-              {b.name}
-            </button>
-          ))}
-          <div className="flex gap-1 pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                dispatch({ type: "bubble/add", name: "Bubble" });
-              }}
-              className="flex-1 rounded border border-dashed border-white/20 px-2 py-1 text-xs text-[#9aa0c3]"
-            >
-              + {t("rail.add")}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                dispatch({ type: "bubble/duplicate", id: bubble.id });
-              }}
-              className="rounded bg-white/5 px-2 py-1 text-xs"
-              aria-label={t("common.duplicate")}
-            >
-              ⧉
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                // FR-1.5: deletion requires confirmation.
-                if (globalThis.confirm(t("confirm.removeBubble"))) {
-                  dispatch({ type: "bubble/remove", id: bubble.id });
-                }
-              }}
-              className="rounded bg-red-500/20 px-2 py-1 text-xs text-red-300"
-              aria-label={t("common.remove")}
-            >
-              ✕
-            </button>
-          </div>
-        </nav>
+        <BubbleRail
+          bubbles={state.doc.bubbles}
+          activeId={bubble.id}
+          dispatch={dispatch}
+          t={t}
+        />
 
-        <main className="min-w-0 flex-1 bg-[#0b0d16]">
+        <main className="min-w-0 flex-1">
           <Stage
             bubble={bubble}
             kit={kit}
@@ -174,8 +145,11 @@ export function StudioView() {
           />
         </main>
 
-        <aside className="w-72 shrink-0 space-y-4 overflow-y-auto border-l border-white/10 p-3">
-          <div role="tablist" className="flex gap-1">
+        <aside className="flex w-90 shrink-0 flex-col border-l border-line bg-panel">
+          <div
+            role="tablist"
+            className="flex shrink-0 gap-0.5 border-b border-line p-2"
+          >
             {tabs.map((x) => (
               <button
                 key={x.id}
@@ -186,10 +160,10 @@ export function StudioView() {
                   if (x.id !== "moods") setPreview(null);
                   setTab(x.id);
                 }}
-                className={`flex-1 rounded px-2 py-1 text-xs ${
+                className={`min-w-0 flex-1 truncate rounded-field px-2 py-1.5 text-xs transition-colors duration-150 ease-out ${
                   tab === x.id
-                    ? "bg-[#6c7bff] text-white"
-                    : "bg-white/5 text-[#e8eaf6]"
+                    ? "bg-primary text-white"
+                    : "text-ink-dim hover:bg-white/6 hover:text-ink"
                 }`}
               >
                 {x.label}
@@ -197,10 +171,11 @@ export function StudioView() {
             ))}
           </div>
 
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
           {state.lastError && (
             <p
               role="alert"
-              className="rounded bg-red-500/20 px-2 py-1 text-xs text-red-300"
+              className="rounded-field border border-danger/30 bg-danger/15 px-2.5 py-1.5 text-xs text-danger"
             >
               {state.lastError.code === "E_REF"
                 ? t("error.ref")
@@ -254,6 +229,7 @@ export function StudioView() {
               t={t}
             />
           )}
+          </div>
         </aside>
       </div>
     </div>
