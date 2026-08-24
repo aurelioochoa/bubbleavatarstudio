@@ -6,6 +6,7 @@ import {
   circlePath,
   ringPath,
   fmt,
+  fmtScale,
 } from "../domain/geometry/primitives";
 import { projectFace, type FaceProjection } from "../domain/geometry/projection";
 import { ambientAt, blinkAt, RESTING_BLINK } from "../domain/playback/ambient";
@@ -266,9 +267,11 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       fill: bodyFill,
       shading: shadingFor(bodyFill, live.headRotation),
       // Turning the head foreshortens the silhouette; breathing swells it.
-      transform: `scale(${fmt(projection.scaleX * live.ambient.bodyScale)} ${fmt(
-        projection.scaleY * live.ambient.bodyScale,
-      )})`,
+      // fmtScale, not fmt: breathing spans under a hundredth, so two decimals
+      // would quantise the swell into visible steps.
+      transform: `scale(${fmtScale(
+        projection.scaleX * live.ambient.bodyScale,
+      )} ${fmtScale(projection.scaleY * live.ambient.bodyScale)})`,
     },
     extras,
     eyes: { left, right },
