@@ -91,33 +91,54 @@ corrupt data → backup copy + fresh document, never a crash). Storage key:
 
 ## 7. i18n
 
-`app/i18n/{es.ts,en.ts}` exporting flat key maps; `t(key)` from a tiny context
-provider. Spanish is the source of truth; en must define the same key set
-(test enforces key parity).
+`app/i18n.ts` — one module holding a `MessageKey` union and a flat map per
+locale; `translator(locale)` returns `t(key)`. Spanish is the source of truth;
+`en` must define the same key set.
+
+Parity is enforced by the **type system**, not a test: both maps are declared
+`Record<MessageKey, string>`, so a key added to one and missed in the other
+fails `pnpm typecheck`. (An earlier draft of this section claimed a test
+enforced parity and placed the dictionaries in `i18n/{es.ts,en.ts}`; neither
+was ever true.)
 
 ## 8. Directory map
 
+The tree below is the real one (35 non-test modules). It replaces a map drafted
+before implementation which named 35 paths, of which **18 never existed** and 17
+did — so roughly half of it was aspirational, and the halves were not visually
+distinguishable. Treat this section as descriptive, and re-derive it with
+`find src -name '*.ts*' | grep -v '\.test\.'` rather than trusting it to stay
+current.
+
 ```
 src/
-  domain/            # pure
-    ids.ts  ambient.ts  easing.ts
-    geometry/{blob.ts,projection.ts}
-    document/{types.ts,create.ts,mutate.ts,kit.ts,validate.ts,migrate.ts}
-    playback/{loop-player.ts,blink.ts,durations.ts}
+  domain/            # pure: no React, no DOM (lint-enforced)
+    ids.ts
+    geometry/{primitives.ts,projection.ts,shapes.ts}
+    document/{types.ts,create.ts,mutate.ts,validate.ts,migrate.ts}
+    playback/{LoopPlayer.ts,easing.ts,ambient.ts}
   render/            # pure
-    scene.ts  svg.ts
+    color.ts  scene.ts  svg.ts
+    goldens/{resting.svg,ambient.svg,live-3000.svg}
   export/            # mostly pure; png raster browser-only
-    avatar-file.ts  project-file.ts  snapshot.ts
+    avatar.ts  zip.ts
   runtime/
     BubbleAvatar.tsx
   app/
-    studio/{StudioShell.tsx,store.ts,useStageEngine.ts}
+    studio/{StudioView.tsx,store.ts}
     studio/panels/{LookPanel.tsx,MoodsPanel.tsx,LoopsPanel.tsx,SharePanel.tsx}
-    stage/{Stage.tsx,transport.tsx,Gizmo.tsx}
-    i18n/{es.ts,en.ts,I18nProvider.tsx}
-    persistence/local.ts
-    styles.css
+    studio/panels/look/{fields.tsx,SurfaceSection.tsx,EyesSection.tsx,
+                        ExtrasSection.tsx,AmbientSection.tsx}
+    stage/{Stage.tsx,StageEngine.ts}
+    i18n.ts  persistence.ts  styles.css
+  test/fixtures/{minimal.json,full.json}
 ```
+
+Names that differ from the draft and are worth knowing: kit copy-on-write lives
+inside `document/mutate.ts` rather than its own `kit.ts`; blink and step
+durations live in `playback/ambient.ts` and `playback/LoopPlayer.ts` rather than
+separate modules; both export builders are in `export/avatar.ts`; and the i18n
+dictionaries are one `i18n.ts`, not a directory.
 
 ## 9. Key ADRs (ours)
 

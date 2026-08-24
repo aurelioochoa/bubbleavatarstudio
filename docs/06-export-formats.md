@@ -9,6 +9,9 @@
   - `transparent` — no background rect.
   - `solid` — `<rect fill="#..."/>`.
   - `linear` / `radial` — `<defs><gradient>` two user-configured stops.
+    All four are implemented in `render/svg.ts` and covered by tests; the Share
+    panel currently offers only transparent, solid and linear, with fixed
+    stops. Exposing radial and the stop pickers is roadmap P4 (FR-10.1).
 - PNG: rasterize the SVG string via `Image` + canvas at target resolution
   (square 1:1), `image/png` blob download. Browser-only path; gradient/scene
   construction is pure and node-tested.
@@ -45,6 +48,8 @@ import definition from "./mango.bubble-avatar.json";
 
 ## 4. Export package (ZIP)
 
+Target layout:
+
 ```
 mango-bubble/
   mango.bubble-avatar.json
@@ -53,6 +58,10 @@ mango-bubble/
 ```
 
 ZIP built client-side (store-only compression; content is tiny).
+
+**Ships today:** the definition JSON, a 1024px `bubble.svg` snapshot, and a
+plain `README.txt`. The generated bilingual `README.md` and `example.tsx` are
+roadmap P4 (FR-10.5) — this section described them before they were written.
 
 ## 5. Project backup `*.bubble-studio.json` (FR-9.3)
 

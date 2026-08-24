@@ -40,13 +40,37 @@ t=0 and periodicity).
 
 ## 4. Fixtures
 
-`src/test/fixtures/` — canonical documents: `minimal.json` (1 bubble, no kit),
-`full.json` (2 bubbles, own kit on #2, 3 moods, 2 loops incl. pingpong),
-`invalid/` cases per validation rule (E_VERSION, broken ref, bad color…).
-Fixtures are typed (`satisfies StudioDocument`) so schema drift breaks tests.
+`src/test/fixtures/` — canonical documents: `minimal.json` (1 bubble, no kit)
+and `full.json` (2 bubbles, own kit on the first, 2 moods and 1 loop in each
+kit). Both are loaded through `validateDocument`, so schema drift breaks tests.
+
+**Not built yet:** the `invalid/` cases per validation rule (E_VERSION, broken
+ref, bad colour). `validate.test.ts` covers those error codes with documents
+built inline instead. Extracting them into fixtures is F5 work — this section
+described them as existing before they were written.
+
+## 4b. Current state (re-derive; do not trust)
+
+As of the P2 parity work: **21 Vitest files, 195 tests**, plus **1 Playwright
+spec** covering boot, panels and a playing loop. Production bundle 254.96 kB JS
+/ 13.98 kB CSS (78.27 / 3.54 gzipped).
+
+Re-derive rather than trusting these: `pnpm test` prints the file and test
+counts, `pnpm build` prints the bundle sizes. They are recorded here as a
+tripwire — if they disagree with a fresh run, this doc is stale, not the run.
 
 ## 5. Regression discipline
 
 Any bug fix lands with the test that reproduces it (red → green). Golden SVG
 files change only with an explicit snapshot update in the same diff, reviewed
 visually (F5 screenshots) when geometry is touched.
+
+A regression test that has only ever been seen passing is not yet evidence.
+Confirm it fails against the unfixed code before trusting it — the defect sweep
+(roadmap G) did this per fix, and the mood-preview test was verified by removing
+the wiring again and watching it fail. When the test cannot be written before
+the fix, remove the fix afterwards to check the test notices.
+
+Where a change alters the goldens, the commit says which values moved and why
+(e.g. eye corner radii scaling by exactly the fixture's 0.9 roundness), so a
+reviewer can tell a deliberate visual change from an accidental one.
