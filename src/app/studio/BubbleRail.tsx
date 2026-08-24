@@ -1,12 +1,13 @@
 // Bubble rail (docs/05 §1): a 56px column of live mini-renders, the active one
 // highlighted, `+` at the bottom, and a per-bubble context menu carrying
 // rename, duplicate, move up/down and delete-with-confirm.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { restingScene } from "../../render/scene";
 import { sceneToSvg } from "../../render/svg";
 import type { Bubble } from "../../domain/document/types";
 import type { Action } from "./store";
 import type { MessageKey } from "../i18n";
+import { Menu, MenuItem } from "./ui";
 
 export interface BubbleRailProps {
   bubbles: Bubble[];
@@ -207,33 +208,9 @@ function RailMenu({
   onRemove: () => void;
 }) {
   const [draft, setDraft] = useState(bubble.name);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Dismiss on a click anywhere else, the way a context menu is expected to.
-  // Escape is bound on the document because opening the menu leaves focus on
-  // the kebab, which is outside this subtree.
-  useEffect(() => {
-    const onDown = (e: Event) => {
-      if (!ref.current?.contains(e.target as Node)) onClose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
 
   return (
-    <div
-      ref={ref}
-      role="menu"
-      aria-label={bubble.name}
-      className="absolute top-0 left-full z-20 ml-2 w-48 rounded-card border border-line bg-panel-2 p-1.5 shadow-panel"
-    >
+    <Menu label={bubble.name} onClose={onClose}>
       <input
         type="text"
         value={draft}
@@ -250,45 +227,13 @@ function RailMenu({
         className="mb-1 w-full rounded-field border border-line bg-panel px-2 py-1.5 text-xs text-ink"
       />
       <MenuItem label={t("common.duplicate")} onClick={onDuplicate} />
-      <MenuItem
-        label={t("rail.moveUp")}
-        onClick={onMoveUp}
-        disabled={first}
-      />
+      <MenuItem label={t("rail.moveUp")} onClick={onMoveUp} disabled={first} />
       <MenuItem
         label={t("rail.moveDown")}
         onClick={onMoveDown}
         disabled={last}
       />
       <MenuItem label={t("common.remove")} onClick={onRemove} danger />
-    </div>
-  );
-}
-
-function MenuItem({
-  label,
-  onClick,
-  disabled = false,
-  danger = false,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={disabled}
-      onClick={onClick}
-      className={`block w-full rounded-field px-2 py-1.5 text-left text-xs transition-colors duration-150 ease-out disabled:opacity-30 ${
-        danger
-          ? "text-danger hover:bg-danger/15 disabled:hover:bg-transparent"
-          : "text-ink hover:bg-white/10 disabled:hover:bg-transparent"
-      }`}
-    >
-      {label}
-    </button>
+    </Menu>
   );
 }

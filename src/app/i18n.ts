@@ -63,6 +63,18 @@ export type MessageKey =
   | "moods.colorOverride"
   | "moods.deltas"
   | "moods.clearOverride"
+  | "moods.menu"
+  | "moods.edit"
+  | "moods.moveUp"
+  | "moods.moveDown"
+  | "moods.mirror"
+  | "moods.rotationX"
+  | "moods.rotationY"
+  | "moods.rotationZ"
+  | "moods.overrideBodyColor"
+  | "moods.overrideEyesColor"
+  | "common.save"
+  | "common.close"
   | "loops.title"
   | "loops.add"
   | "loops.mode"
@@ -179,6 +191,18 @@ const es: Record<MessageKey, string> = {
   "moods.colorOverride": "Color temporal",
   "moods.deltas": "Ajustes de los ojos",
   "moods.clearOverride": "Quitar color",
+  "moods.menu": "Acciones",
+  "moods.edit": "Editar",
+  "moods.moveUp": "Subir",
+  "moods.moveDown": "Bajar",
+  "moods.mirror": "Reflejar izquierdo → derecho",
+  "moods.rotationX": "Rotación X",
+  "moods.rotationY": "Rotación Y",
+  "moods.rotationZ": "Rotación Z",
+  "moods.overrideBodyColor": "Color del cuerpo",
+  "moods.overrideEyesColor": "Color de los ojos",
+  "common.save": "Guardar",
+  "common.close": "Cerrar",
   "loops.title": "Ciclos",
   "loops.add": "Nuevo ciclo",
   "loops.mode": "Modo",
@@ -296,6 +320,18 @@ const en: Record<MessageKey, string> = {
   "moods.colorOverride": "Temporary color",
   "moods.deltas": "Eye adjustments",
   "moods.clearOverride": "Clear color",
+  "moods.menu": "Actions",
+  "moods.edit": "Edit",
+  "moods.moveUp": "Move up",
+  "moods.moveDown": "Move down",
+  "moods.mirror": "Mirror left → right",
+  "moods.rotationX": "Rotation X",
+  "moods.rotationY": "Rotation Y",
+  "moods.rotationZ": "Rotation Z",
+  "moods.overrideBodyColor": "Body color",
+  "moods.overrideEyesColor": "Eye color",
+  "common.save": "Save",
+  "common.close": "Close",
   "loops.title": "Loops",
   "loops.add": "New loop",
   "loops.mode": "Mode",

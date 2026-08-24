@@ -1,7 +1,7 @@
 // FR-9 studio shell smoke test (jsdom). rAF is stubbed; the engine is
 // exercised in unit tests, here we verify the UI tree and interactions.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StudioView } from "./StudioView";
 import { createDefaultDocument, starterKit } from "../../domain/document/create";
@@ -95,12 +95,19 @@ describe("StudioView", () => {
     expect(screen.getByText("Redondez")).toBeTruthy();
   });
 
-  it("Moods tab lists starter kit moods and supports cancelable edits", async () => {
+  it("Moods tab lists starter kit moods and opens the editor over the stage", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ánimos" }));
     expect(screen.getByRole("button", { name: "happy" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Cancelar" })).toBeTruthy();
+
+    // The editor is a modal over the inspector (docs/05 §2); the stage stays
+    // rendered behind it, which is what makes the live preview useful.
+    await user.dblClick(screen.getByRole("button", { name: "happy" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByLabelText("bubble stage")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("Loops tab lists the starter loops", async () => {
@@ -241,13 +248,15 @@ describe("StudioView", () => {
     const user = userEvent.setup();
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ánimos" }));
-    await user.click(screen.getByRole("button", { name: "happy" }));
     // Confirm first (docs/05 §3); the reducer is what refuses afterwards.
     vi.stubGlobal("confirm", vi.fn(() => true));
-    const buttons = screen.getAllByRole("button", { name: "Eliminar" });
-    const del = buttons[buttons.length - 1];
-    if (!del) throw new Error("delete button missing");
-    await user.click(del);
+    await user.click(screen.getByRole("button", { name: "Acciones · happy" }));
+    await user.click(
+      within(screen.getByRole("menu", { name: "happy" })).getByRole(
+        "menuitem",
+        { name: "Eliminar" },
+      ),
+    );
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("No se puede eliminar");
   });
@@ -280,12 +289,17 @@ describe("StudioView", () => {
     // MoodsPanel names a new mood `mood ${kit.moods.length + 1}`; derive it
     // rather than re-hard-coding a number the starter library sets.
     const added = `mood ${String(starterKit().moods.length + 1)}`;
-    await user.click(screen.getByRole("button", { name: added }));
 
     const remove = async () => {
-      const del = screen.getAllByRole("button", { name: "Eliminar" }).at(-1);
-      if (!del) throw new Error("delete button missing");
-      await user.click(del);
+      await user.click(
+        screen.getByRole("button", { name: `Acciones · ${added}` }),
+      );
+      await user.click(
+        within(screen.getByRole("menu", { name: added })).getByRole(
+          "menuitem",
+          { name: "Eliminar" },
+        ),
+      );
     };
 
     vi.stubGlobal("confirm", vi.fn(() => false));

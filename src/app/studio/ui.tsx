@@ -2,7 +2,7 @@
 // segmented control the panels build their sections from. Kept here so the
 // 12–16px radius, the 8px spacing grid and the ≤160ms transition are stated
 // once rather than re-typed per panel.
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export function Card({
   title,
@@ -180,5 +180,176 @@ export function RangeInput({
       style={{ "--range-fill": `${String(fill)}%` } as React.CSSProperties}
       className={className}
     />
+  );
+}
+
+/** Everything the browser will stop on when Tab walks the dialog. */
+const FOCUSABLE =
+  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+/**
+ * A modal scoped to its positioned ancestor rather than the viewport, so the
+ * mood editor can cover the inspector while leaving the stage visible — the
+ * live preview behind it is the point of editing a mood (FR-4.4, docs/05 §2).
+ *
+ * Focus moves in on open, Tab wraps inside, Escape and the backdrop close.
+ */
+export function Modal({
+  title,
+  closeLabel,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string;
+  /** Accessible name of the ✕ — translated by the caller, which holds `t`. */
+  closeLabel: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  /** Trailing action row, pinned below the scrollable body. */
+  footer?: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = ref.current;
+      if (!root) return;
+      const stops = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (stops.length === 0) return;
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      // The dialog itself is a focus stop only until the user Tabs; from then
+      // on focus cycles through its controls rather than leaving for the page.
+      const active = document.activeElement;
+      if (e.shiftKey ? active === first || active === root : active === last) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="absolute inset-0 z-30 flex items-start justify-center p-3">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        data-testid="modal-backdrop"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-stage/70 backdrop-blur-[2px]"
+      />
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className="relative flex max-h-full w-full flex-col overflow-hidden rounded-card border border-line bg-panel-2 shadow-panel outline-none"
+      >
+        <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2.5">
+          <h2 className="min-w-0 flex-1 truncate text-xs font-semibold tracking-wide text-ink-dim uppercase">
+            {title}
+          </h2>
+          <IconButton label={closeLabel} onClick={onClose}>
+            ✕
+          </IconButton>
+        </div>
+        <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+          {children}
+        </div>
+        {footer && (
+          <div className="flex shrink-0 items-center gap-2 border-t border-line px-3 py-2.5">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Popover menu for per-item actions. Dismisses on Escape or a press anywhere
+ * else — Escape is bound on the document because opening the menu leaves
+ * focus on the trigger, which is outside this subtree.
+ */
+export function Menu({
+  label,
+  onClose,
+  children,
+  className = "absolute top-0 left-full z-20 ml-2 w-48",
+}: {
+  label: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDown = (e: Event) => {
+      if (!ref.current?.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      aria-label={label}
+      className={`${className} rounded-card border border-line bg-panel-2 p-1.5 shadow-panel`}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function MenuItem({
+  label,
+  onClick,
+  disabled = false,
+  danger = false,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      onClick={onClick}
+      className={`block w-full rounded-field px-2 py-1.5 text-left text-xs transition-colors duration-150 ease-out disabled:opacity-30 ${
+        danger
+          ? "text-danger hover:bg-danger/15 disabled:hover:bg-transparent"
+          : "text-ink hover:bg-white/10 disabled:hover:bg-transparent"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

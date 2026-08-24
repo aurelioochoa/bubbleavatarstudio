@@ -25,6 +25,9 @@ export function StudioView() {
   }>({ loopId: null, mode: "stopped" });
   // FR-4.4: picking or editing a mood shows it on the stage straight away.
   const [preview, setPreview] = useState<MoodSample | null>(null);
+  // The inspector column, so the mood editor can mount over all of it rather
+  // than inside the scroll box that would clip it (docs/05 §2).
+  const [inspector, setInspector] = useState<HTMLElement | null>(null);
   const autosaver = useMemo(() => createAutosaver(300), []);
 
   // FR-9: restore on boot, autosave (≤300ms debounce) on change.
@@ -166,7 +169,12 @@ export function StudioView() {
           />
         </main>
 
-        <aside className="flex w-90 shrink-0 flex-col border-l border-line bg-panel">
+        {/* `relative`: the mood editor is a modal scoped to this column, so
+            the stage stays visible behind it (docs/05 §2). */}
+        <aside
+          ref={setInspector}
+          className="relative flex w-90 shrink-0 flex-col border-l border-line bg-panel"
+        >
           <div
             role="tablist"
             className="flex shrink-0 gap-0.5 border-b border-line p-2"
@@ -213,6 +221,7 @@ export function StudioView() {
               dispatch={dispatch}
               t={t}
               bubble={bubble}
+              overlayHost={inspector}
               onPreview={(sample) => {
                 setPreview(sample);
                 // Manual selection owns the live state (FR-6.1).
