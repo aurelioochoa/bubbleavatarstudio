@@ -4,20 +4,35 @@ import { liveFrame, restingScene } from "../../render/scene";
 import { sceneToSvg } from "../../render/svg";
 import type { Bubble, Kit } from "../../domain/document/types";
 
+/**
+ * Transport state (FR-6.2). `paused` freezes the frame in place; `stopped`
+ * rewinds to the first step and shows the resting face, which keeps breathing
+ * with ambient idle motion (FR-7).
+ */
+export type StageMode = "playing" | "paused" | "stopped";
+
 export interface StageEngineOptions {
   bubble: Bubble;
   kit: Kit;
   loopId: string | null;
-  playing: boolean;
+  mode: StageMode;
   headRotation: { x: number; y: number; z: number };
 }
+
+/** A frame longer than this means the tab slept; charge a nominal frame instead. */
+const MAX_FRAME_MS = 1000;
+const NOMINAL_FRAME_MS = 16;
 
 export class StageEngine {
   private host: HTMLElement;
   private opts: StageEngineOptions;
   private raf = 0;
-  private startMs = 0;
-  private lastFrameMs = 0;
+  /** Elapsed time inside the current loop; rewound by stop and loop changes. */
+  private loopMs = 0;
+  /** Elapsed time driving ambient idle motion; never rewound. */
+  private ambientMs = 0;
+  private lastTickMs: number | null = null;
+  private lastSvg = "";
 
   constructor(host: HTMLElement, opts: StageEngineOptions) {
     this.host = host;
@@ -27,12 +42,11 @@ export class StageEngine {
   update(opts: StageEngineOptions): void {
     const loopChanged = opts.loopId !== this.opts.loopId;
     this.opts = opts;
-    if (loopChanged) this.startMs = this.now();
-    if (!opts.playing) this.renderFrame(); // render once for paused edits
+    if (loopChanged || opts.mode === "stopped") this.loopMs = 0;
+    this.renderFrame();
   }
 
   start(): void {
-    this.startMs = this.now();
     const tick = () => {
       this.renderFrame();
       this.raf = requestAnimationFrame(tick);
@@ -49,23 +63,38 @@ export class StageEngine {
     return typeof performance !== "undefined" ? performance.now() : Date.now();
   }
 
+  /** Charges elapsed wall time to the clocks the current mode lets run. */
+  private advanceClocks(t: number): void {
+    const previous = this.lastTickMs ?? t;
+    this.lastTickMs = t;
+    const delta = t - previous;
+    const dt = delta < 0 || delta > MAX_FRAME_MS ? NOMINAL_FRAME_MS : delta;
+    switch (this.opts.mode) {
+      case "playing":
+        this.loopMs += dt;
+        this.ambientMs += dt;
+        return;
+      case "stopped":
+        // The resting face still breathes while nothing plays.
+        this.ambientMs += dt;
+        return;
+      case "paused":
+        // Everything holds where it was.
+        return;
+    }
+  }
+
   private renderFrame(): void {
-    const t = this.now();
-    // Cap effective delta to avoid jumps after tab sleep.
-    if (t - this.lastFrameMs > 1000) this.startMs += t - this.lastFrameMs - 16;
-    this.lastFrameMs = t;
-    const elapsed = t - this.startMs;
-    // No loop to play (empty kit, or nothing selected): the resting face still
-    // breathes with ambient motion (FR-6.2, FR-7).
-    const scene = this.opts.loopId
-      ? liveFrame(
-          this.opts.bubble,
-          this.opts.kit,
-          this.opts.loopId,
-          elapsed,
-          this.opts.headRotation,
-        ).scene
-      : restingScene(this.opts.bubble, elapsed, this.opts.headRotation);
-    this.host.innerHTML = sceneToSvg(scene);
+    this.advanceClocks(this.now());
+    const { bubble, kit, loopId, mode, headRotation } = this.opts;
+    const scene =
+      loopId && mode !== "stopped"
+        ? liveFrame(bubble, kit, loopId, this.loopMs, headRotation).scene
+        : restingScene(bubble, this.ambientMs, headRotation);
+    const svg = sceneToSvg(scene);
+    // A paused stage re-serializes to the same bytes every frame; skip the write.
+    if (svg === this.lastSvg) return;
+    this.lastSvg = svg;
+    this.host.innerHTML = svg;
   }
 }

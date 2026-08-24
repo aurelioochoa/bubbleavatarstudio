@@ -8,6 +8,7 @@ import { MoodsPanel } from "./panels/MoodsPanel";
 import { LoopsPanel } from "./panels/LoopsPanel";
 import { SharePanel } from "./panels/SharePanel";
 import { useStudio } from "./store";
+import type { StageMode } from "../stage/StageEngine";
 import { createAutosaver, loadDocument } from "../persistence";
 import type { Locale } from "../../domain/document/types";
 
@@ -16,7 +17,11 @@ type Tab = "look" | "moods" | "loops" | "share";
 export function StudioView() {
   const [state, dispatch] = useStudio();
   const [tab, setTab] = useState<Tab>("look");
-  const [playingLoopId, setPlayingLoopId] = useState<string | null>(null);
+  // FR-6.2: playback is a three-state transport, not a boolean.
+  const [transport, setTransport] = useState<{
+    loopId: string | null;
+    mode: StageMode;
+  }>({ loopId: null, mode: "stopped" });
   const autosaver = useMemo(() => createAutosaver(300), []);
 
   // FR-9: restore on boot, autosave (≤300ms debounce) on change.
@@ -148,10 +153,10 @@ export function StudioView() {
           <Stage
             bubble={bubble}
             kit={kit}
-            loopId={playingLoopId}
-            playing={playingLoopId !== null}
+            loopId={transport.loopId}
+            mode={transport.mode}
             onPause={() => {
-              setPlayingLoopId(null);
+              setTransport((tr) => ({ ...tr, mode: "paused" }));
             }}
           />
         </main>
@@ -200,8 +205,16 @@ export function StudioView() {
               kit={kit}
               dispatch={dispatch}
               t={t}
-              playingLoopId={playingLoopId}
-              onPlay={setPlayingLoopId}
+              transport={transport}
+              onPlay={(loopId) => {
+                setTransport({ loopId, mode: "playing" });
+              }}
+              onPause={() => {
+                setTransport((tr) => ({ ...tr, mode: "paused" }));
+              }}
+              onStop={() => {
+                setTransport((tr) => ({ ...tr, mode: "stopped" }));
+              }}
             />
           )}
           {tab === "share" && (

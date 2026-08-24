@@ -7,13 +7,21 @@ import type {
 } from "../../../domain/document/types";
 import type { Action } from "../store";
 import type { MessageKey } from "../../i18n";
+import type { StageMode } from "../../stage/StageEngine";
+
+export interface Transport {
+  loopId: string | null;
+  mode: StageMode;
+}
 
 export interface LoopsPanelProps {
   kit: Kit;
   dispatch: React.Dispatch<Action>;
   t: (k: MessageKey) => string;
-  playingLoopId: string | null;
-  onPlay: (loopId: string | null) => void;
+  transport: Transport;
+  onPlay: (loopId: string) => void;
+  onPause: () => void;
+  onStop: () => void;
 }
 
 const MODES: PlaybackMode[] = ["loop", "once", "pingpong"];
@@ -23,13 +31,19 @@ export function LoopsPanel({
   kit,
   dispatch,
   t,
-  playingLoopId,
+  transport,
   onPlay,
+  onPause,
+  onStop,
 }: LoopsPanelProps) {
   const [selected, setSelected] = useState<string | null>(
     kit.loops[0]?.id ?? null,
   );
   const loop = kit.loops.find((l) => l.id === selected) ?? null;
+  const playingThis =
+    loop !== null &&
+    transport.loopId === loop.id &&
+    transport.mode === "playing";
 
   return (
     <div className="space-y-4">
@@ -40,7 +54,7 @@ export function LoopsPanel({
             type="button"
             onClick={() => {
               setSelected(l.id);
-              if (playingLoopId !== l.id) onPlay(null);
+              if (transport.loopId !== l.id) onStop();
             }}
             className={`rounded-full px-3 py-1 text-xs ${
               l.id === selected
@@ -71,11 +85,20 @@ export function LoopsPanel({
             <button
               type="button"
               onClick={() => {
-                onPlay(playingLoopId === loop.id ? null : loop.id);
+                if (playingThis) onPause();
+                else onPlay(loop.id);
               }}
               className="rounded bg-[#6c7bff] px-3 py-1.5 text-xs text-white"
             >
-              {playingLoopId === loop.id ? t("common.pause") : t("common.play")}
+              {playingThis ? t("common.pause") : t("common.play")}
+            </button>
+            <button
+              type="button"
+              onClick={onStop}
+              disabled={transport.mode === "stopped"}
+              className="rounded bg-white/5 px-3 py-1.5 text-xs text-[#e8eaf6] disabled:opacity-40"
+            >
+              {t("common.stop")}
             </button>
             <select
               value={loop.mode}
@@ -235,7 +258,7 @@ export function LoopsPanel({
                 setSelected(
                   kit.loops.find((l) => l.id !== loop.id)?.id ?? null,
                 );
-                onPlay(null);
+                onStop();
               }}
               className="rounded bg-red-500/20 px-3 py-1 text-xs text-red-300"
             >

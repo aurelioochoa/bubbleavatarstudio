@@ -1,18 +1,18 @@
 // Stage: hosts the StageEngine, handles direct manipulation (FR-8).
 // Drag rotates the head and pauses playback; Escape restores.
 import { useEffect, useRef, useState } from "react";
-import { StageEngine } from "./StageEngine";
+import { StageEngine, type StageMode } from "./StageEngine";
 import type { Bubble, Kit } from "../../domain/document/types";
 
 export interface StageProps {
   bubble: Bubble;
   kit: Kit;
   loopId: string | null;
-  playing: boolean;
+  mode: StageMode;
   onPause: () => void;
 }
 
-export function Stage({ bubble, kit, loopId, playing, onPause }: StageProps) {
+export function Stage({ bubble, kit, loopId, mode, onPause }: StageProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<StageEngine | null>(null);
   const [head, setHead] = useState({ x: 0, y: 0, z: 0 });
@@ -30,7 +30,7 @@ export function Stage({ bubble, kit, loopId, playing, onPause }: StageProps) {
       bubble,
       kit,
       loopId,
-      playing,
+      mode,
       headRotation: head,
     });
     engineRef.current = engine;
@@ -46,10 +46,10 @@ export function Stage({ bubble, kit, loopId, playing, onPause }: StageProps) {
       bubble,
       kit,
       loopId,
-      playing,
+      mode,
       headRotation: head,
     });
-  }, [bubble, kit, loopId, playing, head]);
+  }, [bubble, kit, loopId, mode, head]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
@@ -57,7 +57,7 @@ export function Stage({ bubble, kit, loopId, playing, onPause }: StageProps) {
     (e.target as Partial<HTMLElement> & EventTarget).setPointerCapture?.(
       e.pointerId,
     );
-    if (playing) onPause(); // direct manipulation pauses playback (FR-8)
+    if (mode === "playing") onPause(); // direct manipulation pauses playback (FR-8)
   };
 
   const onPointerMove = (e: React.PointerEvent) => {

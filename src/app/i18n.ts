@@ -34,6 +34,7 @@ export type MessageKey =
   | "common.remove"
   | "common.play"
   | "common.pause"
+  | "common.stop"
   | "common.cancel"
   | "common.duplicate"
   | "confirm.removeBubble"
@@ -76,6 +77,7 @@ const es: Record<MessageKey, string> = {
   "common.remove": "Eliminar",
   "common.play": "Reproducir",
   "common.pause": "Pausar",
+  "common.stop": "Detener",
   "common.cancel": "Cancelar",
   "common.duplicate": "Duplicar",
   "confirm.removeBubble": "¿Eliminar esta burbuja?",
@@ -119,6 +121,7 @@ const en: Record<MessageKey, string> = {
   "common.remove": "Remove",
   "common.play": "Play",
   "common.pause": "Pause",
+  "common.stop": "Stop",
   "common.cancel": "Cancel",
   "common.duplicate": "Duplicate",
   "confirm.removeBubble": "Delete this bubble?",

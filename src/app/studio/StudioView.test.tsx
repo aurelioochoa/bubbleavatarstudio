@@ -88,6 +88,26 @@ describe("StudioView", () => {
     expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
   });
 
+  it("transport plays, pauses and stops the selected loop (FR-6.2)", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("tab", { name: "Ciclos" }));
+    const stop = screen.getByRole("button", { name: "Detener" });
+    expect(stop.hasAttribute("disabled")).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Reproducir" }));
+    expect(screen.getByRole("button", { name: "Pausar" })).toBeTruthy();
+    expect(stop.hasAttribute("disabled")).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Pausar" }));
+    expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Reproducir" }));
+    await user.click(stop);
+    expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
+    expect(stop.hasAttribute("disabled")).toBe(true);
+  });
+
   it("renders a stored document whose kit has no loops (FR-5.2, FR-6.2)", () => {
     const doc = createDefaultDocument();
     const withoutLoops = {

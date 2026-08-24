@@ -46,7 +46,7 @@ function renderStage() {
       bubble={bubble}
       kit={kit}
       loopId={kit.loops[0]?.id ?? null}
-      playing={false}
+      mode="stopped"
       onPause={() => {}}
     />,
   );
