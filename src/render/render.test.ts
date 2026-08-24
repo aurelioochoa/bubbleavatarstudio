@@ -52,6 +52,29 @@ describe("backgrounds (FR-10)", () => {
   });
 });
 
+describe("eye roundness (FR-3.1)", () => {
+  const rx = (roundness: number): string => {
+    const base = doc.bubbles[0];
+    const bubble: Bubble = {
+      ...base,
+      restingFace: {
+        ...base.restingFace,
+        eye: { ...base.restingFace.eye, roundness },
+      },
+    };
+    const svg = sceneToSvg(restingScene(bubble, 0));
+    return /<rect[^>]*rx="([0-9.]+)"/.exec(svg)?.[1] ?? "";
+  };
+
+  it("rounds the eye from a sharp rectangle to a capsule", () => {
+    // The capsule is half the shorter side; roundness scales down from there.
+    const capsule = Number(rx(1));
+    expect(capsule).toBeGreaterThan(0);
+    expect(Number(rx(0))).toBe(0);
+    expect(Number(rx(0.5))).toBeCloseTo(capsule / 2);
+  });
+});
+
 describe("output size (FR-10.4)", () => {
   it("scales the rendered box while keeping the coordinate system", () => {
     const scene = restingScene(doc.bubbles[0], 0);

@@ -7,7 +7,8 @@ import { fmt } from "../domain/geometry/primitives";
 function eyeElement(id: string, eye: Scene["eyes"]["left"]): string {
   const w = Math.max(eye.width, 0);
   const h = Math.max(eye.height, 0);
-  const rx = fmt(Math.min(w, h) / 2);
+  // Half the shorter side is a full capsule; roundness scales in from there.
+  const rx = fmt(((Math.min(w, h) / 2) * eye.roundness));
   return [
     `<g id="${id}" transform="translate(${fmt(eye.x)} ${fmt(eye.y)}) rotate(${fmt(eye.rotationDeg)})">`,
     `<rect x="${fmt(-w / 2)}" y="${fmt(-h / 2)}" width="${fmt(w)}" height="${fmt(h)}" rx="${rx}" fill="${eye.fill}"/>`,

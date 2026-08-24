@@ -22,6 +22,8 @@ export interface EyeRender {
   width: number;
   height: number;
   rotationDeg: number;
+  /** Corner rounding, 0 = rectangle, 1 = capsule (FR-3.1). */
+  roundness: number;
   /** Vertical squash incl. mood scale and blink closure (0..1). */
   scaleY: number;
   scaleX: number;
@@ -85,6 +87,7 @@ function eyeRender(
     width: face.eye.width * place.scaleX * moodEye.scaleX,
     height: face.eye.height * place.scaleY * moodEye.scaleY * (1 - blink),
     rotationDeg: place.rotationDeg + moodEye.rotationZDeg,
+    roundness: face.eye.roundness,
     scaleX: place.scaleX * moodEye.scaleX,
     scaleY: place.scaleY * moodEye.scaleY * (1 - blink),
     fill: bubble.colors.eyes,
