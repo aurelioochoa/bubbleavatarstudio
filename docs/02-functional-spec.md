@@ -26,6 +26,13 @@
 - **FR-2.4** Extras can be added, edited, reordered (z), and removed.
 - **FR-2.5** The surface carries the **face frame**: eye anchors and mood deltas
   are expressed in it (see FR-4.6).
+- **FR-2.6** The surface has a **shape family**, chosen per bubble: `round`
+  (superellipse from rectangle to ellipse via roundness), `organic` (an outline
+  whose radius varies around the perimeter, giving lumpy and lopsided forms),
+  and `drop` (a teardrop taper). Every family is a deterministic function of its
+  parameters — same values, same path, byte for byte.
+- **FR-2.7** Organic shapes take `lobes` (how many bumps), `wobble` (how far the
+  radius strays, 0 = the round family) and `seed` (which arrangement of bumps).
 
 ## FR-3 Eyes
 
@@ -50,6 +57,9 @@
 - **FR-4.6** Because deltas are relative to the face frame, the same mood is
   compatible with any bubble surface (test: one mood applied to two different
   bodies yields proportionally consistent eye changes).
+- **FR-4.7** The starter kit ships a **library of at least 24 moods** spanning a
+  documented range (alert, calm, warm, negative, sleepy, playful), so a new
+  bubble is expressive before the user authors anything.
 
 ## FR-5 Loops (animations)
 
@@ -65,6 +75,11 @@
 - **FR-5.6** Deleting a mood that a step references is blocked while any step in
   any loop of the same kit references it (or, equivalently, deletion requires
   removing the references first — we choose: **block with a clear error**).
+- **FR-5.7** The starter kit ships a **catalogue of at least 20 loops** in two
+  groups: `life` (the resting behaviours a character cycles through unprompted)
+  and `reaction` (responses to something that just happened).
+- **FR-5.8** A loop shows a **summary** of what it will do: how many steps and
+  their durations, and its blink interval and duration.
 
 ## FR-6 Playback
 
@@ -86,12 +101,17 @@
 
 ## FR-8 Direct manipulation (stage)
 
-- **FR-8.1** Drag anywhere on the stage translates the whole bubble (surface +
-  extras + eyes) within bounds.
+- **FR-8.1** Drag anywhere on the stage **turns the head** (rotation X/Y), with
+  the face anchored to the projected surface so the eyes sweep across it. The
+  bubble's position is set numerically (FR-2.2) rather than by dragging — see
+  `docs/research/blackbox-notes.md`, session 2, for why this replaced the
+  original "drag to translate" wording.
 - **FR-8.2** A rotation control (on-canvas handle or gizmo) sets head rotation
   X/Y/Z; projection foreshortens the surface and shifts eye anchors accordingly.
 - **FR-8.3** Any direct manipulation pauses playback (FR-6.1) and is undoable
   (single-level undo of the drag is acceptable v1: restore pre-drag values on Esc).
+- **FR-8.4** An optional **guide overlay** draws the projection surface, so the
+  volume the eyes are anchored to is visible while posing.
 
 ## FR-9 Studio shell & persistence
 
@@ -103,6 +123,8 @@
   import replaces the document **after explicit confirmation**, and is rejected
   with a readable error if invalid/unknown version.
 - **FR-9.4** Locale switch es/en; default es; choice persists.
+- **FR-9.5** Numeric fields accept typing, steppers **and drag-to-scrub** on the
+  label, so values can be dialled in without keyboard round-trips.
 
 ## FR-10 Export & runtime
 

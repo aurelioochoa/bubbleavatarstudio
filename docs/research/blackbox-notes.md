@@ -153,3 +153,50 @@ no first-blink delay; FR-5.5 does not require one.
 Character cards, expression presets and animation entries all draw the actual
 character rather than an icon, and expression/animation catalogues are grouped and
 counted ("27 presets", "23 animations", life-cycle versus reactions).
+
+## Session 3 — 2026-08-23 (feature inventory for parity)
+
+> Same method and limits as session 2: rendered output only, described in our
+> own words. Purpose: decide what "feature parity" has to cover.
+
+### Silhouettes are organic, not just superellipses
+
+The character gallery spans shapes our geometry cannot currently express. Several
+are irregular and lumpy — a wide slumped form, a cloud of overlapping lobes, a
+teardrop, a blob with a bite taken out of one side — while others are a plain
+circle or a rounded square, which our superellipse already covers. One character
+is a body ringed by radiating petals, i.e. a surface plus a set of extra
+primitives arranged around it, which our extras model does cover.
+
+Conclusion: parity needs a shape vocabulary beyond one superellipse — an organic
+outline whose radius varies around the perimeter — plus the extras we have.
+
+### Pose controls
+
+Body: colour, and head rotation X/Y/Z in degrees. Eyes: colour, per-eye width,
+height and a proportional-size control, per-eye horizontal and vertical position,
+a shared spacing, and per-eye tilt. Projection: a perspective factor described as
+simulated face depth, plus a toggle that draws the projection surface as a guide.
+
+Two notes that matter for us. Eye position is described as shared coordinates
+projected onto the selected shape — the same anchor-on-a-surface model, and
+confirmation that the shape is a selectable property of the character. And the
+numeric labels can be dragged sideways to scrub their value, the way a design
+tool does, rather than only typed into.
+
+### The animation panel summarises what will happen
+
+Alongside playback mode it shows how many expressions the animation steps
+through with each step's duration, the delay before the first blink, the
+randomised interval range between blinks, and how long a blink takes. Ours
+exposes the same underlying values as raw inputs but never summarises them.
+
+### Parity gaps, as a list
+
+1. An organic outline family; a per-character shape choice.
+2. A large expression library (theirs shows 27) rather than our four.
+3. An animation catalogue grouped into life-cycle and reaction sets (theirs
+   shows 23) rather than our two.
+4. A projection guide overlay.
+5. Drag-to-scrub numeric labels.
+6. A summary of an animation's timing and blink behaviour.

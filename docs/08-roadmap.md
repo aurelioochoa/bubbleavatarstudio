@@ -50,6 +50,40 @@ Avatar/project file builders (FR-10.2/3, FR-9.3); snapshot UI + PNG (FR-10.1);
 - **AC:** round-trip tests green; runtime renders identical SVG to studio for
   same definition+state.
 
+## G — Defect sweep (done)
+
+Seven defects found by auditing the running app against this spec: a loop-less
+kit crashing the studio, pause and stop not stopping the frame loop, an
+unplayable loop throwing inside rAF, eye roundness and mood rotation X/Y never
+reaching the renderer, a runtime `size` prop that sized only its wrapper, and a
+CI pnpm pin that conflicted with `packageManager`. Each landed with the
+regression test that reproduced it first.
+
+- **AC:** each fix has a test confirmed red before it and green after.
+
+## P — Parity (in progress)
+
+Bring the app level with what the concept demands, per the feature inventory in
+`docs/research/blackbox-notes.md` session 3.
+
+- **P1 (done)** Volume: anchor the face on a projected surface (FR-8.2), shade
+  the body, and keep a resting character alive — blinking, micro-saccades,
+  breathing (FR-7).
+- **P2** Shape vocabulary: the `round`, `organic` and `drop` families and their
+  parameters (FR-2.6, FR-2.7), schema v2 plus the v1→v2 migration, and a shape
+  control in the Look panel.
+- **P3** Content: a starter library of at least 24 moods (FR-4.7) and at least
+  20 loops grouped life/reaction (FR-5.7), all original.
+- **P4** Remaining UI surfaces: loop rename/duplicate, step reorder, blink card
+  and loop summary (FR-5.2, FR-5.5, FR-5.8); stage transport dock with status
+  pill and rotation gizmo plus the guide overlay (FR-6.2, FR-8.2, FR-8.4);
+  Share loop picker, radial background and package example (FR-10.1, FR-10.3,
+  FR-10.5); rail rename, reorder and thumbnails (FR-1.2, FR-1.4); drag-to-scrub
+  numeric labels (FR-9.5).
+
+- **AC:** `pnpm check` green per step; every FR above covered by a test that
+  names it; a visual pass in a real browser, not only jsdom.
+
 ## F5 — Hardening & final verification
 
 Full `pnpm check`; Playwright visual smoke (boot, panels, playing loop);

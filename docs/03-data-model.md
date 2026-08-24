@@ -33,13 +33,17 @@
   "body": {
     "surface": {
       "kind": "blob",
+      "shape": "organic",
       "width": 220,
       "height": 200,
-      "roundness": 0.85,
+      "roundness": 0.96,
+      "lobes": 5,
+      "wobble": 0.12,
+      "seed": 7,
       "x": 0,
       "y": 0,
       "rotationDeg": 0,
-      "perspective": 0.25,
+      "perspective": 0.6,
     },
     "extras": [
       {
@@ -209,7 +213,11 @@ integrity (every step's `moodId` exists in the inlined kit).
 1. `version === 1` and `kind` matches the file type; else reject with code
    `E_VERSION`.
 2. Unique IDs within their scope; step `moodId` must exist in the same kit.
-3. Numeric ranges: roundness 0–1, perspective 0–1, springSpeed 0.1–3,
+3. Shape family (FR-2.6): `shape` is `round` | `organic` | `drop`. `roundness`
+   counts up toward round — 0 squares the silhouette off, 1 is an ellipse.
+   `lobes` 3–10 and `wobble` 0–1 only bite on `organic`; `seed` is any integer
+   and picks which arrangement of bumps you get. Every family is deterministic.
+4. Numeric ranges: roundness 0–1, perspective 0–1, springSpeed 0.1–3,
    scale 0.1–3, holdMs ≥ 0, blink intervals > 0, colors match `#rrggbb`.
 4. Non-empty `name` after trim (moods, loops, bubbles).
 5. `linked: true` ⇒ left/right placements must be mirror-consistent (enforced
@@ -221,3 +229,10 @@ integrity (every step's `moodId` exists in the inlined kit).
   `document/migrate.ts`; imports run the migration chain then validate.
 - Breaking experiments happen on a branch behind a `version: 2` flag — v1 files
   keep loading forever via migrations.
+
+### v1 → v2 (shape family, FR-2.6)
+
+v2 adds `shape`, `lobes`, `wobble` and `seed` to the surface. A v1 document
+predates the shape vocabulary, so the migration fills them with the round
+family (`shape: "round"`, `wobble: 0`), which draws exactly what v1 drew. Any
+autosaved v1 document therefore keeps loading and looks unchanged.
