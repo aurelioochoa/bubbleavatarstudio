@@ -15,7 +15,11 @@ see `docs/CLEANROOM.md` before contributing.
 pnpm install
 pnpm dev        # studio at http://localhost:5173
 pnpm check      # typecheck + lint + tests + build (required gate, also runs in CI)
+pnpm e2e        # Playwright visual smoke against the preview build
 ```
+
+Screenshots of the smoke scenarios (boot, panels, playing loop) are archived
+under `docs/screenshots/` by `pnpm e2e`.
 
 ## Architecture
 
