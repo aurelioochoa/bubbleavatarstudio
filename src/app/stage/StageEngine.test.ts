@@ -23,6 +23,12 @@ function asMarkup(svg: string): string {
   return host.innerHTML;
 }
 
+/** Height of the first eye rect currently on the stage. */
+function eyeHeight(host: HTMLElement): number {
+  const rect = host.querySelector("rect");
+  return Number(rect?.getAttribute("height") ?? "0");
+}
+
 let now = 0;
 
 beforeEach(() => {
@@ -44,6 +50,7 @@ describe("StageEngine without a loop (FR-6.2)", () => {
       loopId: null,
       mode: "stopped",
       headRotation: { x: 0, y: 0, z: 0 },
+      preview: null,
     });
     engine.update({
       bubble,
@@ -51,8 +58,43 @@ describe("StageEngine without a loop (FR-6.2)", () => {
       loopId: null,
       mode: "stopped",
       headRotation: { x: 0, y: 0, z: 0 },
+      preview: null,
     });
     expect(host.innerHTML).toContain('id="body"');
+  });
+});
+
+describe("StageEngine mood preview (FR-4.4)", () => {
+  it("shows the previewed mood instead of the resting face", () => {
+    const { bubble, kit } = fixture();
+    const sleepy = kit.moods.find((m) => m.name === "sleepy");
+    if (!sleepy) throw new Error("fixture missing the sleepy mood");
+    const host = document.createElement("div");
+    const opts = {
+      bubble,
+      kit,
+      loopId: null,
+      mode: "stopped" as const,
+      headRotation: { x: 0, y: 0, z: 0 },
+      preview: null,
+    };
+    const engine = new StageEngine(host, opts);
+    engine.update(opts);
+    const resting = eyeHeight(host);
+
+    engine.update({
+      ...opts,
+      preview: {
+        left: sleepy.left,
+        right: sleepy.right,
+        colorOverride: sleepy.colorOverride,
+      },
+    });
+    // sleepy squashes the eyes to a quarter height.
+    expect(eyeHeight(host)).toBeLessThan(resting * 0.5);
+
+    engine.update(opts);
+    expect(eyeHeight(host)).toBeCloseTo(resting, 1);
   });
 });
 
@@ -68,6 +110,7 @@ describe("StageEngine transport (FR-6.1, FR-6.2)", () => {
       loopId: loop.id,
       mode,
       headRotation: { x: 0, y: 0, z: 0 },
+      preview: null,
     };
     const engine = new StageEngine(host, opts);
     engine.update(opts);

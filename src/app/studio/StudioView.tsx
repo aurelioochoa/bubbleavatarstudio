@@ -11,6 +11,7 @@ import { useStudio } from "./store";
 import type { StageMode } from "../stage/StageEngine";
 import { createAutosaver, loadDocument } from "../persistence";
 import type { Locale } from "../../domain/document/types";
+import type { MoodSample } from "../../domain/playback/LoopPlayer";
 
 type Tab = "look" | "moods" | "loops" | "share";
 
@@ -22,6 +23,8 @@ export function StudioView() {
     loopId: string | null;
     mode: StageMode;
   }>({ loopId: null, mode: "stopped" });
+  // FR-4.4: picking or editing a mood shows it on the stage straight away.
+  const [preview, setPreview] = useState<MoodSample | null>(null);
   const autosaver = useMemo(() => createAutosaver(300), []);
 
   // FR-9: restore on boot, autosave (≤300ms debounce) on change.
@@ -164,6 +167,7 @@ export function StudioView() {
             kit={kit}
             loopId={transport.loopId}
             mode={transport.mode}
+            preview={preview}
             onPause={() => {
               setTransport((tr) => ({ ...tr, mode: "paused" }));
             }}
@@ -179,6 +183,7 @@ export function StudioView() {
                 type="button"
                 aria-selected={tab === x.id}
                 onClick={() => {
+                  if (x.id !== "moods") setPreview(null);
                   setTab(x.id);
                 }}
                 className={`flex-1 rounded px-2 py-1 text-xs ${
@@ -207,7 +212,21 @@ export function StudioView() {
             <LookPanel bubble={bubble} dispatch={dispatch} t={t} />
           )}
           {tab === "moods" && (
-            <MoodsPanel kit={kit} dispatch={dispatch} t={t} />
+            <MoodsPanel
+              kit={kit}
+              dispatch={dispatch}
+              t={t}
+              bubble={bubble}
+              onPreview={(sample) => {
+                setPreview(sample);
+                // Manual selection owns the live state (FR-6.1).
+                if (sample) {
+                  setTransport((tr) =>
+                    tr.mode === "playing" ? { ...tr, mode: "paused" } : tr,
+                  );
+                }
+              }}
+            />
           )}
           {tab === "loops" && (
             <LoopsPanel

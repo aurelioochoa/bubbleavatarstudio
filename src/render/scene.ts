@@ -254,6 +254,25 @@ export function liveFrame(
   return { scene: buildScene(bubble, live), player: st };
 }
 
+/**
+ * A single mood held still (FR-4.4). Used to preview a mood on the stage and
+ * to draw mood thumbnails, so both show exactly what playback would show.
+ */
+export function moodScene(
+  bubble: Bubble,
+  mood: MoodSample,
+  tAbsMs = 0,
+  headRotation: LiveInput["headRotation"] = { x: 0, y: 0, z: 0 },
+): Scene {
+  return buildScene(bubble, {
+    tAbsMs,
+    mood,
+    blink: 0,
+    ambient: ambientAt(bubble.ambient, tAbsMs),
+    headRotation,
+  });
+}
+
 /** Resting scene: neutral pose, ambient only (used for thumbnails/snapshots). */
 export function restingScene(
   bubble: Bubble,

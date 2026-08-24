@@ -3,16 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import { StageEngine, type StageMode } from "./StageEngine";
 import type { Bubble, Kit } from "../../domain/document/types";
+import type { MoodSample } from "../../domain/playback/LoopPlayer";
 
 export interface StageProps {
   bubble: Bubble;
   kit: Kit;
   loopId: string | null;
   mode: StageMode;
+  /** Mood held on the stage while it is being picked or edited (FR-4.4). */
+  preview: MoodSample | null;
   onPause: () => void;
 }
 
-export function Stage({ bubble, kit, loopId, mode, onPause }: StageProps) {
+export function Stage({
+  bubble,
+  kit,
+  loopId,
+  mode,
+  preview,
+  onPause,
+}: StageProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<StageEngine | null>(null);
   const [head, setHead] = useState({ x: 0, y: 0, z: 0 });
@@ -32,6 +42,7 @@ export function Stage({ bubble, kit, loopId, mode, onPause }: StageProps) {
       loopId,
       mode,
       headRotation: head,
+      preview,
     });
     engineRef.current = engine;
     engine.start();
@@ -48,8 +59,9 @@ export function Stage({ bubble, kit, loopId, mode, onPause }: StageProps) {
       loopId,
       mode,
       headRotation: head,
+      preview,
     });
-  }, [bubble, kit, loopId, mode, head]);
+  }, [bubble, kit, loopId, mode, head, preview]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };

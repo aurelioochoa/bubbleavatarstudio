@@ -1,6 +1,7 @@
 // StageEngine: high-frequency frame loop writing SVG straight to the DOM
 // (FR-11). React never re-renders per frame; the engine owns only live values.
-import { liveFrame, restingScene } from "../../render/scene";
+import { liveFrame, moodScene, restingScene } from "../../render/scene";
+import type { MoodSample } from "../../domain/playback/LoopPlayer";
 import { sceneToSvg } from "../../render/svg";
 import type { Bubble, Kit } from "../../domain/document/types";
 
@@ -17,6 +18,8 @@ export interface StageEngineOptions {
   loopId: string | null;
   mode: StageMode;
   headRotation: { x: number; y: number; z: number };
+  /** A mood held on the stage while the user picks or edits it (FR-4.4). */
+  preview: MoodSample | null;
 }
 
 /** A frame longer than this means the tab slept; charge a nominal frame instead. */
@@ -86,11 +89,16 @@ export class StageEngine {
 
   private renderFrame(): void {
     this.advanceClocks(this.now());
-    const { bubble, kit, loopId, mode, headRotation } = this.opts;
-    const scene =
-      loopId && mode !== "stopped"
-        ? liveFrame(bubble, kit, loopId, this.loopMs, headRotation).scene
-        : restingScene(bubble, this.ambientMs, headRotation);
+    const { bubble, kit, loopId, mode, headRotation, preview } = this.opts;
+    let scene;
+    if (preview) {
+      // Manual selection owns the live state while it lasts (FR-6.1).
+      scene = moodScene(bubble, preview, this.ambientMs, headRotation);
+    } else if (loopId && mode !== "stopped") {
+      scene = liveFrame(bubble, kit, loopId, this.loopMs, headRotation).scene;
+    } else {
+      scene = restingScene(bubble, this.ambientMs, headRotation);
+    }
     const svg = sceneToSvg(scene);
     // A paused stage re-serializes to the same bytes every frame; skip the write.
     if (svg === this.lastSvg) return;

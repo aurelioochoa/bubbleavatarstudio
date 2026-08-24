@@ -16,6 +16,11 @@ beforeEach(() => {
   vi.stubGlobal("cancelAnimationFrame", () => {});
 });
 
+/** Height of the first eye rect the stage is currently showing. */
+function eyeHeight(stage: HTMLElement): number {
+  return Number(stage.querySelector("rect")?.getAttribute("height") ?? "0");
+}
+
 describe("StudioView", () => {
   it("renders shell with tabs and default bubble", () => {
     render(<StudioView />);
@@ -107,6 +112,26 @@ describe("StudioView", () => {
     await user.click(stop);
     expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
     expect(stop.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("selecting a mood updates the stage and takes over playback (FR-4.4, FR-6.1)", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    const stage = screen.getByLabelText("bubble stage");
+    await user.click(screen.getByRole("tab", { name: "Ciclos" }));
+    await user.click(screen.getByRole("button", { name: "Reproducir" }));
+
+    await user.click(screen.getByRole("tab", { name: "Ánimos" }));
+    const before = eyeHeight(stage);
+    expect(before).toBeGreaterThan(0);
+
+    // "sleepy" squashes the eyes, so the stage must visibly change.
+    await user.click(screen.getByRole("button", { name: "sleepy" }));
+    expect(eyeHeight(stage)).toBeLessThan(before * 0.6);
+
+    // Manual selection owns the live state, so playback is no longer running.
+    await user.click(screen.getByRole("tab", { name: "Ciclos" }));
+    expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
   });
 
   it("stops when the target bubble cannot play the current loop (FR-6.4)", async () => {

@@ -47,6 +47,7 @@ function renderStage() {
       kit={kit}
       loopId={kit.loops[0]?.id ?? null}
       mode="stopped"
+      preview={null}
       onPause={() => {}}
     />,
   );

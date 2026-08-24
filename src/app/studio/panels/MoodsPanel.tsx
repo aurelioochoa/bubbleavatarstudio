@@ -1,14 +1,20 @@
 // Moods panel: relative per-eye deltas + color overrides (FR-4). Edits are
 // cancelable: the editor works on a draft until committed.
 import { useState } from "react";
-import type { Kit, MoodEye } from "../../../domain/document/types";
+import { moodScene } from "../../../render/scene";
+import { sceneToSvg } from "../../../render/svg";
+import type { Bubble, Kit, MoodEye } from "../../../domain/document/types";
+import type { MoodSample } from "../../../domain/playback/LoopPlayer";
 import type { Action } from "../store";
 import type { MessageKey } from "../../i18n";
 
 export interface MoodsPanelProps {
   kit: Kit;
+  bubble: Bubble;
   dispatch: React.Dispatch<Action>;
   t: (k: MessageKey) => string;
+  /** Shows a mood on the stage while it is picked or edited (FR-4.4). */
+  onPreview: (sample: MoodSample | null) => void;
 }
 
 const MOOD_KEYS: (keyof MoodEye)[] = [
@@ -19,7 +25,13 @@ const MOOD_KEYS: (keyof MoodEye)[] = [
   "offsetY",
 ];
 
-export function MoodsPanel({ kit, dispatch, t }: MoodsPanelProps) {
+export function MoodsPanel({
+  kit,
+  bubble,
+  dispatch,
+  t,
+  onPreview,
+}: MoodsPanelProps) {
   const [selected, setSelected] = useState<string | null>(
     kit.moods[0]?.id ?? null,
   );
@@ -27,10 +39,29 @@ export function MoodsPanel({ kit, dispatch, t }: MoodsPanelProps) {
   const [colorDraft, setColorDraft] = useState<string | null>(null);
   const mood = kit.moods.find((m) => m.id === selected) ?? null;
 
+  /** FR-4.5: cards show the mood on the real character, not an icon. */
+  const thumbnail = (sample: MoodSample): string =>
+    sceneToSvg(moodScene(bubble, sample), { background: null, size: 44 });
+
+  /** Both eyes take the same delta today; per-eye editing is a later step. */
+  const sampleOf = (eye: MoodEye, color: string | null): MoodSample => ({
+    left: eye,
+    right: eye,
+    colorOverride: color === null ? null : { body: color },
+  });
+
   const select = (id: string) => {
     setSelected(id);
     setDraft(null);
     setColorDraft(null);
+    const picked = kit.moods.find((m) => m.id === id);
+    if (picked) {
+      onPreview({
+        left: picked.left,
+        right: picked.right,
+        colorOverride: picked.colorOverride,
+      });
+    }
   };
 
   const commit = () => {
@@ -67,13 +98,24 @@ export function MoodsPanel({ kit, dispatch, t }: MoodsPanelProps) {
             onClick={() => {
               select(m.id);
             }}
-            className={`rounded-full px-3 py-1 text-xs ${
+            className={`flex w-[4.5rem] flex-col items-center gap-1 rounded-lg p-1.5 text-[10px] ${
               m.id === selected
                 ? "bg-[#6c7bff] text-white"
                 : "bg-white/5 text-[#e8eaf6]"
             }`}
           >
-            {m.name}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none block h-11 w-11"
+              dangerouslySetInnerHTML={{
+                __html: thumbnail({
+                  left: m.left,
+                  right: m.right,
+                  colorOverride: m.colorOverride,
+                }),
+              }}
+            />
+            <span className="w-full truncate text-center">{m.name}</span>
           </button>
         ))}
         <button
@@ -84,7 +126,7 @@ export function MoodsPanel({ kit, dispatch, t }: MoodsPanelProps) {
               name: `mood ${String(kit.moods.length + 1)}`,
             });
           }}
-          className="rounded-full border border-dashed border-white/20 px-3 py-1 text-xs text-[#9aa0c3]"
+          className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-lg border border-dashed border-white/20 text-xs text-[#9aa0c3]"
         >
           + {t("moods.add")}
         </button>
@@ -118,7 +160,9 @@ export function MoodsPanel({ kit, dispatch, t }: MoodsPanelProps) {
                 step={0.05}
                 value={current[k]}
                 onChange={(e) => {
-                  setDraft({ ...current, [k]: Number(e.target.value) });
+                  const next = { ...current, [k]: Number(e.target.value) };
+                  setDraft(next);
+                  onPreview(sampleOf(next, colorDraft ?? null));
                 }}
                 className="w-full accent-[#6c7bff]"
               />
@@ -131,6 +175,7 @@ export function MoodsPanel({ kit, dispatch, t }: MoodsPanelProps) {
               value={colorDraft ?? mood.colorOverride?.body ?? "#6c7bff"}
               onChange={(e) => {
                 setColorDraft(e.target.value);
+                onPreview(sampleOf(current, e.target.value));
               }}
               className="h-7 w-12 cursor-pointer rounded border border-white/10 bg-transparent"
             />
@@ -148,6 +193,12 @@ export function MoodsPanel({ kit, dispatch, t }: MoodsPanelProps) {
               onClick={() => {
                 setDraft(null);
                 setColorDraft(null);
+                // FR-4.4: cancelling restores the stage to the saved mood.
+                onPreview({
+                  left: mood.left,
+                  right: mood.right,
+                  colorOverride: mood.colorOverride,
+                });
               }}
               className="rounded bg-white/5 px-3 py-1.5 text-xs text-[#e8eaf6]"
             >
