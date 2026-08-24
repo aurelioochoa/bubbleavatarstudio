@@ -7,6 +7,7 @@ import {
   ringPath,
   fmt,
 } from "../domain/geometry/primitives";
+import { projectFace, type FaceProjection } from "../domain/geometry/projection";
 import { ambientAt, blinkAt } from "../domain/playback/ambient";
 import { LoopPlayer, type MoodSample } from "../domain/playback/LoopPlayer";
 import type {
@@ -24,6 +25,8 @@ export interface EyeRender {
   rotationDeg: number;
   /** Corner rounding, 0 = rectangle, 1 = capsule (FR-3.1). */
   roundness: number;
+  /** Fades to 0 as the anchor wraps behind the silhouette (FR-8.2). */
+  opacity: number;
   /** Vertical squash incl. mood scale and blink closure (0..1). */
   scaleY: number;
   scaleX: number;
@@ -39,6 +42,12 @@ export interface ShapeRender {
 export interface Scene {
   /** Square viewBox side. */
   size: number;
+  /**
+   * Position and roll of the head. Everything else in the scene is expressed
+   * in the face frame and inherits this, so the eyes and extras travel with
+   * the body instead of floating over it.
+   */
+  head: { transform: string };
   body: ShapeRender;
   /** Sorted back-to-front by z. */
   extras: ShapeRender[];
@@ -80,32 +89,60 @@ function foreshorten(deg: number): number {
   return Math.abs(Math.cos(deg * DEG));
 }
 
+/** Local foreshortening at an anchor, measured from the projection itself. */
+function surfaceScale(
+  projection: FaceProjection,
+  px: number,
+  py: number,
+): { x: number; y: number } {
+  const step = 1;
+  const dx =
+    (projection.project(px + step, py).x - projection.project(px - step, py).x) /
+    (2 * step);
+  const dy =
+    (projection.project(px, py + step).y - projection.project(px, py - step).y) /
+    (2 * step);
+  return { x: Math.abs(dx), y: Math.abs(dy) };
+}
+
 function eyeRender(
   bubble: Bubble,
   side: "left" | "right",
   moodEye: MoodEye,
   ambientEyeY: number,
   blink: number,
+  projection: FaceProjection,
 ): EyeRender {
   const face = bubble.restingFace;
   const place = face[side];
   const dir = side === "left" ? -1 : 1;
-  const x = dir * (face.spacing / 2) + place.offsetX + moodEye.offsetX;
-  const y = place.offsetY + moodEye.offsetY + ambientEyeY;
+  const flatX = dir * (face.spacing / 2) + place.offsetX + moodEye.offsetX;
+  const flatY = place.offsetY + moodEye.offsetY + ambientEyeY;
+  const anchor = projection.project(flatX, flatY);
+  const surface = surfaceScale(projection, flatX, flatY);
+  // Wrapping past the equator hides the eye; the last stretch fades so it does
+  // not pop out of existence.
+  const rim = Math.max(1, Math.min(bubble.body.surface.width, bubble.body.surface.height) * 0.06);
+  const opacity = Math.max(0, Math.min(1, anchor.depth / rim));
+  const x = anchor.x;
+  const y = anchor.y;
   return {
     x,
     y,
+    opacity,
     width:
       face.eye.width *
       place.scaleX *
       moodEye.scaleX *
-      foreshorten(moodEye.rotationYDeg),
+      foreshorten(moodEye.rotationYDeg) *
+      surface.x,
     height:
       face.eye.height *
       place.scaleY *
       moodEye.scaleY *
       (1 - blink) *
-      foreshorten(moodEye.rotationXDeg),
+      foreshorten(moodEye.rotationXDeg) *
+      surface.y,
     rotationDeg: place.rotationDeg + moodEye.rotationZDeg,
     roundness: face.eye.roundness,
     scaleX: place.scaleX * moodEye.scaleX,
@@ -119,11 +156,12 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   const bodyY = surface.y + live.ambient.bodyY;
   const bodyRot =
     surface.rotationDeg + live.ambient.bodyRotationDeg + live.headRotation.z;
-  // Perspective + head pitch/yaw approximated with skews on the group.
-  const skewX =
-    Math.tan((live.headRotation.y * surface.perspective * Math.PI) / 180) * 10;
-  const skewY =
-    Math.tan((live.headRotation.x * surface.perspective * Math.PI) / 180) * 10;
+  const projection = projectFace({
+    width: surface.width,
+    height: surface.height,
+    perspective: surface.perspective,
+    rotation: live.headRotation,
+  });
 
   const moodColors = live.mood.colorOverride;
   const bodyFill = moodColors?.body ?? bubble.colors.body;
@@ -143,7 +181,14 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
 
   const eyeFill = moodColors?.eyes ?? bubble.colors.eyes;
   const left = {
-    ...eyeRender(bubble, "left", live.mood.left, live.ambient.eyeY, live.blink),
+    ...eyeRender(
+      bubble,
+      "left",
+      live.mood.left,
+      live.ambient.eyeY,
+      live.blink,
+      projection,
+    ),
     fill: eyeFill,
   };
   const right = {
@@ -153,12 +198,16 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       live.mood.right,
       live.ambient.eyeY,
       live.blink,
+      projection,
     ),
     fill: eyeFill,
   };
 
   return {
     size: SCENE_SIZE,
+    head: {
+      transform: `translate(${fmt(surface.x)} ${fmt(bodyY)}) rotate(${fmt(bodyRot)})`,
+    },
     body: {
       path: blobPath({
         width: surface.width,
@@ -166,7 +215,8 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
         roundness: surface.roundness,
       }),
       fill: bodyFill,
-      transform: `translate(${fmt(surface.x)} ${fmt(bodyY)}) rotate(${fmt(bodyRot)}) skewX(${fmt(skewX)}) skewY(${fmt(skewY)})`,
+      // Turning the head foreshortens the silhouette rather than shearing it.
+      transform: `scale(${fmt(projection.scaleX)} ${fmt(projection.scaleY)})`,
     },
     extras,
     eyes: { left, right },

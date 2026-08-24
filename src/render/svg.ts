@@ -8,9 +8,12 @@ function eyeElement(id: string, eye: Scene["eyes"]["left"]): string {
   const w = Math.max(eye.width, 0);
   const h = Math.max(eye.height, 0);
   // Half the shorter side is a full capsule; roundness scales in from there.
-  const rx = fmt(((Math.min(w, h) / 2) * eye.roundness));
+  const rx = fmt((Math.min(w, h) / 2) * eye.roundness);
+  // Omitted at full opacity so a face-on render keeps its minimal markup.
+  const opacity =
+    eye.opacity >= 1 ? "" : ` opacity="${fmt(Math.max(eye.opacity, 0))}"`;
   return [
-    `<g id="${id}" transform="translate(${fmt(eye.x)} ${fmt(eye.y)}) rotate(${fmt(eye.rotationDeg)})">`,
+    `<g id="${id}" transform="translate(${fmt(eye.x)} ${fmt(eye.y)}) rotate(${fmt(eye.rotationDeg)})"${opacity}>`,
     `<rect x="${fmt(-w / 2)}" y="${fmt(-h / 2)}" width="${fmt(w)}" height="${fmt(h)}" rx="${rx}" fill="${eye.fill}"/>`,
     "</g>",
   ].join("");
@@ -73,9 +76,12 @@ export function sceneToSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size)} ${fmt(scene.size)}" width="${box}" height="${box}">` +
     bg.join("") +
     `<g id="bubble" transform="translate(${center} ${center})">` +
+    // The head group owns position and roll; body, extras and eyes are all
+    // expressed in the face frame and inherit it.
+    `<g id="head" transform="${scene.head.transform}">` +
     `<path id="body" d="${scene.body.path}" fill="${scene.body.fill}" transform="${scene.body.transform}"/>` +
     extras +
     eyes +
-    "</g></svg>"
+    "</g></g></svg>"
   );
 }

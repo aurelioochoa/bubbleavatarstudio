@@ -9,6 +9,16 @@ import full from "../test/fixtures/full.json";
 
 const doc = full as unknown as StudioDocument;
 
+const ZERO_EYE: MoodEye = {
+  rotationXDeg: 0,
+  rotationYDeg: 0,
+  rotationZDeg: 0,
+  scaleX: 1,
+  scaleY: 1,
+  offsetX: 0,
+  offsetY: 0,
+};
+
 describe("sceneToSvg determinism", () => {
   it("produces byte-identical SVG for identical input", () => {
     const a = sceneToSvg(restingScene(doc.bubbles[0], 0));
@@ -52,17 +62,79 @@ describe("backgrounds (FR-10)", () => {
   });
 });
 
-describe("mood eye rotation (FR-4.1)", () => {
-  const ZERO_EYE: MoodEye = {
-    rotationXDeg: 0,
-    rotationYDeg: 0,
-    rotationZDeg: 0,
-    scaleX: 1,
-    scaleY: 1,
-    offsetX: 0,
-    offsetY: 0,
+describe("volume: the face sits on a surface (FR-8.2)", () => {
+  const base: Bubble = doc.bubbles[0];
+  // perspective 1 turns the face fully; the fixture's own 0.25 is exercised by
+  // the "respects perspective" case below.
+  const bubble: Bubble = {
+    ...base,
+    body: {
+      ...base.body,
+      surface: { ...base.body.surface, perspective: 1 },
+    },
   };
+  const at = (
+    rotation: { x: number; y: number; z: number },
+    who: Bubble = bubble,
+  ) =>
+    buildScene(who, {
+      tAbsMs: 0,
+      mood: {
+        left: ZERO_EYE,
+        right: ZERO_EYE,
+        colorOverride: null,
+      },
+      blink: 0,
+      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0 },
+      headRotation: rotation,
+    });
 
+  it("sweeps the eyes across the face as the head turns", () => {
+    const facing = at({ x: 0, y: 0, z: 0 });
+    const turned = at({ x: 0, y: 35, z: 0 });
+    expect(turned.eyes.left.x).not.toBeCloseTo(facing.eyes.left.x);
+    expect(turned.eyes.right.x).not.toBeCloseTo(facing.eyes.right.x);
+    // Both eyes travel the same way; the far one lags as it wraps around.
+    expect(turned.eyes.left.x).toBeGreaterThan(facing.eyes.left.x);
+    expect(turned.eyes.right.x).toBeGreaterThan(facing.eyes.right.x);
+  });
+
+  it("foreshortens an eye as its part of the surface turns away", () => {
+    const facing = at({ x: 0, y: 0, z: 0 });
+    const turned = at({ x: 0, y: 45, z: 0 });
+    expect(turned.eyes.right.width).toBeLessThan(facing.eyes.right.width);
+  });
+
+  it("hides the eye that has rotated behind the silhouette", () => {
+    const extreme = at({ x: 0, y: 85, z: 0 });
+    expect(extreme.eyes.right.opacity).toBe(0);
+    expect(extreme.eyes.left.opacity).toBeGreaterThan(0);
+  });
+
+  it("scales the silhouette instead of shearing it", () => {
+    const svg = sceneToSvg(at({ x: 25, y: 25, z: 0 }));
+    expect(svg).not.toContain("skew");
+    expect(svg).toContain("scale(");
+  });
+
+  it("carries the eyes with the head, not just the body", () => {
+    // The head group owns position and roll, so every child inherits it —
+    // the eyes used to sit outside the rotated body entirely.
+    const facing = at({ x: 0, y: 0, z: 0 });
+    const rolled = at({ x: 0, y: 0, z: 30 });
+    const angle = (scene: { head: { transform: string } }) =>
+      Number(/rotate\(([-0-9.]+)\)/.exec(scene.head.transform)?.[1] ?? "0");
+    expect(angle(rolled) - angle(facing)).toBeCloseTo(30);
+  });
+
+  it("respects the surface's own perspective setting", () => {
+    // The unmodified fixture only leans into the turn a quarter of the way.
+    const shy = at({ x: 0, y: 85, z: 0 }, base);
+    expect(shy.eyes.right.opacity).toBe(1);
+  });
+});
+
+describe("mood eye rotation (FR-4.1)", () => {
   const leftEye = (delta: Partial<MoodEye>) =>
     buildScene(doc.bubbles[0], {
       tAbsMs: 0,
@@ -160,18 +232,12 @@ describe("live frame with a playing loop", () => {
     );
   });
 
-  it("head rotation changes the transform deterministically", () => {
-    const a = liveFrame(bubble, kit, loopId, 3000, {
-      x: 15,
-      y: -10,
-      z: 5,
-    }).scene;
-    const b = liveFrame(bubble, kit, loopId, 3000, { x: 0, y: 0, z: 0 }).scene;
-    expect(a.body.transform).not.toBe(b.body.transform);
-    expect(a.body.transform).toBe(
-      liveFrame(bubble, kit, loopId, 3000, { x: 15, y: -10, z: 5 }).scene.body
-        .transform,
-    );
+  it("head rotation changes the frame deterministically", () => {
+    const frame = (r: { x: number; y: number; z: number }) =>
+      sceneToSvg(liveFrame(bubble, kit, loopId, 3000, r).scene);
+    const turned = frame({ x: 15, y: -10, z: 5 });
+    expect(turned).not.toBe(frame({ x: 0, y: 0, z: 0 }));
+    expect(turned).toBe(frame({ x: 15, y: -10, z: 5 }));
   });
 });
 
@@ -181,6 +247,7 @@ describe("ambient feeds the scene", () => {
     const s0 = restingScene(bubble, 0);
     const s1 = restingScene(bubble, 1300);
     expect(ambientAt(bubble.ambient, 1300).bodyY).not.toBe(0);
-    expect(s0.body.transform).not.toBe(s1.body.transform);
+    // Ambient drift moves the head group; the body transform is foreshortening.
+    expect(s0.head.transform).not.toBe(s1.head.transform);
   });
 });
