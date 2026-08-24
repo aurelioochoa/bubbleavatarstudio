@@ -4,13 +4,35 @@ import { sceneToSvg, type SvgOptions } from "../render/svg";
 import type { Bubble, Kit, StudioDocument } from "../domain/document/types";
 
 export const AVATAR_FORMAT = "bubble-avatar";
-export const AVATAR_VERSION = 1;
+export const AVATAR_VERSION = 2;
+
+/** Versions the runtime still reads. v1 predates the shape family (FR-2.6). */
+export type AvatarFileVersion = 1 | typeof AVATAR_VERSION;
 
 export interface PortableAvatar {
-  version: typeof AVATAR_VERSION;
+  version: AvatarFileVersion;
   kind: typeof AVATAR_FORMAT;
   bubble: Bubble;
   kit: Kit;
+}
+
+/**
+ * Accepts any avatar file the runtime still reads and returns it at the
+ * current version. v1 predates the shape family, so its surface joins v2 on
+ * "round" — the same rule migrate() applies to a v1 project, and the family
+ * whose outline is byte-identical to what v1 drew.
+ *
+ * Returns the input untouched when it is already current, so the common path
+ * costs nothing.
+ */
+export function readPortableAvatar(input: PortableAvatar): PortableAvatar {
+  if (input.version === AVATAR_VERSION) return input;
+  const next = structuredClone(input);
+  next.version = AVATAR_VERSION;
+  // The file is untrusted JSON: the field the type promises may not be there.
+  const surface = next.bubble.body.surface as { shape?: string };
+  surface.shape ??= "round";
+  return next;
 }
 
 /** Kit inlined; orphan moods (not referenced by any kept loop) are pruned. */

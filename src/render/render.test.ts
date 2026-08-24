@@ -40,6 +40,45 @@ describe("sceneToSvg determinism", () => {
   });
 });
 
+// FR-2.6 / FR-2.7: the shape family reaches the renderer. The round family is
+// the pre-v2 outline, which is what keeps the goldens above frozen.
+describe("surface shape families", () => {
+  const shaped = (patch: Partial<Bubble["body"]["surface"]>) => {
+    const b = createBubble("Shape");
+    return restingScene({
+      ...b,
+      body: { ...b.body, surface: { ...b.body.surface, ...patch } },
+    }).body.path;
+  };
+
+  it("round is the outline the pre-v2 renderer drew", () => {
+    expect(shaped({ shape: "round" })).toBe(
+      shaped({ shape: "organic", wobble: 0 }),
+    );
+  });
+
+  it("organic wobble moves the outline off round", () => {
+    expect(shaped({ shape: "organic", wobble: 0.5 })).not.toBe(
+      shaped({ shape: "round" }),
+    );
+  });
+
+  it("the organic seed picks a different arrangement of the same bumps", () => {
+    const a = shaped({ shape: "organic", wobble: 0.5, seed: 1 });
+    const b = shaped({ shape: "organic", wobble: 0.5, seed: 2 });
+    expect(a).not.toBe(b);
+  });
+
+  it("drop narrows the outline toward its top", () => {
+    expect(shaped({ shape: "drop" })).not.toBe(shaped({ shape: "round" }));
+  });
+
+  it("stays deterministic per family", () => {
+    const opts = { shape: "organic" as const, wobble: 0.6, seed: 7, lobes: 6 };
+    expect(shaped(opts)).toBe(shaped(opts));
+  });
+});
+
 describe("backgrounds (FR-10)", () => {
   it("solid, linear and radial render differently and stay valid", () => {
     const scene = restingScene(doc.bubbles[0], 0);

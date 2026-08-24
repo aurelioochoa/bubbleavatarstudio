@@ -1,11 +1,7 @@
 // Surface shape families (FR-2.6, FR-2.7). Pure math: every family is a
 // deterministic function of its parameters, because the renderer, the goldens
 // and the exported files all rely on identical input giving identical bytes.
-import {
-  smoothClosedPath,
-  superellipsePoints,
-  type Point,
-} from "./primitives";
+import { smoothClosedPath, superellipsePoints, type Point } from "./primitives";
 
 export type ShapeFamily = "round" | "organic" | "drop";
 
@@ -16,12 +12,12 @@ export interface SurfaceShapeOptions {
   /** 0 squares the silhouette off, 1 is an ellipse. */
   roundness: number;
   /** organic: how many bumps run around the perimeter. */
-  lobes?: number;
+  lobes?: number | undefined;
   /** organic: how far the radius strays from round, 0..1. */
-  wobble?: number;
+  wobble?: number | undefined;
   /** organic: which arrangement of bumps. */
-  seed?: number;
-  samples?: number;
+  seed?: number | undefined;
+  samples?: number | undefined;
 }
 
 /** How far full wobble may push the outline past its box. */

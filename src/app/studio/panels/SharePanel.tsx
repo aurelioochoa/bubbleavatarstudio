@@ -42,12 +42,13 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
 
   const exportAvatar = () => {
     const avatar = buildPortableAvatar(bubble, doc);
-    const doc2 = { ...doc, bubbles: [avatar.bubble], starterKit: avatar.kit };
-    // Validate a projected document to guarantee referential integrity pre-download.
-    const projected: typeof doc2 & {
-      version: 1;
-      kind: "bubble-studio-project";
-    } = doc2;
+    // Validate a projected document to guarantee referential integrity
+    // pre-download. Typed as the document itself so a schema bump reaches here.
+    const projected: StudioDocument = {
+      ...doc,
+      bubbles: [avatar.bubble],
+      starterKit: avatar.kit,
+    };
     if (!validateDocument(projected).ok) return;
     download(
       `${bubble.name.toLowerCase().replace(/\s+/g, "-")}.bubble-avatar.json`,

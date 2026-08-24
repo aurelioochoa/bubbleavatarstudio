@@ -1,11 +1,60 @@
-// Primary surface: size, shape, position and orientation (FR-2.1, FR-2.2).
+// Primary surface: shape family, size, position and orientation
+// (FR-2.1, FR-2.2, FR-2.6, FR-2.7).
 import { NumberField, Slider, type SectionProps } from "./fields";
-import { Card } from "../../ui";
+import { Card, Segmented } from "../../ui";
+import type { ShapeFamily } from "../../../../domain/document/types";
 
 export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
   const surface = bubble.body.surface;
   return (
     <Card title={t("look.surface")}>
+      {/* FR-2.6: the outline family is a property of the bubble. */}
+      <Segmented<ShapeFamily>
+        label={t("look.shape")}
+        value={surface.shape}
+        options={[
+          { value: "round", label: t("look.shapeRound") },
+          { value: "organic", label: t("look.shapeOrganic") },
+          { value: "drop", label: t("look.shapeDrop") },
+        ]}
+        onChange={(shape) => {
+          dispatch({ type: "surface/patch", patch: { shape } });
+        }}
+      />
+      {/* FR-2.7: only the organic family has bumps to tune. */}
+      {surface.shape === "organic" && (
+        <>
+          <NumberField
+            label={t("look.lobes")}
+            value={surface.lobes ?? 5}
+            min={3}
+            max={10}
+            onChange={(v) => {
+              dispatch({ type: "surface/patch", patch: { lobes: v } });
+            }}
+          />
+          <NumberField
+            label={t("look.wobble")}
+            value={surface.wobble ?? 0}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(v) => {
+              dispatch({ type: "surface/patch", patch: { wobble: v } });
+            }}
+          />
+          <NumberField
+            label={t("look.seed")}
+            value={surface.seed ?? 0}
+            onChange={(v) => {
+              dispatch({
+                type: "surface/patch",
+                patch: { seed: Math.round(v) },
+              });
+            }}
+          />
+        </>
+      )}
       <NumberField
         label={t("look.width")}
         value={surface.width}

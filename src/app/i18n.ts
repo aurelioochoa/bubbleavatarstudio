@@ -16,6 +16,13 @@ export type MessageKey =
   | "look.width"
   | "look.height"
   | "look.roundness"
+  | "look.shape"
+  | "look.shapeRound"
+  | "look.shapeOrganic"
+  | "look.shapeDrop"
+  | "look.lobes"
+  | "look.wobble"
+  | "look.seed"
   | "look.rotation"
   | "look.perspective"
   | "look.colors"
@@ -111,6 +118,13 @@ const es: Record<MessageKey, string> = {
   "look.width": "Ancho",
   "look.height": "Alto",
   "look.roundness": "Redondez",
+  "look.shape": "Familia de forma",
+  "look.shapeRound": "Redonda",
+  "look.shapeOrganic": "Orgánica",
+  "look.shapeDrop": "Gota",
+  "look.lobes": "Lóbulos",
+  "look.wobble": "Irregularidad",
+  "look.seed": "Semilla",
   "look.rotation": "Rotación",
   "look.perspective": "Perspectiva",
   "look.colors": "Colores",
@@ -207,6 +221,13 @@ const en: Record<MessageKey, string> = {
   "look.width": "Width",
   "look.height": "Height",
   "look.roundness": "Roundness",
+  "look.shape": "Shape family",
+  "look.shapeRound": "Round",
+  "look.shapeOrganic": "Organic",
+  "look.shapeDrop": "Drop",
+  "look.lobes": "Lobes",
+  "look.wobble": "Wobble",
+  "look.seed": "Seed",
   "look.rotation": "Rotation",
   "look.perspective": "Perspective",
   "look.colors": "Colors",

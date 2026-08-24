@@ -32,7 +32,7 @@ describe("validateDocument — valid documents", () => {
 describe("validateDocument — version and kind", () => {
   it("fails E_VERSION on wrong version", () => {
     const doc = clone();
-    (doc as { version: number }).version = 2;
+    (doc as { version: number }).version = 3;
     expect(codes(doc)).toContain("E_VERSION");
   });
 
@@ -72,6 +72,45 @@ describe("validateDocument — identifiers and references", () => {
 });
 
 describe("validateDocument — ranges, names, colors, shapes", () => {
+  // FR-2.6 / FR-2.7 (docs/03 §7.3).
+  it("fails E_SHAPE on an unknown shape family", () => {
+    const doc = clone();
+    (doc.bubbles[0].body.surface as { shape: string }).shape = "hexagon";
+    expect(codes(doc)).toContain("E_SHAPE");
+  });
+
+  it("accepts the organic parameters in range", () => {
+    const doc = clone();
+    const s = doc.bubbles[0].body.surface;
+    s.shape = "organic";
+    s.lobes = 5;
+    s.wobble = 0.4;
+    s.seed = 12;
+    expect(validateDocument(doc)).toEqual({ ok: true });
+  });
+
+  it("treats the organic parameters as optional", () => {
+    const doc = clone();
+    doc.bubbles[0].body.surface.shape = "organic";
+    expect(validateDocument(doc)).toEqual({ ok: true });
+  });
+
+  it("fails E_RANGE on organic parameters out of range", () => {
+    const tooManyLobes = clone();
+    tooManyLobes.bubbles[0].body.surface.lobes = 99;
+    expect(codes(tooManyLobes)).toContain("E_RANGE");
+
+    const tooMuchWobble = clone();
+    tooMuchWobble.bubbles[0].body.surface.wobble = 1.5;
+    expect(codes(tooMuchWobble)).toContain("E_RANGE");
+  });
+
+  it("fails E_RANGE on a non-integer seed", () => {
+    const doc = clone();
+    doc.bubbles[0].body.surface.seed = 1.5;
+    expect(codes(doc)).toContain("E_RANGE");
+  });
+
   it("fails E_RANGE on out-of-range surface roundness", () => {
     const doc = clone();
     doc.bubbles[0].body.surface.roundness = 1.5;

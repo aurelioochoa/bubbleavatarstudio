@@ -1,4 +1,7 @@
-// Domain types — Bubble Avatar v1 schema (docs/03). Pure TS, no React/DOM.
+// Domain types — Bubble Avatar v2 schema (docs/03). Pure TS, no React/DOM.
+import type { ShapeFamily } from "../geometry/shapes";
+
+export type { ShapeFamily };
 export interface Vec2 {
   x: number;
   y: number;
@@ -11,6 +14,8 @@ export type ColorRole = "body" | "accent" | "custom";
 
 export interface Surface {
   kind: "blob";
+  /** FR-2.6. The outline family; "round" is the pre-v2 superellipse. */
+  shape: ShapeFamily;
   width: number;
   height: number;
   roundness: number; // 0..1
@@ -18,6 +23,12 @@ export interface Surface {
   y: number;
   rotationDeg: number;
   perspective: number; // 0..1
+  /** FR-2.7, organic only. Bumps around the perimeter, 3..10. */
+  lobes?: number;
+  /** FR-2.7, organic only. How far the radius strays from round, 0..1. */
+  wobble?: number;
+  /** FR-2.7, organic only. Which arrangement of bumps; any integer. */
+  seed?: number;
 }
 
 export interface ExtraPrimitive {
@@ -141,7 +152,7 @@ export interface Bubble {
 export type Locale = "es" | "en";
 
 export interface StudioDocument {
-  version: 1;
+  version: 2;
   kind: "bubble-studio-project";
   activeBubbleId: string | null;
   locale: Locale;

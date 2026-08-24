@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_min",
   "locale": "es",
@@ -10,6 +10,7 @@
       "body": {
         "surface": {
           "kind": "blob",
+          "shape": "round",
           "width": 200,
           "height": 180,
           "roundness": 0.8,

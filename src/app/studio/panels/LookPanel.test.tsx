@@ -1,8 +1,15 @@
-// Look panel flows: surface geometry, colors, eye shape and placement, extra
-// primitives and ambient idle motion (FR-2, FR-3, FR-7). The panel is rendered
-// with a spy dispatch so each control is checked against the action it commits.
+// Look panel flows: surface geometry, the shape family, colors, eye shape and
+// placement, extra primitives and ambient idle motion (FR-2, FR-2.6, FR-2.7,
+// FR-3, FR-7). The panel is rendered with a spy dispatch so each control is
+// checked against the action it commits.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LookPanel } from "./LookPanel";
 import { createBubble } from "../../../domain/document/create";
@@ -55,6 +62,58 @@ describe("Look panel · surface (FR-2.2)", () => {
   });
 });
 
+describe("Look panel · shape family (FR-2.6, FR-2.7)", () => {
+  it("picks a shape family", async () => {
+    const { dispatch, user } = setup();
+    await user.click(screen.getByRole("radio", { name: t("look.shapeDrop") }));
+    expect(lastOf(dispatch, "surface/patch")?.patch).toEqual({ shape: "drop" });
+  });
+
+  it("hides the organic parameters unless organic is the family", () => {
+    setup();
+    expect(screen.queryByLabelText(t("look.lobes"))).toBeNull();
+
+    const organic = createBubble("Organic");
+    cleanup();
+    render(
+      <LookPanel
+        bubble={{
+          ...organic,
+          body: {
+            ...organic.body,
+            surface: { ...organic.body.surface, shape: "organic" },
+          },
+        }}
+        dispatch={vi.fn()}
+        t={t}
+      />,
+    );
+    expect(screen.getByLabelText(t("look.lobes"))).toBeTruthy();
+    expect(screen.getByLabelText(t("look.wobble"))).toBeTruthy();
+  });
+
+  it("edits the organic parameters", () => {
+    const organic = createBubble("Organic");
+    const dispatch = vi.fn<(a: Action) => void>();
+    cleanup();
+    render(
+      <LookPanel
+        bubble={{
+          ...organic,
+          body: {
+            ...organic.body,
+            surface: { ...organic.body.surface, shape: "organic" },
+          },
+        }}
+        dispatch={dispatch}
+        t={t}
+      />,
+    );
+    setNumber(t("look.lobes"), "7");
+    expect(lastOf(dispatch, "surface/patch")?.patch).toEqual({ lobes: 7 });
+  });
+});
+
 describe("Look panel · colors (FR-2.3)", () => {
   it("edits the accent color used by extras", () => {
     const { dispatch } = setup();
@@ -87,7 +146,9 @@ describe("Look panel · eyes (FR-3.1, FR-3.2, FR-3.3)", () => {
         t={t}
       />,
     );
-    expect(screen.queryByRole("group", { name: t("look.rightEye") })).toBeNull();
+    expect(
+      screen.queryByRole("group", { name: t("look.rightEye") }),
+    ).toBeNull();
 
     cleanup();
     render(
@@ -166,7 +227,9 @@ describe("Look panel · extras (FR-2.3, FR-2.4)", () => {
     expect(updates).toHaveLength(2);
 
     dispatch.mockClear();
-    const [remove] = screen.getAllByRole("button", { name: t("common.remove") });
+    const [remove] = screen.getAllByRole("button", {
+      name: t("common.remove"),
+    });
     if (!remove) throw new Error("remove control missing");
     await user.click(remove);
     expect(lastOf(dispatch, "extra/remove")?.extraId).toBe("ex_1");

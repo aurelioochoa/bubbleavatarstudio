@@ -1,9 +1,9 @@
 // BubbleAvatar React runtime (FR-10, docs/06). SSR-safe: renders the resting
 // SVG on the server; starts the rAF loop only after mount.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { restingScene, liveFrame } from "../render/scene";
 import { sceneToSvg } from "../render/svg";
-import type { PortableAvatar } from "../export/avatar";
+import { readPortableAvatar, type PortableAvatar } from "../export/avatar";
 import type { Kit } from "../domain/document/types";
 
 export interface BubbleAvatarProps {
@@ -26,6 +26,9 @@ export function BubbleAvatar({
 }: BubbleAvatarProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  // An embedded file may predate the current schema (FR-2.6 shipped in v2).
+  // Read it once: the SSR fallback and the frame loop must agree on the shape.
+  const def = useMemo(() => readPortableAvatar(definition), [definition]);
 
   useEffect(() => {
     setMounted(true);
@@ -34,11 +37,11 @@ export function BubbleAvatar({
   useEffect(() => {
     const host = hostRef.current;
     if (!host || !mounted) return;
-    const kit: Kit = definition.kit;
+    const kit: Kit = def.kit;
     const first = kit.loops[0];
     const loopId = loop ?? (kit.loops.length > 0 ? first.id : null);
     if (!loopId || !autoplay || paused) {
-      host.innerHTML = sceneToSvg(restingScene(definition.bubble, 0), {
+      host.innerHTML = sceneToSvg(restingScene(def.bubble, 0), {
         background: null,
         size,
       });
@@ -48,7 +51,7 @@ export function BubbleAvatar({
     let raf = 0;
     const tick = () => {
       const { scene } = liveFrame(
-        definition.bubble,
+        def.bubble,
         kit,
         loopId,
         performance.now() - start,
@@ -65,11 +68,11 @@ export function BubbleAvatar({
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [definition, loop, autoplay, paused, mounted, size]);
+  }, [def, loop, autoplay, paused, mounted, size]);
 
   const fallback = mounted
     ? ""
-    : sceneToSvg(restingScene(definition.bubble, 0), {
+    : sceneToSvg(restingScene(def.bubble, 0), {
         background: null,
         size,
       });
@@ -78,7 +81,7 @@ export function BubbleAvatar({
     <div
       ref={hostRef}
       role="img"
-      aria-label={ariaLabel ?? definition.bubble.name}
+      aria-label={ariaLabel ?? def.bubble.name}
       style={{ width: size, height: size }}
       // SSR: inline the resting SVG as initial content; hydrated by the loop.
       dangerouslySetInnerHTML={fallback ? { __html: fallback } : undefined}

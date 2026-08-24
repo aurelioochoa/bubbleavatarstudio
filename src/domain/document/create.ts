@@ -24,6 +24,7 @@ export function createBubble(name: string, id = newId("bbl")): Bubble {
     body: {
       surface: {
         kind: "blob",
+        shape: "round",
         width: 220,
         height: 200,
         roundness: 0.96,
@@ -132,7 +133,7 @@ export function createDefaultDocument(): StudioDocument {
   const kit = starterKit();
   const bubble = createBubble("Bubble");
   return {
-    version: 1,
+    version: 2,
     kind: "bubble-studio-project",
     activeBubbleId: bubble.id,
     locale: "es",

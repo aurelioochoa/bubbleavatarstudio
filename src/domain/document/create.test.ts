@@ -17,6 +17,12 @@ describe("createBubble", () => {
     expect(a.ambient.enabled).toBe(true);
   });
 
+  // FR-2.6: the shape family is a property of the bubble, and a new bubble
+  // starts on the family that renders identically to the pre-v2 outline.
+  it("starts on the round shape family", () => {
+    expect(createBubble("Mango").body.surface.shape).toBe("round");
+  });
+
   it("trims names", () => {
     expect(createBubble("  Pip ").name).toBe("Pip");
   });
@@ -25,8 +31,8 @@ describe("createBubble", () => {
 describe("createDefaultDocument", () => {
   const doc = createDefaultDocument();
 
-  it("has version 1, kind and locale es", () => {
-    expect(doc.version).toBe(1);
+  it("has version 2, kind and locale es", () => {
+    expect(doc.version).toBe(2);
     expect(doc.kind).toBe("bubble-studio-project");
     expect(doc.locale).toBe("es");
   });

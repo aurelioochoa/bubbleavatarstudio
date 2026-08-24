@@ -27,6 +27,7 @@ const EXTRA_KINDS = new Set(["blob", "capsule", "circle", "ring"]);
 const COLOR_ROLES = new Set(["body", "accent", "custom"]);
 const TRANSITIONS = new Set(["linear", "ease", "spring", "step"]);
 const MODES = new Set(["loop", "once", "pingpong"]);
+const SHAPE_FAMILIES = new Set(["round", "organic", "drop"]);
 
 class Ctx {
   readonly issues: ValidationIssue[] = [];
@@ -62,9 +63,23 @@ function pos(ctx: Ctx, v: unknown, path: string): void {
   }
 }
 
-function int(ctx: Ctx, v: unknown, path: string): void {
+function int(
+  ctx: Ctx,
+  v: unknown,
+  path: string,
+  min?: number,
+  max?: number,
+): void {
   if (typeof v !== "number" || !Number.isInteger(v)) {
     ctx.fail("E_RANGE", path, "expected integer");
+    return;
+  }
+  if ((min !== undefined && v < min) || (max !== undefined && v > max)) {
+    ctx.fail(
+      "E_RANGE",
+      path,
+      `expected integer in [${String(min)}, ${String(max)}]`,
+    );
   }
 }
 
@@ -259,6 +274,7 @@ function validateBubble(
   }
   const s = surface as Record<string, unknown>;
   oneOf(ctx, s.kind, new Set(["blob"]), `${path}.body.surface.kind`);
+  oneOf(ctx, s.shape, SHAPE_FAMILIES, `${path}.body.surface.shape`);
   pos(ctx, s.width, `${path}.body.surface.width`);
   pos(ctx, s.height, `${path}.body.surface.height`);
   num(ctx, s.roundness, `${path}.body.surface.roundness`, 0, 1);
@@ -266,6 +282,11 @@ function validateBubble(
   num(ctx, s.x, `${path}.body.surface.x`, -2000, 2000);
   num(ctx, s.y, `${path}.body.surface.y`, -2000, 2000);
   num(ctx, s.rotationDeg, `${path}.body.surface.rotationDeg`, -180, 180);
+  if (s.lobes !== undefined)
+    int(ctx, s.lobes, `${path}.body.surface.lobes`, 3, 10);
+  if (s.wobble !== undefined)
+    num(ctx, s.wobble, `${path}.body.surface.wobble`, 0, 1);
+  if (s.seed !== undefined) int(ctx, s.seed, `${path}.body.surface.seed`);
 
   if (!Array.isArray(bodyRec.extras)) {
     ctx.fail("E_SHAPE", `${path}.body.extras`);
@@ -387,7 +408,7 @@ export function validateDocument(doc: unknown): ValidateResult {
     return { ok: false, issues: [{ code: "E_SHAPE", path: "$" }] };
   }
   const d = doc as Record<string, unknown>;
-  ctx.check(d.version === 1, "E_VERSION", "$.version");
+  ctx.check(d.version === 2, "E_VERSION", "$.version");
   ctx.check(d.kind === "bubble-studio-project", "E_KIND", "$.kind");
   if (!Array.isArray(d.bubbles)) {
     ctx.fail("E_SHAPE", "$.bubbles");

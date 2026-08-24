@@ -8,7 +8,11 @@ import {
   fmt,
   fmtScale,
 } from "../domain/geometry/primitives";
-import { projectFace, type FaceProjection } from "../domain/geometry/projection";
+import { surfacePath } from "../domain/geometry/shapes";
+import {
+  projectFace,
+  type FaceProjection,
+} from "../domain/geometry/projection";
 import { ambientAt, blinkAt, RESTING_BLINK } from "../domain/playback/ambient";
 import { darken, lighten, luminance } from "./color";
 import { LoopPlayer, type MoodSample } from "../domain/playback/LoopPlayer";
@@ -116,10 +120,12 @@ function surfaceScale(
 ): { x: number; y: number } {
   const step = 1;
   const dx =
-    (projection.project(px + step, py).x - projection.project(px - step, py).x) /
+    (projection.project(px + step, py).x -
+      projection.project(px - step, py).x) /
     (2 * step);
   const dy =
-    (projection.project(px, py + step).y - projection.project(px, py - step).y) /
+    (projection.project(px, py + step).y -
+      projection.project(px, py - step).y) /
     (2 * step);
   return { x: Math.abs(dx), y: Math.abs(dy) };
 }
@@ -142,7 +148,10 @@ function eyeRender(
   const surface = surfaceScale(projection, flatX, flatY);
   // Wrapping past the equator hides the eye; the last stretch fades so it does
   // not pop out of existence.
-  const rim = Math.max(1, Math.min(bubble.body.surface.width, bubble.body.surface.height) * 0.06);
+  const rim = Math.max(
+    1,
+    Math.min(bubble.body.surface.width, bubble.body.surface.height) * 0.06,
+  );
   const opacity = Math.max(0, Math.min(1, anchor.depth / rim));
   const x = anchor.x;
   const y = anchor.y;
@@ -259,7 +268,11 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       transform: `translate(${fmt(surface.x)} ${fmt(bodyY)}) rotate(${fmt(bodyRot)})`,
     },
     body: {
-      path: blobPath({
+      path: surfacePath({
+        shape: surface.shape,
+        lobes: surface.lobes,
+        wobble: surface.wobble,
+        seed: surface.seed,
         width: surface.width,
         height: surface.height,
         roundness: surface.roundness,
