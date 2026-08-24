@@ -1,11 +1,11 @@
 // Primary surface: size, shape, position and orientation (FR-2.1, FR-2.2).
-import { NumberField, SectionTitle, Slider, type SectionProps } from "./fields";
+import { NumberField, Slider, type SectionProps } from "./fields";
+import { Card } from "../../ui";
 
 export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
   const surface = bubble.body.surface;
   return (
-    <section className="space-y-2">
-      <SectionTitle>{t("look.surface")}</SectionTitle>
+    <Card title={t("look.surface")}>
       <NumberField
         label={t("look.width")}
         value={surface.width}
@@ -71,6 +71,6 @@ export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
           dispatch({ type: "surface/patch", patch: { rotationDeg: v } });
         }}
       />
-    </section>
+    </Card>
   );
 }

@@ -3,15 +3,15 @@ export type MessageKey =
   | "app.title"
   | "rail.bubbles"
   | "rail.add"
-  | "rail.rename"
-  | "rail.menu"
-  | "rail.moveUp"
-  | "rail.moveDown"
-  | "empty.title"
   | "tab.look"
   | "tab.moods"
   | "tab.loops"
   | "tab.share"
+  | "stage.playing"
+  | "stage.paused"
+  | "stage.resting"
+  | "stage.transport"
+  | "stage.loop"
   | "look.surface"
   | "look.width"
   | "look.height"
@@ -54,6 +54,8 @@ export type MessageKey =
   | "moods.add"
   | "moods.name"
   | "moods.colorOverride"
+  | "moods.deltas"
+  | "moods.clearOverride"
   | "loops.title"
   | "loops.add"
   | "loops.mode"
@@ -62,6 +64,23 @@ export type MessageKey =
   | "loops.addStep"
   | "loops.holdMs"
   | "loops.transition"
+  | "loops.moveUp"
+  | "loops.moveDown"
+  | "rail.rename"
+  | "rail.menu"
+  | "rail.moveUp"
+  | "rail.moveDown"
+  | "empty.title"
+  | "share.photo"
+  | "share.runtime"
+  | "share.project"
+  | "share.resolution"
+  | "share.background"
+  | "share.bgTransparent"
+  | "share.bgSolid"
+  | "share.bgGradient"
+  | "share.exportProject"
+  | "share.importProject"
   | "common.remove"
   | "common.play"
   | "common.pause"
@@ -69,6 +88,8 @@ export type MessageKey =
   | "common.cancel"
   | "common.duplicate"
   | "confirm.removeBubble"
+  | "confirm.removeLoop"
+  | "confirm.removeMood"
   | "error.ref"
   | "error.generic"
   | "error.import";
@@ -77,15 +98,15 @@ const es: Record<MessageKey, string> = {
   "app.title": "Bubble Avatar Studio",
   "rail.bubbles": "Burbujas",
   "rail.add": "Nueva burbuja",
-  "rail.rename": "Renombrar",
-  "rail.menu": "Acciones de la burbuja",
-  "rail.moveUp": "Subir burbuja",
-  "rail.moveDown": "Bajar burbuja",
-  "empty.title": "Crea tu primera bubble",
   "tab.look": "Aspecto",
   "tab.moods": "Ánimos",
   "tab.loops": "Ciclos",
   "tab.share": "Compartir",
+  "stage.playing": "Reproduciendo",
+  "stage.paused": "En pausa",
+  "stage.resting": "En reposo",
+  "stage.transport": "Transporte",
+  "stage.loop": "Ciclo",
   "look.surface": "Cuerpo",
   "look.width": "Ancho",
   "look.height": "Alto",
@@ -128,6 +149,8 @@ const es: Record<MessageKey, string> = {
   "moods.add": "Nuevo ánimo",
   "moods.name": "Nombre",
   "moods.colorOverride": "Color temporal",
+  "moods.deltas": "Ajustes de los ojos",
+  "moods.clearOverride": "Quitar color",
   "loops.title": "Ciclos",
   "loops.add": "Nuevo ciclo",
   "loops.mode": "Modo",
@@ -136,6 +159,23 @@ const es: Record<MessageKey, string> = {
   "loops.addStep": "Añadir paso",
   "loops.holdMs": "Duración (ms)",
   "loops.transition": "Transición",
+  "loops.moveUp": "Subir paso",
+  "loops.moveDown": "Bajar paso",
+  "rail.rename": "Renombrar",
+  "rail.menu": "Acciones de la burbuja",
+  "rail.moveUp": "Subir burbuja",
+  "rail.moveDown": "Bajar burbuja",
+  "empty.title": "Crea tu primera bubble",
+  "share.photo": "Photo Mode",
+  "share.runtime": "Runtime",
+  "share.project": "Proyecto",
+  "share.resolution": "Resolución",
+  "share.background": "Fondo",
+  "share.bgTransparent": "Sin fondo",
+  "share.bgSolid": "Sólido",
+  "share.bgGradient": "Degradado",
+  "share.exportProject": "Exportar proyecto",
+  "share.importProject": "Importar proyecto",
   "common.remove": "Eliminar",
   "common.play": "Reproducir",
   "common.pause": "Pausar",
@@ -143,6 +183,8 @@ const es: Record<MessageKey, string> = {
   "common.cancel": "Cancelar",
   "common.duplicate": "Duplicar",
   "confirm.removeBubble": "¿Eliminar esta burbuja?",
+  "confirm.removeLoop": "¿Eliminar este ciclo?",
+  "confirm.removeMood": "¿Eliminar este ánimo?",
   "error.ref": "No se puede eliminar: está en uso.",
   "error.generic": "Operación rechazada.",
   "error.import": "Archivo de proyecto no válido.",
@@ -152,15 +194,15 @@ const en: Record<MessageKey, string> = {
   "app.title": "Bubble Avatar Studio",
   "rail.bubbles": "Bubbles",
   "rail.add": "New bubble",
-  "rail.rename": "Rename",
-  "rail.menu": "Bubble actions",
-  "rail.moveUp": "Move bubble up",
-  "rail.moveDown": "Move bubble down",
-  "empty.title": "Create your first bubble",
   "tab.look": "Look",
   "tab.moods": "Moods",
   "tab.loops": "Loops",
   "tab.share": "Share",
+  "stage.playing": "Playing",
+  "stage.paused": "Paused",
+  "stage.resting": "Resting",
+  "stage.transport": "Transport",
+  "stage.loop": "Loop",
   "look.surface": "Body",
   "look.width": "Width",
   "look.height": "Height",
@@ -203,6 +245,8 @@ const en: Record<MessageKey, string> = {
   "moods.add": "New mood",
   "moods.name": "Name",
   "moods.colorOverride": "Temporary color",
+  "moods.deltas": "Eye adjustments",
+  "moods.clearOverride": "Clear color",
   "loops.title": "Loops",
   "loops.add": "New loop",
   "loops.mode": "Mode",
@@ -211,6 +255,23 @@ const en: Record<MessageKey, string> = {
   "loops.addStep": "Add step",
   "loops.holdMs": "Hold (ms)",
   "loops.transition": "Transition",
+  "loops.moveUp": "Move step up",
+  "loops.moveDown": "Move step down",
+  "rail.rename": "Rename",
+  "rail.menu": "Bubble actions",
+  "rail.moveUp": "Move bubble up",
+  "rail.moveDown": "Move bubble down",
+  "empty.title": "Create your first bubble",
+  "share.photo": "Photo Mode",
+  "share.runtime": "Runtime",
+  "share.project": "Project",
+  "share.resolution": "Resolution",
+  "share.background": "Background",
+  "share.bgTransparent": "Transparent",
+  "share.bgSolid": "Solid",
+  "share.bgGradient": "Gradient",
+  "share.exportProject": "Export project",
+  "share.importProject": "Import project",
   "common.remove": "Remove",
   "common.play": "Play",
   "common.pause": "Pause",
@@ -218,6 +279,8 @@ const en: Record<MessageKey, string> = {
   "common.cancel": "Cancel",
   "common.duplicate": "Duplicate",
   "confirm.removeBubble": "Delete this bubble?",
+  "confirm.removeLoop": "Delete this loop?",
+  "confirm.removeMood": "Delete this mood?",
   "error.ref": "Cannot remove: it is in use.",
   "error.generic": "Operation rejected.",
   "error.import": "Invalid project file.",

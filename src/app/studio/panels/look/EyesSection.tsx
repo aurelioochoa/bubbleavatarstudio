@@ -1,7 +1,8 @@
 // Eyes: resting shape, spacing, and per-side placement (FR-3.1..FR-3.3).
 // While linked, one column edits both sides — the mirroring itself lives in
 // mutate.updateEyePlacement, so this only decides what to show.
-import { NumberField, SectionTitle, Slider, type SectionProps } from "./fields";
+import { NumberField, Slider, type SectionProps } from "./fields";
+import { Card } from "../../ui";
 import type { EyePlacement } from "../../../../domain/document/types";
 
 export function EyesSection({ bubble, dispatch, t }: SectionProps) {
@@ -10,9 +11,9 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
   const side = (which: "left" | "right", placement: EyePlacement) => (
     <fieldset
       aria-label={which === "left" ? t("look.leftEye") : t("look.rightEye")}
-      className="space-y-1.5 rounded border border-white/10 p-2"
+      className="space-y-1.5 rounded-field border border-line bg-panel/50 p-2"
     >
-      <legend className="px-1 text-[10px] tracking-wide text-[#9aa0c3] uppercase">
+      <legend className="px-1 text-[10px] tracking-wide text-ink-dim uppercase">
         {which === "left" ? t("look.leftEye") : t("look.rightEye")}
       </legend>
       <NumberField
@@ -65,8 +66,7 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
   );
 
   return (
-    <section className="space-y-2">
-      <SectionTitle>{t("look.eyes")}</SectionTitle>
+    <Card title={t("look.eyes")}>
 
       <NumberField
         label={t("look.eyeWidth")}
@@ -106,7 +106,7 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
           dispatch({ type: "eye/spacing", spacing: v });
         }}
       />
-      <label className="flex items-center gap-2 text-xs text-[#e8eaf6]">
+      <label className="flex items-center gap-2 text-xs text-ink">
         <input
           type="checkbox"
           checked={face.linked}
@@ -122,6 +122,6 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
         {side("left", face.left)}
         {!face.linked && side("right", face.right)}
       </div>
-    </section>
+    </Card>
   );
 }

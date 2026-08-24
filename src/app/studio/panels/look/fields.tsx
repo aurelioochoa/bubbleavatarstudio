@@ -3,6 +3,7 @@
 import type { Bubble } from "../../../../domain/document/types";
 import type { Action } from "../../store";
 import type { MessageKey } from "../../../i18n";
+import { RangeInput } from "../../ui";
 
 export interface SectionProps {
   bubble: Bubble;
@@ -12,7 +13,7 @@ export interface SectionProps {
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-semibold tracking-wide text-[#9aa0c3] uppercase">
+    <h3 className="text-xs font-semibold tracking-wide text-ink-dim uppercase">
       {children}
     </h3>
   );
@@ -36,7 +37,7 @@ export function NumberField({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-2 text-xs text-[#9aa0c3]">
+    <label className="flex items-center justify-between gap-2 text-xs text-ink-dim">
       <span className="min-w-0 truncate">{label}</span>
       <span className="flex shrink-0 items-center gap-1">
         <input
@@ -50,9 +51,9 @@ export function NumberField({
             const v = Number(e.target.value);
             if (Number.isFinite(v)) onChange(v);
           }}
-          className="w-20 rounded bg-white/5 px-1.5 py-1 text-right tabular-nums text-[#e8eaf6]"
+          className="w-20 rounded-field border border-line bg-panel px-2 py-1 text-right tabular-nums text-ink"
         />
-        {unit && <span className="w-3 text-[10px]">{unit}</span>}
+        {unit && <span className="w-3 text-[10px] text-ink-dim">{unit}</span>}
       </span>
     </label>
   );
@@ -75,23 +76,20 @@ export function Slider({
 }) {
   return (
     <label className="block text-xs">
-      <span className="flex justify-between text-[#9aa0c3]">
+      <span className="flex justify-between text-ink-dim">
         {label}
-        <span className="tabular-nums text-[#e8eaf6]">
+        <span className="tabular-nums text-ink">
           {String(Math.round(value * 100) / 100)}
         </span>
       </span>
-      <input
-        type="range"
+      <RangeInput
+        label={label}
+        value={value}
         min={min}
         max={max}
         step={step}
-        value={value}
-        aria-label={label}
-        onChange={(e) => {
-          onChange(Number(e.target.value));
-        }}
-        className="w-full accent-[#6c7bff]"
+        onChange={onChange}
+        className="mt-1 w-full"
       />
     </label>
   );
@@ -107,7 +105,7 @@ export function ColorField({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className="flex items-center justify-between text-xs text-[#e8eaf6]">
+    <label className="flex items-center justify-between text-xs text-ink">
       {label}
       <input
         type="color"
@@ -115,7 +113,7 @@ export function ColorField({
         onChange={(e) => {
           onChange(e.target.value);
         }}
-        className="h-7 w-12 cursor-pointer rounded border border-white/10 bg-transparent"
+        className="h-7 w-12 cursor-pointer rounded-field border border-line bg-panel"
         aria-label={label}
       />
     </label>

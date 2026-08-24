@@ -1,5 +1,6 @@
 // Extra primitives: add, edit, reorder in z, remove (FR-2.3, FR-2.4).
-import { ColorField, NumberField, SectionTitle, type SectionProps } from "./fields";
+import { ColorField, NumberField, type SectionProps } from "./fields";
+import { Card } from "../../ui";
 import type {
   ColorRole,
   ExtraKind,
@@ -47,10 +48,9 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
   };
 
   return (
-    <section className="space-y-2">
-      <SectionTitle>{t("look.extras")}</SectionTitle>
+    <Card title={t("look.extras")}>
 
-      <label className="flex items-center justify-between text-xs text-[#9aa0c3]">
+      <label className="flex items-center justify-between text-xs text-ink-dim">
         {t("look.addExtra")}
         <select
           value=""
@@ -61,7 +61,7 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
             const topZ = extras.at(-1)?.z ?? -1;
             dispatch({ type: "extra/add", extra: newExtra(kind, topZ + 1) });
           }}
-          className="rounded bg-white/5 px-2 py-1 text-xs text-[#e8eaf6]"
+          className="rounded-field border border-line bg-panel px-2 py-1 text-xs text-ink"
         >
           <option value="">+</option>
           {KINDS.map((k) => (
@@ -76,9 +76,9 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
         <fieldset
           key={extra.id}
           aria-label={`${extra.kind} ${String(index + 1)}`}
-          className="space-y-1.5 rounded border border-white/10 p-2"
+          className="space-y-1.5 rounded-field border border-line bg-panel/50 p-2"
         >
-          <legend className="px-1 text-[10px] tracking-wide text-[#9aa0c3] uppercase">
+          <legend className="px-1 text-[10px] tracking-wide text-ink-dim uppercase">
             {extra.kind} {index + 1}
           </legend>
 
@@ -90,7 +90,7 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
               onClick={() => {
                 swapZ(index, 1);
               }}
-              className="rounded bg-white/5 px-2 py-1 text-xs disabled:opacity-40"
+              className="rounded-field bg-panel px-2 py-1 text-xs text-ink disabled:opacity-40"
             >
               ↑
             </button>
@@ -101,7 +101,7 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
               onClick={() => {
                 swapZ(index, -1);
               }}
-              className="rounded bg-white/5 px-2 py-1 text-xs disabled:opacity-40"
+              className="rounded-field bg-panel px-2 py-1 text-xs text-ink disabled:opacity-40"
             >
               ↓
             </button>
@@ -111,7 +111,7 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
               onClick={() => {
                 dispatch({ type: "extra/remove", extraId: extra.id });
               }}
-              className="ml-auto rounded bg-red-500/20 px-2 py-1 text-xs text-red-300"
+              className="ml-auto rounded-field bg-danger/15 px-2 py-1 text-xs text-danger"
             >
               ✕
             </button>
@@ -180,7 +180,7 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
             }}
           />
 
-          <label className="flex items-center justify-between text-xs text-[#9aa0c3]">
+          <label className="flex items-center justify-between text-xs text-ink-dim">
             {t("look.colorRole")}
             <select
               value={extra.colorRole}
@@ -192,7 +192,7 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
                   patch: { colorRole: e.target.value as ColorRole },
                 });
               }}
-              className="rounded bg-white/5 px-2 py-1 text-xs text-[#e8eaf6]"
+              className="rounded-field border border-line bg-panel px-2 py-1 text-xs text-ink"
             >
               {ROLES.map((r) => (
                 <option key={r} value={r}>
@@ -216,6 +216,6 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
           )}
         </fieldset>
       ))}
-    </section>
+    </Card>
   );
 }

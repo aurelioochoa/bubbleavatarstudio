@@ -103,18 +103,25 @@ describe("StudioView", () => {
     expect(screen.getByRole("button", { name: "Cancelar" })).toBeTruthy();
   });
 
-  it("Loops tab shows starter loops and play button", async () => {
+  it("Loops tab lists the starter loops", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ciclos" }));
     expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
+  });
+
+  it("transport sits on the stage dock, reachable from every tab (docs/05 §1)", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    // Look is the default tab and the dock is already there.
+    expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
+    await user.click(screen.getByRole("tab", { name: "Compartir" }));
     expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
   });
 
   it("transport plays, pauses and stops the selected loop (FR-6.2)", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
-    await user.click(screen.getByRole("tab", { name: "Ciclos" }));
     const stop = screen.getByRole("button", { name: "Detener" });
     expect(stop.hasAttribute("disabled")).toBe(true);
 
@@ -135,7 +142,6 @@ describe("StudioView", () => {
     const user = userEvent.setup();
     render(<StudioView />);
     const stage = screen.getByLabelText("bubble stage");
-    await user.click(screen.getByRole("tab", { name: "Ciclos" }));
     await user.click(screen.getByRole("button", { name: "Reproducir" }));
 
     await user.click(screen.getByRole("tab", { name: "Ánimos" }));
@@ -147,7 +153,6 @@ describe("StudioView", () => {
     expect(eyeHeight(stage)).toBeLessThan(before * 0.6);
 
     // Manual selection owns the live state, so playback is no longer running.
-    await user.click(screen.getByRole("tab", { name: "Ciclos" }));
     expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
   });
 
@@ -156,7 +161,6 @@ describe("StudioView", () => {
     // Alpha owns a kit whose "wave" loop Beta, on the starter kit, does not have.
     globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
     render(<StudioView />);
-    await user.click(screen.getByRole("tab", { name: "Loops" }));
     await user.click(screen.getByRole("button", { name: "Play" }));
     expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
 
@@ -238,11 +242,55 @@ describe("StudioView", () => {
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ánimos" }));
     await user.click(screen.getByRole("button", { name: "happy" }));
+    // Confirm first (docs/05 §3); the reducer is what refuses afterwards.
+    vi.stubGlobal("confirm", vi.fn(() => true));
     const buttons = screen.getAllByRole("button", { name: "Eliminar" });
     const del = buttons[buttons.length - 1];
     if (!del) throw new Error("delete button missing");
     await user.click(del);
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("No se puede eliminar");
+  });
+
+  // docs/05 §3: every destructive action confirms. Bubble delete and import
+  // already did; loop and mood delete applied immediately until this landed.
+  it("asks for confirmation before deleting a loop", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("tab", { name: "Ciclos" }));
+    expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
+
+    vi.stubGlobal("confirm", vi.fn(() => false));
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+    expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
+
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+    expect(screen.queryByRole("button", { name: "idle" })).toBeNull();
+  });
+
+  it("asks for confirmation before deleting a mood", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("tab", { name: "Ánimos" }));
+    // Every starter mood is referenced by a starter loop, so deleting one is
+    // blocked by E_REF (FR-5.6) whatever the confirmation says. Add a fresh
+    // mood so this test measures the confirmation gate and nothing else.
+    await user.click(screen.getByRole("button", { name: "+ Nuevo ánimo" }));
+    await user.click(screen.getByRole("button", { name: "mood 5" }));
+
+    const remove = async () => {
+      const del = screen.getAllByRole("button", { name: "Eliminar" }).at(-1);
+      if (!del) throw new Error("delete button missing");
+      await user.click(del);
+    };
+
+    vi.stubGlobal("confirm", vi.fn(() => false));
+    await remove();
+    expect(screen.getByRole("button", { name: "mood 5" })).toBeTruthy();
+
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    await remove();
+    expect(screen.queryByRole("button", { name: "mood 5" })).toBeNull();
   });
 });

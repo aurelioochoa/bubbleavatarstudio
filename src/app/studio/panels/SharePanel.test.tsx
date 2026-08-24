@@ -35,7 +35,7 @@ async function upload(file: File) {
   const user = userEvent.setup();
   render(<StudioView />);
   await user.click(screen.getByRole("tab", { name: "Compartir" }));
-  const input = screen.getByLabelText("Import");
+  const input = screen.getByLabelText("Importar proyecto");
   await user.upload(input, file);
   return user;
 }

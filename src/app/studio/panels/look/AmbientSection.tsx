@@ -1,13 +1,13 @@
 // Ambient idle motion (FR-7.1): the sinusoidal breathing applied while the
 // character rests. Amplitudes are units, periods milliseconds.
-import { NumberField, SectionTitle, type SectionProps } from "./fields";
+import { NumberField, type SectionProps } from "./fields";
+import { Card } from "../../ui";
 
 export function AmbientSection({ bubble, dispatch, t }: SectionProps) {
   const ambient = bubble.ambient;
   return (
-    <section className="space-y-2">
-      <SectionTitle>{t("look.ambient")}</SectionTitle>
-      <label className="flex items-center gap-2 text-xs text-[#e8eaf6]">
+    <Card title={t("look.ambient")}>
+      <label className="flex items-center gap-2 text-xs text-ink">
         <input
           type="checkbox"
           checked={ambient.enabled}
@@ -59,6 +59,6 @@ export function AmbientSection({ bubble, dispatch, t }: SectionProps) {
           dispatch({ type: "ambient/patch", patch: { eyePeriodMs: v } });
         }}
       />
-    </section>
+    </Card>
   );
 }

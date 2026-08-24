@@ -185,4 +185,18 @@ describe("Look panel · ambient (FR-7.1)", () => {
       bodyAmplitude: 9,
     });
   });
+
+  it("sections collapse and reopen (docs/05 §2)", async () => {
+    const { user } = setup();
+    const header = screen.getByRole("button", { name: /Cuerpo/ });
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByLabelText("Redondez")).toBeTruthy();
+
+    await user.click(header);
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByLabelText("Redondez")).toBeNull();
+
+    await user.click(header);
+    expect(screen.getByLabelText("Redondez")).toBeTruthy();
+  });
 });

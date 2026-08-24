@@ -66,6 +66,25 @@ export function StudioView() {
     }
   }, [kit, playableLoopId]);
 
+  // docs/05 §1: one loop selection, owned here, drives both the stage dock and
+  // the Loops panel. Until the user picks one it is the kit's first loop.
+  const selectedLoopId = transport.loopId ?? kit?.loops[0]?.id ?? null;
+
+  const play = (loopId: string) => {
+    setPreview(null); // playback takes the live state back from a mood preview
+    setTransport({ loopId, mode: "playing" });
+  };
+  const pause = () => {
+    setTransport((tr) => ({ ...tr, mode: "paused" }));
+  };
+  const stop = () => {
+    setTransport((tr) => ({ ...tr, mode: "stopped" }));
+  };
+  const selectLoop = (loopId: string) => {
+    // Switching loops rewinds rather than cutting mid-step (FR-6.2).
+    setTransport({ loopId, mode: "stopped" });
+  };
+
   const tabs: { id: Tab; label: string }[] = [
     { id: "look", label: t("tab.look") },
     { id: "moods", label: t("tab.moods") },
@@ -136,12 +155,14 @@ export function StudioView() {
           <Stage
             bubble={bubble}
             kit={kit}
-            loopId={transport.loopId}
+            loopId={selectedLoopId}
             mode={transport.mode}
             preview={preview}
-            onPause={() => {
-              setTransport((tr) => ({ ...tr, mode: "paused" }));
-            }}
+            t={t}
+            onPlay={play}
+            onPause={pause}
+            onStop={stop}
+            onSelectLoop={selectLoop}
           />
         </main>
 
@@ -208,16 +229,8 @@ export function StudioView() {
               kit={kit}
               dispatch={dispatch}
               t={t}
-              transport={transport}
-              onPlay={(loopId) => {
-                setTransport({ loopId, mode: "playing" });
-              }}
-              onPause={() => {
-                setTransport((tr) => ({ ...tr, mode: "paused" }));
-              }}
-              onStop={() => {
-                setTransport((tr) => ({ ...tr, mode: "stopped" }));
-              }}
+              selectedLoopId={selectedLoopId}
+              onSelectLoop={selectLoop}
             />
           )}
           {tab === "share" && (

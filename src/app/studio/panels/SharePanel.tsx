@@ -14,6 +14,7 @@ import {
 import { createZip, textEntry } from "../../../export/zip";
 import { validateDocument } from "../../../domain/document/validate";
 import type { MessageKey } from "../../i18n";
+import { Card, Segmented } from "../ui";
 
 export interface SharePanelProps {
   bubble: Bubble;
@@ -95,49 +96,43 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
     });
   };
 
+  const BTN =
+    "w-full rounded-field bg-panel px-2 py-2 text-xs text-ink transition-colors duration-150 ease-out hover:bg-panel-3";
+
   return (
-    <div className="space-y-4 text-xs">
+    <div className="space-y-3">
       {importError && (
         <p
           role="alert"
-          className="rounded bg-red-500/20 px-2 py-1 text-red-300"
+          className="rounded-field border border-danger/30 bg-danger/15 px-2.5 py-1.5 text-xs text-danger"
         >
           {t("error.import")}
         </p>
       )}
-      <section className="space-y-2">
-        <h3 className="text-xs font-semibold tracking-wide text-[#9aa0c3] uppercase">
-          Photo Mode
-        </h3>
-        <div className="flex gap-2">
-          {SIZES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => {
-                setSize(s);
-              }}
-              className={`rounded px-2 py-1 ${s === size ? "bg-[#6c7bff] text-white" : "bg-white/5"}`}
-            >
-              {String(s)}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          {(["transparent", "solid", "gradient"] as const).map((b) => (
-            <button
-              key={b}
-              type="button"
-              onClick={() => {
-                setBg(b);
-              }}
-              className={`rounded px-2 py-1 ${b === bg ? "bg-[#6c7bff] text-white" : "bg-white/5"}`}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
+
+      <Card title={t("share.photo")}>
+        <Segmented
+          label={t("share.resolution")}
+          value={String(size)}
+          options={SIZES.map((s2) => ({
+            value: String(s2),
+            label: String(s2),
+          }))}
+          onChange={(v) => {
+            setSize(Number(v) as (typeof SIZES)[number]);
+          }}
+        />
+        <Segmented
+          label={t("share.background")}
+          value={bg}
+          options={[
+            { value: "transparent", label: t("share.bgTransparent") },
+            { value: "solid", label: t("share.bgSolid") },
+            { value: "gradient", label: t("share.bgGradient") },
+          ]}
+          onChange={setBg}
+        />
+        <div className="flex gap-2 pt-0.5">
           <button
             type="button"
             onClick={() => {
@@ -147,7 +142,7 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
                 "image/svg+xml",
               );
             }}
-            className="flex-1 rounded bg-white/5 px-2 py-1.5"
+            className={BTN}
           >
             SVG
           </button>
@@ -158,46 +153,34 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
                 download("bubble.png", b2);
               })
             }
-            className="flex-1 rounded bg-white/5 px-2 py-1.5"
+            className={BTN}
           >
             PNG
           </button>
         </div>
-      </section>
+      </Card>
 
-      <section className="space-y-2">
-        <h3 className="text-xs font-semibold tracking-wide text-[#9aa0c3] uppercase">
-          Runtime
-        </h3>
+      <Card title={t("share.runtime")}>
         <button
           type="button"
           onClick={exportAvatar}
-          className="w-full rounded bg-[#6c7bff] px-2 py-1.5 text-white"
+          className="w-full rounded-field bg-primary px-2 py-2 text-xs text-white transition-colors duration-150 ease-out hover:bg-primary-hi"
         >
           .bubble-avatar.json
         </button>
-        <button
-          type="button"
-          onClick={exportZip}
-          className="w-full rounded bg-white/5 px-2 py-1.5"
-        >
+        <button type="button" onClick={exportZip} className={BTN}>
           ZIP
         </button>
-      </section>
+      </Card>
 
-      <section className="space-y-2">
-        <h3 className="text-xs font-semibold tracking-wide text-[#9aa0c3] uppercase">
-          Project
-        </h3>
-        <button
-          type="button"
-          onClick={exportProject}
-          className="w-full rounded bg-white/5 px-2 py-1.5"
-        >
-          {t("tab.share")} · JSON
+      <Card title={t("share.project")}>
+        <button type="button" onClick={exportProject} className={BTN}>
+          {t("share.exportProject")}
         </button>
-        <label className="block w-full cursor-pointer rounded bg-white/5 px-2 py-1.5 text-center">
-          Import
+        <label
+          className={`block cursor-pointer border border-dashed border-line bg-transparent text-center ${BTN} hover:border-primary`}
+        >
+          {t("share.importProject")}
           <input
             type="file"
             accept="application/json"
@@ -208,7 +191,7 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
             }}
           />
         </label>
-      </section>
+      </Card>
     </div>
   );
 }

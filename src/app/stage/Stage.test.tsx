@@ -1,12 +1,18 @@
 // FR-8 direct manipulation: each drag axis seeds from its own start value,
 // and Escape restores the resting rotation. Engine is mocked; we assert on
 // the opts StageEngine.update receives.
+//
+// Also covers the stage overlays of docs/05 §1: the status pill and the
+// transport dock, which own playback now that it has left the Loops panel.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Stage } from "./Stage";
 import { StageEngine } from "./StageEngine";
 import { createDefaultDocument } from "../../domain/document/create";
 import { effectiveKit } from "../../domain/document/mutate";
+import { translator } from "../i18n";
+import type { StageMode } from "./StageEngine";
 
 vi.mock("./StageEngine", () => ({
   StageEngine: vi.fn().mockImplementation(() => ({
@@ -36,7 +42,16 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function renderStage() {
+interface StageOverrides {
+  mode?: StageMode;
+  loopId?: string | null;
+  onPlay?: (loopId: string) => void;
+  onPause?: () => void;
+  onStop?: () => void;
+  onSelectLoop?: (loopId: string) => void;
+}
+
+function setupStage(overrides: StageOverrides = {}) {
   const doc = createDefaultDocument();
   const bubble = doc.bubbles[0];
   if (!bubble) throw new Error("fixture missing bubble");
@@ -45,15 +60,27 @@ function renderStage() {
     <Stage
       bubble={bubble}
       kit={kit}
-      loopId={kit.loops[0]?.id ?? null}
-      mode="stopped"
+      loopId={
+        overrides.loopId === undefined
+          ? (kit.loops[0]?.id ?? null)
+          : overrides.loopId
+      }
+      mode={overrides.mode ?? "stopped"}
       preview={null}
-      onPause={() => {}}
+      t={translator("es")}
+      onPause={overrides.onPause ?? (() => {})}
+      onPlay={overrides.onPlay ?? (() => {})}
+      onStop={overrides.onStop ?? (() => {})}
+      onSelectLoop={overrides.onSelectLoop ?? (() => {})}
     />,
   );
   const el = container.querySelector('[aria-label="bubble stage"]');
   if (!el) throw new Error("stage element missing");
-  return el;
+  return { el, kit };
+}
+
+function renderStage() {
+  return setupStage().el;
 }
 
 // jsdom has no PointerEvent; dispatch plain events with coordinates
@@ -99,5 +126,84 @@ describe("Stage drag (FR-8.3)", () => {
     drag(el, 100, 100);
     fireEvent.keyDown(el, { key: "Escape" });
     expect(lastHead()).toEqual({ x: 0, y: 0, z: 0 });
+  });
+});
+
+describe("Stage overlays (docs/05 §1)", () => {
+  it("status pill names the transport state and the loop on stage", () => {
+    const { kit } = setupStage({ mode: "playing" });
+    const pill = screen.getByRole("status");
+    expect(pill.textContent).toContain("Reproduciendo");
+    expect(pill.textContent).toContain(kit.loops[0]?.name ?? "");
+  });
+
+  it("status pill reports a resting stage when nothing plays", () => {
+    setupStage({ mode: "stopped" });
+    expect(screen.getByRole("status").textContent).toContain("En reposo");
+  });
+
+  it("pill carries a dot alongside the text, not colour alone (docs/05 §3)", () => {
+    setupStage({ mode: "playing" });
+    const dot = within(screen.getByRole("status")).getByTestId("status-dot");
+    expect(dot.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("dock plays the selected loop and pauses once it is playing", async () => {
+    const user = userEvent.setup();
+    const onPlay = vi.fn();
+    const { kit } = setupStage({ mode: "stopped", onPlay });
+    await user.click(screen.getByRole("button", { name: "Reproducir" }));
+    expect(onPlay).toHaveBeenCalledWith(kit.loops[0]?.id);
+
+    cleanup();
+    const onPause = vi.fn();
+    setupStage({ mode: "playing", onPause });
+    await user.click(screen.getByRole("button", { name: "Pausar" }));
+    expect(onPause).toHaveBeenCalled();
+  });
+
+  it("dock stop is disabled on an already stopped stage", async () => {
+    const user = userEvent.setup();
+    const onStop = vi.fn();
+    setupStage({ mode: "stopped", onStop });
+    const stop = screen.getByRole("button", { name: "Detener" });
+    expect(stop.hasAttribute("disabled")).toBe(true);
+
+    cleanup();
+    setupStage({ mode: "playing", onStop });
+    await user.click(screen.getByRole("button", { name: "Detener" }));
+    expect(onStop).toHaveBeenCalled();
+  });
+
+  it("dock loop selector switches which loop the transport owns", async () => {
+    const user = userEvent.setup();
+    const onSelectLoop = vi.fn();
+    const { kit } = setupStage({ onSelectLoop });
+    const second = kit.loops[1];
+    if (!second) throw new Error("fixture needs two loops");
+    await user.selectOptions(screen.getByLabelText("Ciclo"), second.id);
+    expect(onSelectLoop).toHaveBeenCalledWith(second.id);
+  });
+
+  it("hides the dock when the kit has no loops (FR-5.2)", () => {
+    const doc = createDefaultDocument();
+    const bubble = doc.bubbles[0];
+    if (!bubble) throw new Error("fixture missing bubble");
+    const kit = { ...effectiveKit(bubble, doc), loops: [] };
+    render(
+      <Stage
+        bubble={bubble}
+        kit={kit}
+        loopId={null}
+        mode="stopped"
+        preview={null}
+        t={translator("es")}
+        onPause={() => {}}
+        onPlay={() => {}}
+        onStop={() => {}}
+        onSelectLoop={() => {}}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Reproducir" })).toBeNull();
   });
 });
