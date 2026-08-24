@@ -39,13 +39,16 @@ looks alive; and the P4 UI pass — a 56px rail of live thumbnails with a
 rename/duplicate/reorder/delete menu, a stage carrying the status pill and the
 transport dock, and a 360px inspector of collapsible cards on shared design
 tokens; and the shape families (round / organic / drop) reaching the schema,
-the renderer and the Look panel, on a v2 document that migrates v1 forward.
+the renderer and the Look panel, on a v2 document that migrates v1 forward;
+and the starter library — 24 moods across six expressive bands and 20 loops
+split life/reaction, meeting FR-4.7 and FR-5.7.
 
-Still open: a larger starter library (the kit ships 4 moods and 2 loops
-against the spec's 24 and 20), and the rest of roadmap P4 — the rotation gizmo
-and guide overlay, the blink card and loop summary, the Moods modal editor
-with per-eye deltas, drag-reorder and drag-to-scrub, and the Share loop
-checklist and radial background.
+Still open: the rest of roadmap P4 — the rotation gizmo and guide overlay, the
+blink card and loop summary, the Moods modal editor with per-eye deltas,
+drag-reorder and drag-to-scrub, and the Share loop checklist and radial
+background. The starter library reaches **new** documents only; a project
+already in localStorage keeps the kit it was saved with, and nothing in the UI
+offers to refresh it (see `docs/08-roadmap.md` P3).
 `docs/05-ui-design.md` marks each item **[built]** or **[target]**.
 
 ## Architecture

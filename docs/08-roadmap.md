@@ -109,6 +109,17 @@ Bring the app level with what the concept demands, per the feature inventory in
   **unchanged**, as predicted — they are driven by `test/fixtures/full.json`,
   not by `starterKit()`.
 
+  _Open, found by running the app rather than the tests:_ `starterKit()` is
+  called only from `createDefaultDocument()`, so the library reaches **new**
+  documents only. Any project already in localStorage keeps the kit it was
+  saved with, and no UI offers to refresh it — a returning user still sees four
+  moods. Defensible, since the kit is user-editable and refreshing would
+  clobber renamed or retuned moods, but FR-4.7's promise ("a new bubble is
+  expressive before the user authors anything") is currently kept for new
+  projects only. Needs a decision before P4 builds the Moods surface on it:
+  leave as is, offer an explicit "add the starter moods to this project"
+  action, or migrate on load. Not a blocker for P4a.
+
 - **P4 (in progress)** Remaining UI surfaces.
 
   _Done:_ stage transport dock with status pill, owning playback for the whole

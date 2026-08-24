@@ -40,7 +40,7 @@ These are non-negotiable and predate any individual task. `docs/07` and
    imports. Enforced by ESLint `import/no-restricted-paths` and by those tests
    running in a bare node environment.
 3. **Cleanroom.** Never read upstream source code (`docs/CLEANROOM.md` §3 lists
-   what is prohibited). Feature parity means matching *capabilities*; never
+   what is prohibited). Feature parity means matching _capabilities_; never
    copy names, artwork or UI copy. Behavioural observation of the deployed app
    is allowed and logged in `docs/research/blackbox-notes.md`.
 4. **Goldens change only in a diff that states which values moved and why**
@@ -55,6 +55,11 @@ Layers depend downward only (`docs/04-architecture.md` §1 has the full diagram)
 - **`src/domain/`** — pure: document types, validation, mutations, geometry
   (superellipse/organic outlines, ellipsoid face projection), easing,
   `LoopPlayer`, blink, ambient idle motion.
+- **`src/domain/content/`** — pure literal data, no logic: the 24-mood /
+  20-loop starter library (FR-4.7, FR-5.7). Loops name moods by a stable local
+  `key`; `starterKit()` in `document/create.ts` is the only thing that turns
+  those keys into ids. Nothing here imports `create.ts` — the dependency runs
+  one way, which is what keeps the library readable as a list.
 - **`src/render/`** — pure: `scene.ts` composes document + live state into a
   `Scene`; `svg.ts` serializes it to a **byte-stable** SVG string (fixed
   attribute order, 2-decimal numbers). Same input → identical bytes, golden-tested.
@@ -63,7 +68,7 @@ Layers depend downward only (`docs/04-architecture.md` §1 has the full diagram)
 - **`src/export/`** — portable `*.bubble-avatar.json`, SVG/PNG snapshots, ZIP.
 - **`src/runtime/`** — SSR-safe `<BubbleAvatar/>`.
 
-Four cross-cutting mechanics that are not obvious from any single file:
+Five cross-cutting mechanics that are not obvious from any single file:
 
 **Copy-on-write kits.** A `Bubble` has `ownKit: Kit | null`; `null` means it
 inherits `doc.starterKit`. Always resolve with `effectiveKit(bubble, doc)`
@@ -74,7 +79,7 @@ with different IDs, and why the stage must stop playback when a bubble switch
 leaves the current loop unreachable (FR-6.4).
 
 **Transactional reducer.** Every mutation in `document/mutate.ts` returns a
-`MutationResult`. `studioReducer` commits only if the result is ok *and* the
+`MutationResult`. `studioReducer` commits only if the result is ok _and_ the
 resulting document re-validates; otherwise the previous document is kept and
 `state.lastError` is set for the UI to surface (e.g. `E_REF` when deleting a
 mood a loop still references, FR-5.6). Mutations never throw.
@@ -82,10 +87,19 @@ mood a loop still references, FR-5.6). Mutations never throw.
 **The stage bypasses React per frame.** `StageEngine` owns the rAF loop and
 writes SVG straight into its host element via `innerHTML`; React never
 re-renders per frame (FR-11.2). Consequences: any stage overlay (status pill,
-transport dock) must be a *sibling* of the engine's host element, never a child
+transport dock) must be a _sibling_ of the engine's host element, never a child
 — a child is wiped on the next frame. The engine also skips the DOM write when
 the serialized SVG is byte-identical to the last frame, which is what makes a
 paused stage cheap.
+
+**The starter library reaches new documents only.** `starterKit()` runs inside
+`createDefaultDocument()`, so a document already in localStorage keeps whatever
+kit it was saved with — growing the library does not retro-fit saved projects,
+and no UI offers to refresh one. That is defensible (the kit is user-editable;
+refreshing would clobber renamed or retuned moods) but it means a returning
+user does not see new starter content, and it is easy to mistake for a bug when
+the app shows four moods while the tests assert twenty-four. Verify library
+changes against a _fresh_ origin, not a reloaded tab.
 
 **Three-state transport.** `playing | paused | stopped` (FR-6.2), owned by
 `StudioView` and rendered by the stage dock. `stopped` rewinds the loop clock
@@ -97,7 +111,7 @@ Moods panel takes over the live state and pauses playback (FR-6.1/FR-4.4).
 - **IDs** are `prefix_xxxxxxxx` via `newId(prefix)` in `src/domain/ids.ts`
   (crypto-backed, falls back to `Math.random`). Never hand-write an ID.
 - **i18n is Spanish-first with es/en parity.** `MessageKey` in `src/app/i18n.ts`
-  is a closed union; adding a key requires an entry in *both* dictionaries or
+  is a closed union; adding a key requires an entry in _both_ dictionaries or
   it fails typecheck. Never render a raw domain property name in the UI — route
   it through a message key.
 - **UI colors come from the tokens** in `src/app/styles.css` (`@theme`), used as
