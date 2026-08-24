@@ -51,14 +51,19 @@
 
 ### Look (body & resting face)
 
-**[built]** every section below, and an Ambient card for idle motion (FR-7.1).
-The cards collapse and reopen, remembering nothing across a reload by design.
-**[target]** drag-to-scrub on the numeric labels (FR-9.5).
+**[built]** every section below, the shape-family control, and an Ambient card
+for idle motion (FR-7.1). The cards collapse and reopen, remembering nothing
+across a reload by design. **[target]** drag-to-scrub on the numeric labels
+(FR-9.5), and the projection guide toggle that belongs with the Surface card
+(FR-8.4).
 
 Sections as collapsible cards:
 
-1. **Surface** — width/height/roundness/perspective numeric steppers (unit
-   suffixes u/×), rotation slider ±180°.
+1. **Surface** — a segmented shape family (round / organic / drop, FR-2.6);
+   the organic parameters — lobes, wobble, seed (FR-2.7) — appear only while
+   organic is the family, since they do not bite on the others;
+   width/height/roundness/perspective numeric steppers (unit suffixes u/×),
+   rotation slider ±180°.
 2. **Colors** — body / accent / eyes swatch pickers (preset palette + hex input).
 3. **Extras** — list of primitives with kind icon, up/down z buttons, edit
    expander (same numeric controls), remove; "Add primitive" button.
@@ -171,6 +176,7 @@ All three bullets are **[built]** as Tailwind v4 `@theme` tokens in
   name — `--color-stage-glow` (stage backdrop), `--color-panel-2` /
   `--color-panel-3` (card and control grounds), `--color-line` (borders) and
   `--color-ink-dim`.
+
 - Motion: panel transitions are 150ms ease-out, inside the ≤ 160ms budget;
   stage animation is owned by the engine. A `prefers-reduced-motion` block
   collapses every transition to ~0ms.

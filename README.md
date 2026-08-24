@@ -28,7 +28,7 @@ under `docs/screenshots/` by `pnpm e2e`.
 
 Working toward feature parity with the concept it reimplements; see
 `docs/08-roadmap.md` for phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **223 tests across 22 files**, plus
+requirements each one closes. Current gate: **243 tests across 22 files**, plus
 a Playwright smoke of 4 scenarios — re-derive with `pnpm test` rather than
 trusting this line.
 
@@ -38,12 +38,14 @@ volume; idle behaviour (blink, micro-saccades, breathing) so a resting bubble
 looks alive; and the P4 UI pass — a 56px rail of live thumbnails with a
 rename/duplicate/reorder/delete menu, a stage carrying the status pill and the
 transport dock, and a 360px inspector of collapsible cards on shared design
-tokens.
+tokens; and the shape families (round / organic / drop) reaching the schema,
+the renderer and the Look panel, on a v2 document that migrates v1 forward.
 
-Still open: the shape families reaching the schema and UI, a larger starter
-library, and the rest of roadmap P4 — the rotation gizmo and guide overlay,
-the blink card and loop summary, drag-reorder and drag-to-scrub, and the Share
-loop checklist and radial background.
+Still open: a larger starter library (the kit ships 4 moods and 2 loops
+against the spec's 24 and 20), and the rest of roadmap P4 — the rotation gizmo
+and guide overlay, the blink card and loop summary, the Moods modal editor
+with per-eye deltas, drag-reorder and drag-to-scrub, and the Share loop
+checklist and radial background.
 `docs/05-ui-design.md` marks each item **[built]** or **[target]**.
 
 ## Architecture

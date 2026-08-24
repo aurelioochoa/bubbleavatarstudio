@@ -69,11 +69,31 @@ Bring the app level with what the concept demands, per the feature inventory in
 - **P1 (done)** Volume: anchor the face on a projected surface (FR-8.2), shade
   the body, and keep a resting character alive — blinking, micro-saccades,
   breathing (FR-7).
-- **P2** Shape vocabulary: the `round`, `organic` and `drop` families and their
-  parameters (FR-2.6, FR-2.7), schema v2 plus the v1→v2 migration, and a shape
-  control in the Look panel.
-- **P3** Content: a starter library of at least 24 moods (FR-4.7) and at least
-  20 loops grouped life/reaction (FR-5.7), all original.
+- **P2 (done)** Shape vocabulary: the `round`, `organic` and `drop` families
+  and their parameters (FR-2.6, FR-2.7), schema v2 plus the v1→v2 migration,
+  and a shape control in the Look panel.
+
+  The geometry had landed a step earlier (`9d957cf`) but nothing imported it —
+  `scene.ts` still drew one superellipse. The wire-up is what closed P2:
+  `Surface` carries the family, `migrate()` became a real chain, and the
+  portable avatar format bumped alongside with `readPortableAvatar()` still
+  accepting v1 files. The three render goldens are byte-unchanged across that
+  commit, which is the evidence the migration default is behaviour-preserving
+  rather than merely plausible.
+
+- **P3 (next)** Content: a starter library of at least 24 moods (FR-4.7) and at
+  least 20 loops grouped life/reaction (FR-5.7), all original. The kit ships 4
+  moods and 2 loops today.
+
+  Planned as a new pure `src/domain/content/` module of literal records, with
+  `starterKit()` composing it, so `create.ts` stays about document creation.
+  Two known snags: `StudioView.test.tsx` hard-codes the name `"mood 5"`, which
+  is really `starterKit().moods.length + 1` and should be derived; and several
+  tests reach for starter content by name or index (`happy`, `sleepy`, `idle`,
+  `loops[1]` = `greet`, and `Stage.test.tsx` needs ≥2 loops). The render
+  goldens are safe — they are driven by `test/fixtures/full.json`, not by
+  `starterKit()`.
+
 - **P4 (in progress)** Remaining UI surfaces.
 
   _Done:_ stage transport dock with status pill, owning playback for the whole
@@ -82,10 +102,25 @@ Bring the app level with what the concept demands, per the feature inventory in
   fallback (FR-5.2, FR-5.5); mood duplicate; collapsible inspector cards on
   shared design tokens; the rail and inspector at their documented 56px / 360px.
 
-  _Open:_ loop rename, blink card and loop summary (FR-5.8); rotation gizmo and
-  guide overlay (FR-8.2, FR-8.4); Share loop picker, radial background and
-  package example (FR-10.1, FR-10.3, FR-10.5); drag-reorder proper (the button
-  fallback exists, the drag does not); drag-to-scrub numeric labels (FR-9.5).
+  _Open:_ loop rename, blink card and loop summary (FR-5.8); the Moods modal
+  editor with per-eye deltas and mirror, plus mood rename/reorder and a kebab
+  (docs/05 §2 — the roadmap had omitted these, docs/05 is the fuller list);
+  rotation gizmo and guide overlay (FR-8.2, FR-8.4); Share loop picker, radial
+  background, live preview, import summary and package example (FR-10.1,
+  FR-10.3, FR-10.5); drag-reorder proper (the button fallback exists, the drag
+  does not); drag-to-scrub numeric labels (FR-9.5).
+
+  _Groundwork the open items need:_ there is no modal/dialog primitive anywhere
+  in `src/app` yet, and both the Moods editor and the import summary want one;
+  and `Menu`/`MenuItem` are still private to `BubbleRail.tsx`, so giving Moods
+  or Loops a kebab means lifting them into `studio/ui.tsx` first. Most of the
+  rest needs no new reducer actions — `loop/update` already carries `name`,
+  `group` and `blink`, `mood/reorder` exists with zero call sites, and `svg.ts`
+  already renders a radial background nothing offers in the UI.
+
+  _Defect found while planning, still open:_ FR-8.3 says Esc restores the
+  pre-drag rotation; `Stage.tsx` resets head rotation to zero instead. Needs a
+  red-first regression test.
 
   _a11y gaps surfaced by the docs audit and since closed:_
 

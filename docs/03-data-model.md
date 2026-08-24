@@ -1,4 +1,4 @@
-# 03 · Data Model — Bubble Avatar v1
+# 03 · Data Model — Bubble Avatar v2
 
 > Original schema designed for this project. No compatibility with any external
 > format is intended. IDs are opaque strings with prefixes: `bbl_`, `mood_`,
@@ -15,7 +15,7 @@
 
 ```jsonc
 {
-  "version": 1,
+  "version": 2,
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_abc",
   "locale": "es",
@@ -198,7 +198,7 @@ that _produces_ `displayedMoodId/moodProgress/blinkPhase` over time.
 
 ```jsonc
 {
-  "version": 1,
+  "version": 2,
   "kind": "bubble-avatar",
   "bubble": {/* Bubble, with ownKit inlined (never null) */},
   "loops": ["loop_001", "loop_002"], // exported subset, resolved inside bubble
@@ -210,8 +210,9 @@ integrity (every step's `moodId` exists in the inlined kit).
 
 ## 7. Validation rules (enforced by `document/validate.ts`)
 
-1. `version === 1` and `kind` matches the file type; else reject with code
-   `E_VERSION`.
+1. `version === 2` and `kind` matches the file type; else reject with code
+   `E_VERSION`. A v1 file is upgraded by `migrate()` before it is validated,
+   so it never reaches this rule as a v1.
 2. Unique IDs within their scope; step `moodId` must exist in the same kit.
 3. Shape family (FR-2.6): `shape` is `round` | `organic` | `drop`. `roundness`
    counts up toward round — 0 squares the silhouette off, 1 is an ellipse.
@@ -219,20 +220,30 @@ integrity (every step's `moodId` exists in the inlined kit).
    and picks which arrangement of bumps you get. Every family is deterministic.
 4. Numeric ranges: roundness 0–1, perspective 0–1, springSpeed 0.1–3,
    scale 0.1–3, holdMs ≥ 0, blink intervals > 0, colors match `#rrggbb`.
-4. Non-empty `name` after trim (moods, loops, bubbles).
-5. `linked: true` ⇒ left/right placements must be mirror-consistent (enforced
+5. Non-empty `name` after trim (moods, loops, bubbles).
+6. `linked: true` ⇒ left/right placements must be mirror-consistent (enforced
    on write, so validation only double-checks).
 
 ## 8. Versioning & migration policy
 
 - Additive changes bump `version` and ship a `migrate(vN→vN+1)` in
   `document/migrate.ts`; imports run the migration chain then validate.
-- Breaking experiments happen on a branch behind a `version: 2` flag — v1 files
-  keep loading forever via migrations.
+- Old files keep loading forever via migrations; nothing is ever rejected for
+  being merely old.
 
-### v1 → v2 (shape family, FR-2.6)
+### v1 → v2 (shape family, FR-2.6) — **landed**
 
 v2 adds `shape`, `lobes`, `wobble` and `seed` to the surface. A v1 document
-predates the shape vocabulary, so the migration fills them with the round
-family (`shape: "round"`, `wobble: 0`), which draws exactly what v1 drew. Any
-autosaved v1 document therefore keeps loading and looks unchanged.
+predates the shape vocabulary, so the migration fills the round family
+(`shape: "round"`), which draws exactly what v1 drew. Any autosaved v1
+document therefore keeps loading and looks unchanged.
+
+That last claim is not a hope — it is measured. `surfacePath`'s round branch
+returns the same string the pre-v2 `blobPath` call returned, asserted directly
+in `geometry/shapes.test.ts`, and the three render goldens did not move in the
+commit that switched the renderer over.
+
+The portable `*.bubble-avatar.json` bumps to 2 on the same rule. It is a public
+embed surface, so `readPortableAvatar()` in `export/avatar.ts` still accepts a
+v1 file and upgrades it the same way; the runtime reads every definition
+through it.
