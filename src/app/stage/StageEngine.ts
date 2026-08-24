@@ -1,6 +1,6 @@
 // StageEngine: high-frequency frame loop writing SVG straight to the DOM
 // (FR-11). React never re-renders per frame; the engine owns only live values.
-import { liveFrame } from "../../render/scene";
+import { liveFrame, restingScene } from "../../render/scene";
 import { sceneToSvg } from "../../render/svg";
 import type { Bubble, Kit } from "../../domain/document/types";
 
@@ -54,14 +54,18 @@ export class StageEngine {
     // Cap effective delta to avoid jumps after tab sleep.
     if (t - this.lastFrameMs > 1000) this.startMs += t - this.lastFrameMs - 16;
     this.lastFrameMs = t;
-    if (!this.opts.loopId) return;
-    const { scene } = liveFrame(
-      this.opts.bubble,
-      this.opts.kit,
-      this.opts.loopId,
-      t - this.startMs,
-      this.opts.headRotation,
-    );
+    const elapsed = t - this.startMs;
+    // No loop to play (empty kit, or nothing selected): the resting face still
+    // breathes with ambient motion (FR-6.2, FR-7).
+    const scene = this.opts.loopId
+      ? liveFrame(
+          this.opts.bubble,
+          this.opts.kit,
+          this.opts.loopId,
+          elapsed,
+          this.opts.headRotation,
+        ).scene
+      : restingScene(this.opts.bubble, elapsed, this.opts.headRotation);
     this.host.innerHTML = sceneToSvg(scene);
   }
 }

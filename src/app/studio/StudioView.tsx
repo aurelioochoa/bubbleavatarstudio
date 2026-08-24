@@ -148,7 +148,7 @@ export function StudioView() {
           <Stage
             bubble={bubble}
             kit={kit}
-            loopId={playingLoopId ?? kit.loops[0].id}
+            loopId={playingLoopId}
             playing={playingLoopId !== null}
             onPause={() => {
               setPlayingLoopId(null);

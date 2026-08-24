@@ -175,7 +175,11 @@ export function liveFrame(
 }
 
 /** Resting scene: neutral pose, ambient only (used for thumbnails/snapshots). */
-export function restingScene(bubble: Bubble, tAbsMs = 0): Scene {
+export function restingScene(
+  bubble: Bubble,
+  tAbsMs = 0,
+  headRotation: LiveInput["headRotation"] = { x: 0, y: 0, z: 0 },
+): Scene {
   const mood: MoodSample = {
     left: zeroEye(),
     right: zeroEye(),
@@ -187,7 +191,7 @@ export function restingScene(bubble: Bubble, tAbsMs = 0): Scene {
     mood,
     blink: 0,
     ambient,
-    headRotation: { x: 0, y: 0, z: 0 },
+    headRotation,
   });
 }
 

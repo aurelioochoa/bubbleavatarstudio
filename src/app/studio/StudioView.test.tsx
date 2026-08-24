@@ -4,6 +4,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StudioView } from "./StudioView";
+import { createDefaultDocument } from "../../domain/document/create";
+import { STORAGE_KEY } from "../persistence";
 
 beforeEach(() => {
   cleanup();
@@ -84,6 +86,17 @@ describe("StudioView", () => {
     await user.click(screen.getByRole("tab", { name: "Ciclos" }));
     expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
+  });
+
+  it("renders a stored document whose kit has no loops (FR-5.2, FR-6.2)", () => {
+    const doc = createDefaultDocument();
+    const withoutLoops = {
+      ...doc,
+      starterKit: { ...doc.starterKit, loops: [] },
+    };
+    globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutLoops));
+    render(<StudioView />);
+    expect(screen.getByLabelText("bubble stage")).toBeTruthy();
   });
 
   it("deleting a referenced mood surfaces the E_REF error alert", async () => {
