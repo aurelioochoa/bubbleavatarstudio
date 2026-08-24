@@ -73,6 +73,20 @@ export type MessageKey =
   | "loops.transition"
   | "loops.moveUp"
   | "loops.moveDown"
+  | "loops.name"
+  | "loops.group"
+  | "loops.groupLife"
+  | "loops.groupReaction"
+  | "loops.blink"
+  | "loops.blinkMin"
+  | "loops.blinkMax"
+  | "loops.blinkDuration"
+  | "loops.summary"
+  | "loops.summarySteps"
+  | "loops.summaryHolds"
+  | "loops.summaryCycle"
+  | "loops.summaryBlink"
+  | "loops.blinkOff"
   | "rail.rename"
   | "rail.menu"
   | "rail.moveUp"
@@ -175,6 +189,20 @@ const es: Record<MessageKey, string> = {
   "loops.transition": "Transición",
   "loops.moveUp": "Subir paso",
   "loops.moveDown": "Bajar paso",
+  "loops.name": "Nombre del ciclo",
+  "loops.group": "Grupo",
+  "loops.groupLife": "Vida",
+  "loops.groupReaction": "Reacciones",
+  "loops.blink": "Parpadeo",
+  "loops.blinkMin": "Intervalo mínimo (ms)",
+  "loops.blinkMax": "Intervalo máximo (ms)",
+  "loops.blinkDuration": "Duración del parpadeo (ms)",
+  "loops.summary": "Resumen",
+  "loops.summarySteps": "pasos",
+  "loops.summaryHolds": "Duraciones",
+  "loops.summaryCycle": "Ciclo completo",
+  "loops.summaryBlink": "Parpadeo",
+  "loops.blinkOff": "Sin parpadeo",
   "rail.rename": "Renombrar",
   "rail.menu": "Acciones de la burbuja",
   "rail.moveUp": "Subir burbuja",
@@ -278,6 +306,20 @@ const en: Record<MessageKey, string> = {
   "loops.transition": "Transition",
   "loops.moveUp": "Move step up",
   "loops.moveDown": "Move step down",
+  "loops.name": "Loop name",
+  "loops.group": "Group",
+  "loops.groupLife": "Life",
+  "loops.groupReaction": "Reactions",
+  "loops.blink": "Blink",
+  "loops.blinkMin": "Min interval (ms)",
+  "loops.blinkMax": "Max interval (ms)",
+  "loops.blinkDuration": "Blink duration (ms)",
+  "loops.summary": "Summary",
+  "loops.summarySteps": "steps",
+  "loops.summaryHolds": "Holds",
+  "loops.summaryCycle": "Full cycle",
+  "loops.summaryBlink": "Blink",
+  "loops.blinkOff": "No blinking",
   "rail.rename": "Rename",
   "rail.menu": "Bubble actions",
   "rail.moveUp": "Move bubble up",

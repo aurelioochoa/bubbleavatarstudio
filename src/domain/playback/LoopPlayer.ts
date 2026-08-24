@@ -2,6 +2,7 @@
 // advance(tAbsMs) computes the interpolated mood purely from elapsed time, so
 // the result is frame-rate independent and trivially testable.
 import { transitionFn } from "./easing";
+import { cycleSteps } from "./summary";
 import type { Kit, Loop, Mood, MoodEye } from "../document/types";
 
 export interface MoodSample {
@@ -77,13 +78,10 @@ export class LoopPlayer {
     return this.expandedSteps().reduce((a, s) => a + s.holdMs, 0);
   }
 
-  /** Loop mode: [s1..sn]; pingpong: forward then mirrored reverse leg. */
+  /** Loop mode: [s1..sn]; pingpong: forward then mirrored reverse leg.
+   * Shared with summarizeLoop (FR-5.8) so the two can never disagree. */
   private expandedSteps() {
-    const steps = this.loop.steps;
-    if (this.loop.mode === "pingpong" && steps.length >= 2) {
-      return [...steps, ...[...steps].reverse().slice(1)];
-    }
-    return steps;
+    return cycleSteps(this.loop);
   }
 
   advance(tAbsMs: number): PlaybackState {

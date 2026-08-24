@@ -1,5 +1,5 @@
 // FR-8 direct manipulation: each drag axis seeds from its own start value,
-// and Escape restores the resting rotation. Engine is mocked; we assert on
+// and Escape restores the pose held before it. Engine is mocked; we assert on
 // the opts StageEngine.update receives.
 //
 // Also covers the stage overlays of docs/05 §1: the status pill and the
@@ -121,9 +121,19 @@ describe("Stage drag (FR-8.3)", () => {
     expect(lastHead().y).toBeCloseTo(20);
   });
 
-  it("Escape restores the resting rotation", () => {
+  it("Escape restores the rotation held before the last drag", () => {
     const el = renderStage();
-    drag(el, 100, 100);
+    drag(el, 100, 100); // pose the head, then keep it
+    expect(lastHead()).toEqual({ x: 20, y: 20, z: 0 });
+    drag(el, 100, 100); // a second drag the user wants to back out of
+    expect(lastHead()).toEqual({ x: 40, y: 40, z: 0 });
+    fireEvent.keyDown(el, { key: "Escape" });
+    // FR-8.3: Esc is a single-level undo of the drag, not a reset to resting.
+    expect(lastHead()).toEqual({ x: 20, y: 20, z: 0 });
+  });
+
+  it("Escape with no drag yet leaves the resting rotation alone", () => {
+    const el = renderStage();
     fireEvent.keyDown(el, { key: "Escape" });
     expect(lastHead()).toEqual({ x: 0, y: 0, z: 0 });
   });

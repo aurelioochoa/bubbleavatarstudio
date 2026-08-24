@@ -1,5 +1,5 @@
 // Stage: hosts the StageEngine, handles direct manipulation (FR-8).
-// Drag rotates the head and pauses playback; Escape restores.
+// Drag rotates the head and pauses playback; Escape undoes that drag.
 //
 // Layout follows docs/05 §1: a radial backdrop, the render centered on it, a
 // status pill top-left and the transport dock along the bottom. The engine
@@ -46,6 +46,10 @@ export function Stage({
     sx: number;
     sy: number;
   } | null>(null);
+  // FR-8.3: Esc is a single-level undo of the drag, so what it restores is the
+  // pose held when the last drag began — not the resting pose. Kept in a ref
+  // and outside dragRef, which is cleared on pointerup.
+  const preDragRef = useRef({ x: 0, y: 0, z: 0 });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -79,6 +83,7 @@ export function Stage({
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
+    preDragRef.current = head;
     // Optional chain: jsdom and older embedders lack pointer capture.
     (e.target as Partial<HTMLElement> & EventTarget).setPointerCapture?.(
       e.pointerId,
@@ -103,7 +108,7 @@ export function Stage({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") setHead({ x: 0, y: 0, z: 0 }); // Esc-undo (FR-8)
+    if (e.key === "Escape") setHead(preDragRef.current); // Esc-undo (FR-8.3)
   };
 
   // The transport acts on the loop the dock names; without loops there is
