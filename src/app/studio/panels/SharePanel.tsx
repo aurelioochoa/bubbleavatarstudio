@@ -30,6 +30,7 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
   const [bg, setBg] = useState<"transparent" | "solid" | "gradient">(
     "transparent",
   );
+  const [importError, setImportError] = useState(false);
 
   const background =
     bg === "solid"
@@ -71,10 +72,15 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
   };
 
   const importProject = (file: File) => {
+    setImportError(false);
     void file.text().then((text) => {
       try {
         const parsed: unknown = JSON.parse(text);
-        if (!validateDocument(parsed).ok) return;
+        if (!validateDocument(parsed).ok) {
+          // FR-9.3: invalid files are rejected with a readable error.
+          setImportError(true);
+          return;
+        }
         // FR-9: import parses, validates, then replaces only after confirmation.
         if (
           globalThis.confirm(
@@ -84,13 +90,21 @@ export function SharePanel({ bubble, doc, dispatch, t }: SharePanelProps) {
           dispatch({ type: "load", doc: parsed as StudioDocument });
         }
       } catch {
-        /* ignore malformed files */
+        setImportError(true);
       }
     });
   };
 
   return (
     <div className="space-y-4 text-xs">
+      {importError && (
+        <p
+          role="alert"
+          className="rounded bg-red-500/20 px-2 py-1 text-red-300"
+        >
+          {t("error.import")}
+        </p>
+      )}
       <section className="space-y-2">
         <h3 className="text-xs font-semibold tracking-wide text-[#9aa0c3] uppercase">
           Photo Mode

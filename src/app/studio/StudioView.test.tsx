@@ -7,6 +7,7 @@ import { StudioView } from "./StudioView";
 
 beforeEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   globalThis.localStorage?.clear();
   vi.stubGlobal("requestAnimationFrame", () => 0);
   vi.stubGlobal("cancelAnimationFrame", () => {});
@@ -36,6 +37,30 @@ describe("StudioView", () => {
     render(<StudioView />);
     await user.click(screen.getByRole("button", { name: "+ Nueva burbuja" }));
     expect(screen.getAllByText("Bubble")).toHaveLength(2);
+  });
+
+  it("flushes autosave on pagehide so quick reloads keep edits (FR-9.2)", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("button", { name: "+ Nueva burbuja" }));
+    globalThis.dispatchEvent(new Event("pagehide"));
+    const raw = globalThis.localStorage.getItem(
+      "bubble-studio.document.v1",
+    );
+    expect(raw).toBeTruthy();
+    expect(JSON.parse(raw as string).bubbles).toHaveLength(2);
+  });
+
+  it("asks for confirmation before deleting a bubble (FR-1.5)", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("button", { name: "+ Nueva burbuja" }));
+    vi.stubGlobal("confirm", vi.fn(() => false));
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+    expect(screen.getAllByText("Bubble")).toHaveLength(2);
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+    expect(screen.getAllByText("Bubble")).toHaveLength(1);
   });
 
   it("Look tab shows surface controls", async () => {

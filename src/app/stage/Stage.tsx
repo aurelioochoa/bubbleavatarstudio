@@ -53,7 +53,10 @@ export function Stage({ bubble, kit, loopId, playing, onPause }: StageProps) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    // Optional chain: jsdom and older embedders lack pointer capture.
+    (e.target as Partial<HTMLElement> & EventTarget).setPointerCapture?.(
+      e.pointerId,
+    );
     if (playing) onPause(); // direct manipulation pauses playback (FR-8)
   };
 
@@ -64,8 +67,8 @@ export function Stage({ bubble, kit, loopId, playing, onPause }: StageProps) {
     const dy = e.clientY - d.py;
     setHead((h) => ({
       ...h,
-      y: clamp(d.sx + dy * 0.2, -60, 60),
-      x: clamp(d.sy + dx * 0.2, -60, 60),
+      x: clamp(d.sx + dx * 0.2, -60, 60),
+      y: clamp(d.sy + dy * 0.2, -60, 60),
     }));
   };
 

@@ -31,6 +31,17 @@ export function StudioView() {
     autosaver.push(state.doc);
   }, [state.doc, autosaver]);
 
+  // FR-9.2: a reload racing the 300ms debounce must not lose the last edit.
+  useEffect(() => {
+    const onHide = () => {
+      autosaver.flush();
+    };
+    globalThis.addEventListener("pagehide", onHide);
+    return () => {
+      globalThis.removeEventListener("pagehide", onHide);
+    };
+  }, [autosaver]);
+
   const t = translator(state.doc.locale);
   const empty = state.doc.bubbles.length === 0;
   const bubble =
@@ -120,7 +131,10 @@ export function StudioView() {
             <button
               type="button"
               onClick={() => {
-                dispatch({ type: "bubble/remove", id: bubble.id });
+                // FR-1.5: deletion requires confirmation.
+                if (globalThis.confirm(t("confirm.removeBubble"))) {
+                  dispatch({ type: "bubble/remove", id: bubble.id });
+                }
               }}
               className="rounded bg-red-500/20 px-2 py-1 text-xs text-red-300"
               aria-label={t("common.remove")}

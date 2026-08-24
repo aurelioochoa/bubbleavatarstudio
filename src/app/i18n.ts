@@ -36,8 +36,10 @@ export type MessageKey =
   | "common.pause"
   | "common.cancel"
   | "common.duplicate"
+  | "confirm.removeBubble"
   | "error.ref"
-  | "error.generic";
+  | "error.generic"
+  | "error.import";
 
 const es: Record<MessageKey, string> = {
   "app.title": "Bubble Avatar Studio",
@@ -76,8 +78,10 @@ const es: Record<MessageKey, string> = {
   "common.pause": "Pausar",
   "common.cancel": "Cancelar",
   "common.duplicate": "Duplicar",
+  "confirm.removeBubble": "¿Eliminar esta burbuja?",
   "error.ref": "No se puede eliminar: está en uso.",
   "error.generic": "Operación rechazada.",
+  "error.import": "Archivo de proyecto no válido.",
 };
 
 const en: Record<MessageKey, string> = {
@@ -117,8 +121,10 @@ const en: Record<MessageKey, string> = {
   "common.pause": "Pause",
   "common.cancel": "Cancel",
   "common.duplicate": "Duplicate",
+  "confirm.removeBubble": "Delete this bubble?",
   "error.ref": "Cannot remove: it is in use.",
   "error.generic": "Operation rejected.",
+  "error.import": "Invalid project file.",
 };
 
 const DICTS = { es, en } as const;
