@@ -82,6 +82,15 @@ export function sceneToSvg(
   const eyes =
     eyeElement("eye-left", scene.eyes.left) +
     eyeElement("eye-right", scene.eyes.right);
+  // FR-8.4: stage chrome rather than character, so it takes its colour from
+  // whatever the host sets — the accent token stays in styles.css.
+  const g = scene.guide;
+  const guide = g
+    ? `<g id="guide" fill="none" stroke="currentColor" stroke-width="1.25" opacity="0.55">` +
+      `<path d="${g.outline.path}" transform="${g.outline.transform}"/>` +
+      g.arcs.map((d) => `<path d="${d}"/>`).join("") +
+      "</g>"
+    : "";
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size)} ${fmt(scene.size)}" width="${box}" height="${box}">` +
@@ -94,6 +103,7 @@ export function sceneToSvg(
     `<path id="body" d="${scene.body.path}" fill="${bodyFill}" transform="${scene.body.transform}"/>` +
     extras +
     eyes +
+    guide +
     "</g></g></svg>"
   );
 }

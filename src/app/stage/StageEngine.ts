@@ -20,6 +20,8 @@ export interface StageEngineOptions {
   headRotation: { x: number; y: number; z: number };
   /** A mood held on the stage while the user picks or edits it (FR-4.4). */
   preview: MoodSample | null;
+  /** Draw the projection guide over the character (FR-8.4). */
+  guide: boolean;
 }
 
 /** A frame longer than this means the tab slept; charge a nominal frame instead. */
@@ -89,15 +91,17 @@ export class StageEngine {
 
   private renderFrame(): void {
     this.advanceClocks(this.now());
-    const { bubble, kit, loopId, mode, headRotation, preview } = this.opts;
+    const { bubble, kit, loopId, mode, headRotation, preview, guide } =
+      this.opts;
     let scene;
     if (preview) {
       // Manual selection owns the live state while it lasts (FR-6.1).
-      scene = moodScene(bubble, preview, this.ambientMs, headRotation);
+      scene = moodScene(bubble, preview, this.ambientMs, headRotation, guide);
     } else if (loopId && mode !== "stopped") {
-      scene = liveFrame(bubble, kit, loopId, this.loopMs, headRotation).scene;
+      scene = liveFrame(bubble, kit, loopId, this.loopMs, headRotation, guide)
+        .scene;
     } else {
-      scene = restingScene(bubble, this.ambientMs, headRotation);
+      scene = restingScene(bubble, this.ambientMs, headRotation, guide);
     }
     const svg = sceneToSvg(scene);
     // A paused stage re-serializes to the same bytes every frame; skip the write.

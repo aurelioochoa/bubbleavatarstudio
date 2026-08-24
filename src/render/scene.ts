@@ -62,6 +62,18 @@ export interface Shading {
   edge: string;
 }
 
+/**
+ * FR-8.4: the surface the face is anchored to, drawn so the volume being posed
+ * is visible. Present only when the caller asks for it — a snapshot, an export
+ * and every golden leave it off, which is why they are unaffected by it.
+ */
+export interface GuideRender {
+  /** Silhouette of the turned ellipsoid: an ellipse under the body's scale. */
+  outline: { path: string; transform: string };
+  /** Equator and meridian of the front hemisphere, sampled through project(). */
+  arcs: string[];
+}
+
 export interface Scene {
   /** Square viewBox side. */
   size: number;
@@ -75,6 +87,7 @@ export interface Scene {
   /** Sorted back-to-front by z. */
   extras: ShapeRender[];
   eyes: { left: EyeRender; right: EyeRender };
+  guide?: GuideRender;
 }
 
 /** Live (non-persisted) inputs for one frame. */
@@ -84,6 +97,8 @@ export interface LiveInput {
   blink: number; // 0..1 closure
   ambient: ReturnType<typeof ambientAt>;
   headRotation: { x: number; y: number; z: number };
+  /** Draw the projection guide over the character (FR-8.4). */
+  guide?: boolean;
 }
 
 export const SCENE_SIZE = 512;
@@ -210,6 +225,47 @@ function hashId(seed: string): string {
   return (h >>> 0).toString(36);
 }
 
+/** How many points each guide arc is sampled at; enough to read as a curve. */
+const GUIDE_SAMPLES = 24;
+
+/**
+ * The guide is sampled through the same `project()` the eyes go through, so
+ * what it draws is literally where an anchor would land — not an illustration
+ * of the projection but a reading of it.
+ */
+function guideFor(
+  surface: Bubble["body"]["surface"],
+  projection: FaceProjection,
+  bodyScale: number,
+): GuideRender {
+  const rx = Math.max(surface.width, 1) / 2;
+  const ry = Math.max(surface.height, 1) / 2;
+  const arc = (at: (t: number) => { px: number; py: number }): string =>
+    Array.from({ length: GUIDE_SAMPLES + 1 }, (_, i) => {
+      const { px, py } = at(i / GUIDE_SAMPLES);
+      const p = projection.project(px, py);
+      return `${i === 0 ? "M" : "L"} ${fmt(p.x)} ${fmt(p.y)}`;
+    }).join(" ");
+
+  return {
+    outline: {
+      // The silhouette of an ellipsoid stays an ellipse; two arcs close it.
+      path:
+        `M ${fmt(-rx)} 0 A ${fmt(rx)} ${fmt(ry)} 0 0 1 ${fmt(rx)} 0` +
+        ` A ${fmt(rx)} ${fmt(ry)} 0 0 1 ${fmt(-rx)} 0 Z`,
+      transform: `scale(${fmtScale(projection.scaleX * bodyScale)} ${fmtScale(
+        projection.scaleY * bodyScale,
+      )})`,
+    },
+    arcs: [
+      // Equator: where an anchor at eye height travels as the head yaws.
+      arc((t) => ({ px: -rx + 2 * rx * t, py: 0 })),
+      // Meridian: the same for a pitch.
+      arc((t) => ({ px: 0, py: -ry + 2 * ry * t })),
+    ],
+  };
+}
+
 export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   const { surface } = bubble.body;
   const bodyY = surface.y + live.ambient.bodyY;
@@ -288,6 +344,9 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
     },
     extras,
     eyes: { left, right },
+    ...(live.guide
+      ? { guide: guideFor(surface, projection, live.ambient.bodyScale) }
+      : {}),
   };
 }
 
@@ -303,10 +362,14 @@ export function liveFrame(
   loopId: string,
   tAbsMs: number,
   headRotation: LiveInput["headRotation"],
+  guide = false,
 ): { scene: Scene; player: ReturnType<LoopPlayer["advance"]> | null } {
   const loop = kit.loops.find((l) => l.id === loopId);
   if (!loop) {
-    return { scene: restingScene(bubble, tAbsMs, headRotation), player: null };
+    return {
+      scene: restingScene(bubble, tAbsMs, headRotation, guide),
+      player: null,
+    };
   }
   const player = new LoopPlayer(loop, kit);
   const st = player.advance(tAbsMs);
@@ -318,6 +381,7 @@ export function liveFrame(
     blink,
     ambient,
     headRotation,
+    guide,
   };
   return { scene: buildScene(bubble, live), player: st };
 }
@@ -331,6 +395,7 @@ export function moodScene(
   mood: MoodSample,
   tAbsMs = 0,
   headRotation: LiveInput["headRotation"] = { x: 0, y: 0, z: 0 },
+  guide = false,
 ): Scene {
   return buildScene(bubble, {
     tAbsMs,
@@ -338,6 +403,7 @@ export function moodScene(
     blink: blinkAt(RESTING_BLINK, bubble.id, tAbsMs),
     ambient: ambientAt(bubble.ambient, tAbsMs),
     headRotation,
+    guide,
   });
 }
 
@@ -346,6 +412,7 @@ export function restingScene(
   bubble: Bubble,
   tAbsMs = 0,
   headRotation: LiveInput["headRotation"] = { x: 0, y: 0, z: 0 },
+  guide = false,
 ): Scene {
   const mood: MoodSample = {
     left: zeroEye(),
@@ -360,6 +427,7 @@ export function restingScene(
     blink: blinkAt(RESTING_BLINK, bubble.id, tAbsMs),
     ambient,
     headRotation,
+    guide,
   });
 }
 

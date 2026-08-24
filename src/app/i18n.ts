@@ -12,6 +12,8 @@ export type MessageKey =
   | "stage.resting"
   | "stage.transport"
   | "stage.loop"
+  | "stage.gizmo"
+  | "stage.guide"
   | "look.surface"
   | "look.width"
   | "look.height"
@@ -68,12 +70,13 @@ export type MessageKey =
   | "moods.moveUp"
   | "moods.moveDown"
   | "moods.mirror"
-  | "moods.rotationX"
-  | "moods.rotationY"
-  | "moods.rotationZ"
   | "moods.overrideBodyColor"
   | "moods.overrideEyesColor"
   | "common.save"
+  | "common.reset"
+  | "common.rotationX"
+  | "common.rotationY"
+  | "common.rotationZ"
   | "common.close"
   | "loops.title"
   | "loops.add"
@@ -140,6 +143,8 @@ const es: Record<MessageKey, string> = {
   "stage.resting": "En reposo",
   "stage.transport": "Transporte",
   "stage.loop": "Ciclo",
+  "stage.gizmo": "Rotar cabeza",
+  "stage.guide": "Guía de proyección",
   "look.surface": "Cuerpo",
   "look.width": "Ancho",
   "look.height": "Alto",
@@ -196,12 +201,13 @@ const es: Record<MessageKey, string> = {
   "moods.moveUp": "Subir",
   "moods.moveDown": "Bajar",
   "moods.mirror": "Reflejar izquierdo → derecho",
-  "moods.rotationX": "Rotación X",
-  "moods.rotationY": "Rotación Y",
-  "moods.rotationZ": "Rotación Z",
   "moods.overrideBodyColor": "Color del cuerpo",
   "moods.overrideEyesColor": "Color de los ojos",
   "common.save": "Guardar",
+  "common.reset": "Restablecer",
+  "common.rotationX": "Rotación X",
+  "common.rotationY": "Rotación Y",
+  "common.rotationZ": "Rotación Z",
   "common.close": "Cerrar",
   "loops.title": "Ciclos",
   "loops.add": "Nuevo ciclo",
@@ -269,6 +275,8 @@ const en: Record<MessageKey, string> = {
   "stage.resting": "Resting",
   "stage.transport": "Transport",
   "stage.loop": "Loop",
+  "stage.gizmo": "Rotate head",
+  "stage.guide": "Projection guide",
   "look.surface": "Body",
   "look.width": "Width",
   "look.height": "Height",
@@ -325,12 +333,13 @@ const en: Record<MessageKey, string> = {
   "moods.moveUp": "Move up",
   "moods.moveDown": "Move down",
   "moods.mirror": "Mirror left → right",
-  "moods.rotationX": "Rotation X",
-  "moods.rotationY": "Rotation Y",
-  "moods.rotationZ": "Rotation Z",
   "moods.overrideBodyColor": "Body color",
   "moods.overrideEyesColor": "Eye color",
   "common.save": "Save",
+  "common.reset": "Reset",
+  "common.rotationX": "Rotation X",
+  "common.rotationY": "Rotation Y",
+  "common.rotationZ": "Rotation Z",
   "common.close": "Close",
   "loops.title": "Loops",
   "loops.add": "New loop",

@@ -101,13 +101,20 @@ function drag(el: Element, dx: number, dy: number) {
   firePointer(el, "pointerup", { pointerId: 1, clientX: 100 + dx, clientY: 100 + dy });
 }
 
-function lastHead(): { x: number; y: number; z: number } {
-  const calls = engineOf().update.mock.calls as Array<
-    [{ headRotation: { x: number; y: number; z: number } }]
-  >;
+interface UpdateOpts {
+  headRotation: { x: number; y: number; z: number };
+  guide: boolean;
+}
+
+function lastOpts(): UpdateOpts {
+  const calls = engineOf().update.mock.calls as [UpdateOpts][];
   const last = calls.at(-1);
   if (!last) throw new Error("engine.update never called");
-  return last[0].headRotation;
+  return last[0];
+}
+
+function lastHead(): { x: number; y: number; z: number } {
+  return lastOpts().headRotation;
 }
 
 describe("Stage drag (FR-8.3)", () => {
@@ -215,5 +222,49 @@ describe("Stage overlays (docs/05 §1)", () => {
       />,
     );
     expect(screen.queryByRole("button", { name: "Reproducir" })).toBeNull();
+  });
+});
+
+describe("Stage gizmo and guide (FR-8.2, FR-8.4)", () => {
+  it("keeps its overlays out of the element the engine overwrites", async () => {
+    const user = userEvent.setup();
+    const { el } = setupStage();
+    await user.click(screen.getByRole("button", { name: "Rotar cabeza" }));
+    // The engine writes innerHTML every frame, so a child would be wiped.
+    expect(el.contains(screen.getByRole("group", { name: "Rotar cabeza" }))).toBe(
+      false,
+    );
+  });
+
+  it("sets all three rotation axes, including the roll drag cannot reach", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(screen.getByRole("button", { name: "Rotar cabeza" }));
+    fireEvent.change(screen.getByLabelText("Rotación Z"), {
+      target: { value: "35" },
+    });
+    expect(lastHead().z).toBe(35);
+    fireEvent.change(screen.getByLabelText("Rotación Y"), {
+      target: { value: "140" },
+    });
+    // Past the ±60 a drag clamps to: the gizmo is what reaches a full turn.
+    expect(lastHead()).toEqual({ x: 0, y: 140, z: 35 });
+  });
+
+  it("resets the pose from the gizmo", async () => {
+    const user = userEvent.setup();
+    const { el } = setupStage();
+    drag(el, 100, 100);
+    await user.click(screen.getByRole("button", { name: "Rotar cabeza" }));
+    await user.click(screen.getByRole("button", { name: "Restablecer" }));
+    expect(lastHead()).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it("asks the engine for the projection guide only once toggled", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    expect(lastOpts().guide).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Guía de proyección" }));
+    expect(lastOpts().guide).toBe(true);
   });
 });

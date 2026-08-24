@@ -51,6 +51,7 @@ describe("StageEngine without a loop (FR-6.2)", () => {
       mode: "stopped",
       headRotation: { x: 0, y: 0, z: 0 },
       preview: null,
+      guide: false,
     });
     engine.update({
       bubble,
@@ -59,6 +60,7 @@ describe("StageEngine without a loop (FR-6.2)", () => {
       mode: "stopped",
       headRotation: { x: 0, y: 0, z: 0 },
       preview: null,
+      guide: false,
     });
     expect(host.innerHTML).toContain('id="body"');
   });
@@ -77,6 +79,7 @@ describe("StageEngine mood preview (FR-4.4)", () => {
       mode: "stopped" as const,
       headRotation: { x: 0, y: 0, z: 0 },
       preview: null,
+      guide: false,
     };
     const engine = new StageEngine(host, opts);
     engine.update(opts);
@@ -84,6 +87,7 @@ describe("StageEngine mood preview (FR-4.4)", () => {
 
     engine.update({
       ...opts,
+      guide: false,
       preview: {
         left: sleepy.left,
         right: sleepy.right,
@@ -111,6 +115,7 @@ describe("StageEngine transport (FR-6.1, FR-6.2)", () => {
       mode,
       headRotation: { x: 0, y: 0, z: 0 },
       preview: null,
+      guide: false,
     };
     const engine = new StageEngine(host, opts);
     engine.update(opts);

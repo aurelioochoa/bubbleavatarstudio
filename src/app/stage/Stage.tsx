@@ -10,6 +10,7 @@ import { StageEngine, type StageMode } from "./StageEngine";
 import type { Bubble, Kit } from "../../domain/document/types";
 import type { MoodSample } from "../../domain/playback/LoopPlayer";
 import type { MessageKey } from "../i18n";
+import { RangeInput } from "../studio/ui";
 
 export interface StageProps {
   bubble: Bubble;
@@ -50,6 +51,10 @@ export function Stage({
   // pose held when the last drag began — not the resting pose. Kept in a ref
   // and outside dragRef, which is cleared on pointerup.
   const preDragRef = useRef({ x: 0, y: 0, z: 0 });
+  // FR-8.2 / FR-8.4: the rotation pad and the projection guide, both off until
+  // asked for. Overlays live beside the engine host, never inside it.
+  const [gizmo, setGizmo] = useState(false);
+  const [guide, setGuide] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -61,6 +66,7 @@ export function Stage({
       mode,
       headRotation: head,
       preview,
+      guide,
     });
     engineRef.current = engine;
     engine.start();
@@ -78,8 +84,9 @@ export function Stage({
       mode,
       headRotation: head,
       preview,
+      guide,
     });
-  }, [bubble, kit, loopId, mode, head, preview]);
+  }, [bubble, kit, loopId, mode, head, preview, guide]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
@@ -130,7 +137,7 @@ export function Stage({
 
       <div
         ref={hostRef}
-        className="relative grid h-full w-full cursor-grab touch-none place-items-center outline-none [&>svg]:h-auto [&>svg]:max-h-[min(80%,32rem)] [&>svg]:w-auto [&>svg]:max-w-[min(80%,32rem)] active:cursor-grabbing"
+        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:h-auto [&>svg]:max-h-[min(80%,32rem)] [&>svg]:w-auto [&>svg]:max-w-[min(80%,32rem)] active:cursor-grabbing"
         role="img"
         aria-label="bubble stage"
         tabIndex={0}
@@ -140,6 +147,70 @@ export function Stage({
         onPointerCancel={onPointerUp}
         onKeyDown={onKeyDown}
       />
+
+      <div className="absolute top-4 right-4 flex items-center gap-1">
+        <OverlayToggle
+          label={t("stage.guide")}
+          pressed={guide}
+          onClick={() => {
+            setGuide((v) => !v);
+          }}
+        >
+          <GuideIcon />
+        </OverlayToggle>
+        <OverlayToggle
+          label={t("stage.gizmo")}
+          pressed={gizmo}
+          onClick={() => {
+            setGizmo((v) => !v);
+          }}
+        >
+          <GizmoIcon />
+        </OverlayToggle>
+      </div>
+
+      {gizmo && (
+        <div
+          role="group"
+          aria-label={t("stage.gizmo")}
+          className="absolute top-16 right-4 w-52 space-y-2 rounded-card border border-line bg-panel/90 p-3 shadow-dock backdrop-blur-md"
+        >
+          {AXES.map((a) => (
+            <label key={a.axis} className="block text-xs">
+              <span className="flex justify-between text-ink-dim">
+                {t(a.label)}
+                <span className="tabular-nums text-ink">
+                  {String(Math.round(head[a.axis]))}°
+                </span>
+              </span>
+              <RangeInput
+                label={t(a.label)}
+                value={head[a.axis]}
+                min={-180}
+                max={180}
+                step={1}
+                onChange={(v) => {
+                  // Posing by hand owns the live state, same as a drag (FR-8.3).
+                  if (mode === "playing") onPause();
+                  preDragRef.current = head;
+                  setHead((h) => ({ ...h, [a.axis]: v }));
+                }}
+                className="mt-1 w-full"
+              />
+            </label>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              preDragRef.current = head;
+              setHead({ x: 0, y: 0, z: 0 });
+            }}
+            className="w-full rounded-field bg-panel-2 px-2 py-1.5 text-xs text-ink transition-colors duration-150 ease-out hover:bg-panel-3"
+          >
+            {t("common.reset")}
+          </button>
+        </div>
+      )}
 
       <StatusPill mode={mode} loopName={playing || mode === "paused" ? (selected?.name ?? null) : null} t={t} />
 
@@ -184,6 +255,89 @@ export function Stage({
         </div>
       )}
     </div>
+  );
+}
+
+/** FR-8.2: the three axes the gizmo drives, in the order the pad shows them. */
+const AXES: { axis: "x" | "y" | "z"; label: MessageKey }[] = [
+  { axis: "x", label: "common.rotationX" },
+  { axis: "y", label: "common.rotationY" },
+  { axis: "z", label: "common.rotationZ" },
+];
+
+/** Stage-chrome toggle: pressed state is announced, not only painted. */
+function OverlayToggle({
+  label,
+  pressed,
+  onClick,
+  children,
+}: {
+  label: string;
+  pressed: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`grid h-8 w-8 place-items-center rounded-full border border-line backdrop-blur-md transition-colors duration-150 ease-out ${
+        pressed
+          ? "bg-primary text-white"
+          : "bg-panel/80 text-ink-dim hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function GizmoIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+      <circle
+        cx="8"
+        cy="8"
+        r="5.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <ellipse
+        cx="8"
+        cy="8"
+        rx="2.4"
+        ry="5.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.1"
+      />
+    </svg>
+  );
+}
+
+function GuideIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+      <circle
+        cx="8"
+        cy="8"
+        r="5.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeDasharray="2 1.6"
+      />
+      <path
+        d="M2.5 8h11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.1"
+      />
+    </svg>
   );
 }
 

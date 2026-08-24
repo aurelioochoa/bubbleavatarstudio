@@ -362,3 +362,48 @@ describe("ambient feeds the scene", () => {
     expect(s0.head.transform).not.toBe(s1.head.transform);
   });
 });
+
+// FR-8.4: an optional overlay drawing the surface the eyes are anchored to,
+// so the volume being posed is visible. Off unless asked for — which is what
+// keeps the goldens above frozen.
+describe("projection guide (FR-8.4)", () => {
+  const bubble = doc.bubbles[0];
+
+  it("is absent unless requested", () => {
+    expect(restingScene(bubble, 0).guide).toBeUndefined();
+    expect(sceneToSvg(restingScene(bubble, 0))).not.toContain('id="guide"');
+  });
+
+  it("draws the silhouette and the two great arcs when requested", () => {
+    const scene = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, true);
+    expect(scene.guide?.arcs).toHaveLength(2);
+    expect(scene.guide?.outline.path.startsWith("M")).toBe(true);
+    const svg = sceneToSvg(scene);
+    expect(svg).toContain('id="guide"');
+    // Stage chrome, not character colour: it inherits the host's own accent.
+    expect(svg).toContain('stroke="currentColor"');
+  });
+
+  it("bends its arcs as the head turns", () => {
+    const face = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, true);
+    const turned = restingScene(bubble, 0, { x: 0, y: 40, z: 0 }, true);
+    expect(turned.guide?.arcs[0]).not.toBe(face.guide?.arcs[0]);
+    expect(turned.guide?.outline.transform).not.toBe(
+      face.guide?.outline.transform,
+    );
+  });
+
+  it("stays byte-stable like everything else the renderer emits", () => {
+    const once = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, true));
+    const twice = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, true));
+    expect(once).toBe(twice);
+  });
+
+  it("never reaches a snapshot, which cannot ask for it", async () => {
+    // The overlay is a stage affordance; the exported SVG is the character.
+    const { snapshotSvg } = await import("../export/avatar");
+    expect(snapshotSvg(bubble, { size: 512, background: null })).not.toContain(
+      'id="guide"',
+    );
+  });
+});
