@@ -45,6 +45,15 @@ describe("BubbleAvatar", () => {
     expect(el.style.width).toBe("256px");
   });
 
+  it("renders the SVG at the requested size, not the scene size (FR-10.4)", () => {
+    render(
+      <BubbleAvatar definition={definition} autoplay={false} size={256} />,
+    );
+    const svg = document.querySelector('[role="img"] svg');
+    expect(svg?.getAttribute("width")).toBe("256");
+    expect(svg?.getAttribute("height")).toBe("256");
+  });
+
   it("defaults aria label to the bubble name", () => {
     render(<BubbleAvatar definition={definition} autoplay={false} />);
     expect(screen_first().getAttribute("aria-label")).toBe(

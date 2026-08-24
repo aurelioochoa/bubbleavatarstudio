@@ -16,6 +16,12 @@ function eyeElement(id: string, eye: Scene["eyes"]["left"]): string {
 }
 
 export interface SvgOptions {
+  /**
+   * Rendered box in px (square). The viewBox always stays the scene's own
+   * coordinate space, so this scales the drawing rather than cropping it.
+   * Defaults to the scene size, which keeps the goldens byte-identical.
+   */
+  size?: number;
   /** null ⇒ transparent. */
   background:
     | null
@@ -50,6 +56,7 @@ export function sceneToSvg(
     }
   }
 
+  const box = fmt(opts.size ?? scene.size);
   const center = fmt(scene.size / 2);
   const extras = scene.extras
     .map(
@@ -62,7 +69,7 @@ export function sceneToSvg(
     eyeElement("eye-right", scene.eyes.right);
 
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size)} ${fmt(scene.size)}" width="${fmt(scene.size)}" height="${fmt(scene.size)}">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size)} ${fmt(scene.size)}" width="${box}" height="${box}">` +
     bg.join("") +
     `<g id="bubble" transform="translate(${center} ${center})">` +
     `<path id="body" d="${scene.body.path}" fill="${scene.body.fill}" transform="${scene.body.transform}"/>` +

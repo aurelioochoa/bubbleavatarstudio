@@ -52,6 +52,22 @@ describe("backgrounds (FR-10)", () => {
   });
 });
 
+describe("output size (FR-10.4)", () => {
+  it("scales the rendered box while keeping the coordinate system", () => {
+    const scene = restingScene(doc.bubbles[0], 0);
+    const scaled = sceneToSvg(scene, { background: null, size: 256 });
+    expect(scaled).toContain('width="256"');
+    expect(scaled).toContain('height="256"');
+    // The viewBox is the drawing's own coordinate space and must not change.
+    expect(scaled).toContain('viewBox="0 0 512 512"');
+  });
+
+  it("defaults to the scene size", () => {
+    const scene = restingScene(doc.bubbles[0], 0);
+    expect(sceneToSvg(scene)).toContain('width="512"');
+  });
+});
+
 describe("live frame with a playing loop", () => {
   const bubble: Bubble = doc.bubbles[0];
   const kit = bubble.ownKit ?? doc.starterKit;

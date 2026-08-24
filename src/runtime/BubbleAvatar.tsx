@@ -38,7 +38,10 @@ export function BubbleAvatar({
     const first = kit.loops[0];
     const loopId = loop ?? (kit.loops.length > 0 ? first.id : null);
     if (!loopId || !autoplay || paused) {
-      host.innerHTML = sceneToSvg(restingScene(definition.bubble, 0));
+      host.innerHTML = sceneToSvg(restingScene(definition.bubble, 0), {
+        background: null,
+        size,
+      });
       return;
     }
     const start = performance.now();
@@ -55,18 +58,21 @@ export function BubbleAvatar({
           z: 0,
         },
       );
-      host.innerHTML = sceneToSvg(scene);
+      host.innerHTML = sceneToSvg(scene, { background: null, size });
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [definition, loop, autoplay, paused, mounted]);
+  }, [definition, loop, autoplay, paused, mounted, size]);
 
   const fallback = mounted
     ? ""
-    : sceneToSvg(restingScene(definition.bubble, 0));
+    : sceneToSvg(restingScene(definition.bubble, 0), {
+        background: null,
+        size,
+      });
 
   return (
     <div

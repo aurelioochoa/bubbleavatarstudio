@@ -39,12 +39,10 @@ export interface SnapshotOptions {
 
 /** Deterministic resting-pose snapshot SVG string at the requested size. */
 export function snapshotSvg(bubble: Bubble, opts: SnapshotOptions): string {
-  const svg = sceneToSvg(restingScene(bubble, 0), {
+  return sceneToSvg(restingScene(bubble, 0), {
     background: opts.background,
+    size: opts.size,
   });
-  return svg
-    .replace(/width="[0-9.]+"/, `width="${String(opts.size)}"`)
-    .replace(/height="[0-9.]+"/, `height="${String(opts.size)}"`);
 }
 
 /** PNG via canvas rasterization (browser only). */
