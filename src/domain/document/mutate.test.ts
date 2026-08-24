@@ -394,15 +394,11 @@ describe("FR-5 loops", () => {
     const base = doc0();
     const bid = base.bubbles[0].id;
     const ids = base.starterKit.moods.map((m) => m.id);
-    const doc = unwrap(
-      reorderMoods(base, bid, [ids[3], ids[0], ids[1], ids[2]]),
-    );
-    expect(kitOf(doc, bid).moods.map((m) => m.id)).toEqual([
-      ids[3],
-      ids[0],
-      ids[1],
-      ids[2],
-    ]);
+    // permute() demands the complete id array, so move the last mood to the
+    // front rather than naming a fixed handful.
+    const moved = [ids[ids.length - 1], ...ids.slice(0, -1)];
+    const doc = unwrap(reorderMoods(base, bid, moved));
+    expect(kitOf(doc, bid).moods.map((m) => m.id)).toEqual(moved);
     expect(validateDocument(doc).ok).toBe(true);
   });
 

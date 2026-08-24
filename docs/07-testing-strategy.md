@@ -45,6 +45,11 @@ t=0 and periodicity).
 and `full.json` (2 bubbles, own kit on the first, 2 moods and 1 loop in each
 kit). Both are loaded through `validateDocument`, so schema drift breaks tests.
 
+These stay hand-written and deliberately small — they are _not_ built from
+`starterKit()`. That is what keeps `src/render/goldens/*.svg` frozen when the
+starter library grows, and it was re-verified when P3 took the kit to 24 moods
+and 20 loops.
+
 **Not built yet:** the `invalid/` cases per validation rule (E_VERSION, broken
 ref, bad colour). `validate.test.ts` covers those error codes with documents
 built inline instead. Extracting them into fixtures is F5 work — this section
@@ -52,14 +57,23 @@ described them as existing before they were written.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of P2 (the shape family reaching schema, renderer and UI): **22 Vitest
-files, 243 tests**, plus **1 Playwright spec** of **4 scenarios** covering
-boot, panels, a playing loop and the rail context menu. Production bundle
-269.46 kB JS / 26.20 kB CSS (82.48 / 5.74 gzipped).
+As of P3 (the starter library): **23 Vitest files, 254 tests**, plus **1
+Playwright spec** of **4 scenarios** covering boot, panels, a playing loop and
+the rail context menu. Production bundle 274.55 kB JS / 26.20 kB CSS (83.79 /
+5.74 gzipped).
 
-The JS grew 2.4 kB over the P4 UI pass (267.09 kB): the shape-family geometry
-now ships, where before it was written but unreachable. CSS is unchanged — the
-shape control is built from the existing card and segmented chrome.
+The JS grew 5.1 kB over P2 (269.46 kB): 24 mood records and 20 loop records now
+ship as literal data in `src/domain/content/`. CSS is unchanged — the library is
+data, and no panel gained new chrome to display it yet.
+
+One trap when re-deriving the CSS figure: Tailwind v4 scans every non-ignored
+file in the repo for class candidates, **markdown included**. An untracked
+research note containing the words "shadow" and "invisible" in prose adds
+`.shadow` and `.invisible` rules and inflates the CSS by ~0.27 kB. Measure on a
+clean tree, or the number reflects your scratch files rather than the app.
+
+At P2 the JS had grown 2.4 kB over the P4 UI pass (267.09 kB): the shape-family
+geometry started shipping, where before it was written but unreachable.
 
 The CSS had roughly doubled at the P4 UI pass against the P2 figure recorded
 here before it (13.98 kB): the design tokens, the collapsible-card chrome and

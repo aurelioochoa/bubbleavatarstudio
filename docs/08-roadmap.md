@@ -81,18 +81,33 @@ Bring the app level with what the concept demands, per the feature inventory in
   commit, which is the evidence the migration default is behaviour-preserving
   rather than merely plausible.
 
-- **P3 (next)** Content: a starter library of at least 24 moods (FR-4.7) and at
-  least 20 loops grouped life/reaction (FR-5.7), all original. The kit ships 4
-  moods and 2 loops today.
+- **P3 (done)** Content: the starter library ships **24 moods** (FR-4.7) across
+  the six bands the spec names — alert, calm, warm, negative, sleepy, playful —
+  and **20 loops** split 10 `life` / 10 `reaction` (FR-5.7), all original.
 
-  Planned as a new pure `src/domain/content/` module of literal records, with
-  `starterKit()` composing it, so `create.ts` stays about document creation.
-  Two known snags: `StudioView.test.tsx` hard-codes the name `"mood 5"`, which
-  is really `starterKit().moods.length + 1` and should be derived; and several
-  tests reach for starter content by name or index (`happy`, `sleepy`, `idle`,
-  `loops[1]` = `greet`, and `Stage.test.tsx` needs ≥2 loops). The render
-  goldens are safe — they are driven by `test/fixtures/full.json`, not by
-  `starterKit()`.
+  Lives in a new pure `src/domain/content/` module of literal records
+  (`moods.ts`, `loops.ts`), with `starterKit()` composing it, so `create.ts`
+  stays about document creation. Loops name moods by a stable local key, never
+  by index. `content.test.ts` guards the counts, the band spread, name and key
+  uniqueness, and that every delta and timing sits inside the range
+  `validate.ts` accepts — so a bad record fails at its source rather than as a
+  document-validation error three layers away.
+
+  Two things the wire-up fixed on the way through. `starterKit(ids)` now fills
+  injected mood and loop ids **positionally with a fallback**; previously a
+  partial list (`playback.test.ts` passes two mood ids) left the remaining ids
+  `undefined`. And the fake-`Random` step-id trick collided past the ninth step
+  — it fed `n / 10 ** len(n)` to `newId`, so step 10 produced step 1's id — and
+  is now a seeded LCG, still deterministic across runs.
+
+  The predicted snags landed exactly as predicted and are fixed:
+  `StudioView.test.tsx` derives the new-mood name from
+  `starterKit().moods.length + 1` instead of hard-coding `"mood 5"`, and
+  `mutate.test.ts`'s reorder case passes the complete id array `permute()`
+  requires. Every mood is referenced by at least one loop, which is what keeps
+  the E_REF path (FR-5.6) that test relies on true. The render goldens came out
+  **unchanged**, as predicted — they are driven by `test/fixtures/full.json`,
+  not by `starterKit()`.
 
 - **P4 (in progress)** Remaining UI surfaces.
 

@@ -1,21 +1,14 @@
+import { STARTER_LOOPS } from "../content/loops";
+import { STARTER_MOODS } from "../content/moods";
+import type { Random } from "../ids";
 import { newId } from "../ids";
-import type { Bubble, Kit, Mood, MoodEye, StudioDocument } from "./types";
+import type { Bubble, Kit, StudioDocument } from "./types";
 
 export const DEFAULT_COLORS = {
   body: "#6c7bff",
   accent: "#ffffff",
   eyes: "#1c2033",
 } as const;
-
-const zeroDeltas = (): MoodEye => ({
-  rotationXDeg: 0,
-  rotationYDeg: 0,
-  rotationZDeg: 0,
-  scaleX: 1,
-  scaleY: 1,
-  offsetX: 0,
-  offsetY: 0,
-});
 
 export function createBubble(name: string, id = newId("bbl")): Bubble {
   return {
@@ -54,78 +47,68 @@ export function createBubble(name: string, id = newId("bbl")): Bubble {
   };
 }
 
-function mood(name: string, patch: Partial<MoodEye>, id = newId("mood")): Mood {
-  const base = zeroDeltas();
-  return {
-    id,
-    name,
-    left: { ...base, ...patch },
-    right: { ...base, ...patch },
-    colorOverride: null,
+/**
+ * Deterministic ids for the starter steps. Step ids are only required to be
+ * unique within their loop (validate.ts scopes the set per loop), but a single
+ * seeded sequence keeps them unique across the whole kit and keeps two runs of
+ * `starterKit()` producing the same ids — which is what makes the fixtures and
+ * the reducer tests reproducible.
+ */
+function seededRandom(seed: number): Random {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 0x1_0000_0000;
   };
 }
 
+/**
+ * Compose the starter library (`src/domain/content/`) into a Kit: 24 moods
+ * across the six bands FR-4.7 documents, and 20 loops split life/reaction per
+ * FR-5.7.
+ *
+ * `ids` fills mood and loop ids positionally, for callers that need a known
+ * id; anything the caller does not supply gets a fresh one, so a partial list
+ * is legal.
+ */
 export function starterKit(ids?: { moods?: string[]; loops?: string[] }): Kit {
-  const [happy, curious, sleepy, surprised] = ids?.moods ?? [
-    newId("mood"),
-    newId("mood"),
-    newId("mood"),
-    newId("mood"),
-  ];
-  const [idle, greet] = ids?.loops ?? [newId("loop"), newId("loop")];
-  const step = (n: number) => newId("stp", () => n / 10 ** n.toString().length);
+  const moodIds = STARTER_MOODS.map((_, i) => ids?.moods?.[i] ?? newId("mood"));
+  const loopIds = STARTER_LOOPS.map((_, i) => ids?.loops?.[i] ?? newId("loop"));
+  const idOfMood = new Map(STARTER_MOODS.map((m, i) => [m.key, moodIds[i]]));
+  const stepRandom = seededRandom(0x5bea1);
+
   return {
-    moods: [
-      mood(
-        "happy",
-        { rotationZDeg: -8, scaleX: 1.15, scaleY: 0.8, offsetY: 4 },
-        happy,
-      ),
-      mood(
-        "curious",
-        { rotationZDeg: 10, scaleX: 0.9, scaleY: 1.2, offsetY: -2 },
-        curious,
-      ),
-      mood("sleepy", { scaleX: 0.7, scaleY: 0.25, offsetY: 10 }, sleepy),
-      mood("surprised", { scaleX: 1.35, scaleY: 1.35, offsetY: -6 }, surprised),
-    ],
-    loops: [
-      {
-        id: idle,
-        name: "idle",
-        group: "life",
-        steps: [
-          { id: step(1), moodId: happy, holdMs: 1200, transition: "spring" },
-          { id: step(2), moodId: curious, holdMs: 900, transition: "ease" },
-          { id: step(3), moodId: sleepy, holdMs: 700, transition: "ease" },
-        ],
-        mode: "loop",
-        springSpeed: 1,
-        blink: {
-          enabled: true,
-          minIntervalMs: 2400,
-          maxIntervalMs: 6000,
-          durationMs: 140,
-        },
-      },
-      {
-        id: greet,
-        name: "greet",
-        group: "life",
-        steps: [
-          { id: step(4), moodId: surprised, holdMs: 350, transition: "spring" },
-          { id: step(5), moodId: happy, holdMs: 900, transition: "spring" },
-        ],
-        mode: "once",
-        springSpeed: 1.2,
-        blink: {
-          enabled: false,
-          minIntervalMs: 2400,
-          maxIntervalMs: 6000,
-          durationMs: 140,
-        },
-      },
-    ],
+    moods: STARTER_MOODS.map((m, i) => ({
+      id: moodIds[i],
+      name: m.name,
+      left: { ...m.left },
+      right: { ...m.right },
+      colorOverride: m.colorOverride,
+    })),
+    loops: STARTER_LOOPS.map((l, i) => ({
+      id: loopIds[i],
+      name: l.name,
+      group: l.group,
+      steps: l.steps.map((s) => {
+        const moodId = idOfMood.get(s.mood);
+        // content.test.ts proves every step resolves; this guards the literal
+        // data against a typo reaching a document as a silent E_REF.
+        if (moodId === undefined) {
+          throw new Error(
+            `starter loop "${l.key}" names unknown mood "${s.mood}"`,
+          );
+        }
+        return {
+          id: newId("stp", stepRandom),
+          moodId,
+          holdMs: s.holdMs,
+          transition: s.transition,
+        };
+      }),
+      mode: l.mode,
+      springSpeed: l.springSpeed,
+      blink: { ...l.blink },
+    })),
   };
 }
 

@@ -40,8 +40,9 @@ describe("createDefaultDocument", () => {
   it("starts with one bubble, active, and a starter kit with moods and loops", () => {
     expect(doc.bubbles).toHaveLength(1);
     expect(doc.activeBubbleId).toBe(doc.bubbles[0].id);
-    expect(doc.starterKit.moods.length).toBeGreaterThanOrEqual(3);
-    expect(doc.starterKit.loops.length).toBeGreaterThanOrEqual(2);
+    // FR-4.7 / FR-5.7 minimums, re-baselined onto the starter library.
+    expect(doc.starterKit.moods.length).toBeGreaterThanOrEqual(24);
+    expect(doc.starterKit.loops.length).toBeGreaterThanOrEqual(20);
     const moodIds = new Set(doc.starterKit.moods.map((m) => m.id));
     for (const loop of doc.starterKit.loops) {
       expect(loop.steps.length).toBeGreaterThan(0);

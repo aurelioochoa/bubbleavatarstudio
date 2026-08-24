@@ -28,7 +28,7 @@ under `docs/screenshots/` by `pnpm e2e`.
 
 Working toward feature parity with the concept it reimplements; see
 `docs/08-roadmap.md` for phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **243 tests across 22 files**, plus
+requirements each one closes. Current gate: **254 tests across 23 files**, plus
 a Playwright smoke of 4 scenarios — re-derive with `pnpm test` rather than
 trusting this line.
 

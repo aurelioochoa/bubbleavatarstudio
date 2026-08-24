@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StudioView } from "./StudioView";
-import { createDefaultDocument } from "../../domain/document/create";
+import { createDefaultDocument, starterKit } from "../../domain/document/create";
 import { STORAGE_KEY } from "../persistence";
 import full from "../../test/fixtures/full.json";
 
@@ -277,7 +277,10 @@ describe("StudioView", () => {
     // blocked by E_REF (FR-5.6) whatever the confirmation says. Add a fresh
     // mood so this test measures the confirmation gate and nothing else.
     await user.click(screen.getByRole("button", { name: "+ Nuevo ánimo" }));
-    await user.click(screen.getByRole("button", { name: "mood 5" }));
+    // MoodsPanel names a new mood `mood ${kit.moods.length + 1}`; derive it
+    // rather than re-hard-coding a number the starter library sets.
+    const added = `mood ${String(starterKit().moods.length + 1)}`;
+    await user.click(screen.getByRole("button", { name: added }));
 
     const remove = async () => {
       const del = screen.getAllByRole("button", { name: "Eliminar" }).at(-1);
@@ -287,10 +290,10 @@ describe("StudioView", () => {
 
     vi.stubGlobal("confirm", vi.fn(() => false));
     await remove();
-    expect(screen.getByRole("button", { name: "mood 5" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: added })).toBeTruthy();
 
     vi.stubGlobal("confirm", vi.fn(() => true));
     await remove();
-    expect(screen.queryByRole("button", { name: "mood 5" })).toBeNull();
+    expect(screen.queryByRole("button", { name: added })).toBeNull();
   });
 });
