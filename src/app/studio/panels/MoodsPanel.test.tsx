@@ -258,3 +258,46 @@ describe("mood editor (FR-4.1, FR-4.3, FR-4.4)", () => {
     expect(cleared.patch.colorOverride).toBeNull();
   });
 });
+/** jsdom's drag events carry no dataTransfer; supply the parts the hook reads. */
+function dragCard(from: Element, to: Element) {
+  const data = new Map<string, string>();
+  const dataTransfer = {
+    setData: (k: string, v: string) => data.set(k, v),
+    getData: (k: string) => data.get(k) ?? "",
+    effectAllowed: "",
+    dropEffect: "",
+  };
+  fireEvent.dragStart(from, { dataTransfer });
+  fireEvent.dragOver(to, { dataTransfer });
+  fireEvent.drop(to, { dataTransfer });
+}
+
+const rowOf = (el: Element): Element => {
+  const li = el.closest("li");
+  if (!li) throw new Error("expected the control to sit in a list row");
+  return li;
+};
+
+describe("mood reorder by drag (docs/05 §2)", () => {
+  it("drops a card into the target's place and commits the new order", () => {
+    const { dispatch, kit, first } = setup();
+    const third = kit.moods[2];
+    if (!third) throw new Error("fixture needs three moods");
+    dragCard(
+      rowOf(screen.getByRole("button", { name: first.name })),
+      rowOf(screen.getByRole("button", { name: third.name })),
+    );
+    const ids = kit.moods.map((m) => m.id);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "mood/reorder",
+      ids: [ids[1], ids[2], ids[0], ...ids.slice(3)],
+    });
+  });
+
+  it("leaves the order alone when a card is dropped on itself", () => {
+    const { dispatch, first } = setup();
+    const card = rowOf(screen.getByRole("button", { name: first.name }));
+    dragCard(card, card);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+});

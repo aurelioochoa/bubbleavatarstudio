@@ -20,6 +20,7 @@ import type { MoodSample } from "../../../domain/playback/LoopPlayer";
 import type { Action } from "../store";
 import type { MessageKey } from "../../i18n";
 import { Card, Menu, MenuItem, Modal, RangeInput } from "../ui";
+import { useDragReorder } from "../dragReorder";
 
 export interface MoodsPanelProps {
   kit: Kit;
@@ -143,12 +144,21 @@ export function MoodsPanel({
     setDraft(null);
   };
 
+  const reorder = (ids: string[]) => {
+    dispatch({ type: "mood/reorder", ids });
+  };
+  // docs/05 §2: cards drag; the menu's up/down stays as the keyboard path.
+  const drag = useDragReorder(
+    kit.moods.map((m) => m.id),
+    reorder,
+  );
+
   const move = (index: number, to: number) => {
     const ids = kit.moods.map((m) => m.id);
     if (to < 0 || to >= ids.length) return;
     const next = [...ids];
     [next[index], next[to]] = [ids[to], ids[index]] as [string, string];
-    dispatch({ type: "mood/reorder", ids: next });
+    reorder(next);
     setMenuFor(null);
   };
 
@@ -156,7 +166,11 @@ export function MoodsPanel({
     <div className="space-y-3">
       <ul className="grid grid-cols-4 gap-1.5">
         {kit.moods.map((m, i) => (
-          <li key={m.id} className="relative">
+          <li
+            key={m.id}
+            {...drag.itemProps(m.id)}
+            className="relative data-[dragging]:opacity-40"
+          >
             <button
               type="button"
               onClick={() => {

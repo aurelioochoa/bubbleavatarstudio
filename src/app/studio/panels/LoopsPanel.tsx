@@ -14,6 +14,7 @@ import type { Action } from "../store";
 import type { MessageKey } from "../../i18n";
 import { NumberField } from "./look/fields";
 import { Card, IconButton, RangeInput, Segmented } from "../ui";
+import { useDragReorder } from "../dragReorder";
 
 export interface LoopsPanelProps {
   kit: Kit;
@@ -79,6 +80,13 @@ export function LoopsPanel({
     if (!loop) return;
     patchLoop(loop.id, { blink: { ...loop.blink, ...patch } });
   };
+
+  const stepDrag = useDragReorder(
+    loop?.steps.map((s) => s.id) ?? [],
+    (stepIds) => {
+      if (loop) dispatch({ type: "step/reorder", loopId: loop.id, stepIds });
+    },
+  );
 
   const groups = byGroup(kit.loops);
   // A group the catalogue never names still needs a chip, or its loops would
@@ -245,7 +253,8 @@ export function LoopsPanel({
                 return (
                   <li
                     key={s.id}
-                    className="space-y-1.5 rounded-field border border-line bg-panel/60 p-2"
+                    {...stepDrag.itemProps(s.id)}
+                    className="space-y-1.5 rounded-field border border-line bg-panel/60 p-2 data-[dragging]:opacity-40"
                   >
                     <div className="flex items-center gap-1.5">
                       <span className="w-4 shrink-0 text-center text-[10px] text-ink-dim tabular-nums">

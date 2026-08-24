@@ -173,3 +173,45 @@ describe("grouped loop list (docs/05 §2)", () => {
     expect(screen.getByRole("radio", { name: "cinemática" })).toBeTruthy();
   });
 });
+/** jsdom's drag events carry no dataTransfer; supply the parts the hook reads. */
+function dragCard(from: Element, to: Element) {
+  const data = new Map<string, string>();
+  const dataTransfer = {
+    setData: (k: string, v: string) => data.set(k, v),
+    getData: (k: string) => data.get(k) ?? "",
+    effectAllowed: "",
+    dropEffect: "",
+  };
+  fireEvent.dragStart(from, { dataTransfer });
+  fireEvent.dragOver(to, { dataTransfer });
+  fireEvent.drop(to, { dataTransfer });
+}
+
+const rowOf = (el: Element): Element => {
+  const li = el.closest("li");
+  if (!li) throw new Error("expected the control to sit in a list row");
+  return li;
+};
+
+describe("step reorder by drag (FR-5.2, docs/05 §2)", () => {
+  it("keeps the ↑ ↓ fallback alongside the drag", () => {
+    setup();
+    expect(screen.getAllByRole("button", { name: /Subir paso/ }).length)
+      .toBeGreaterThan(0);
+  });
+
+  it("moves a step without changing which mood it references", () => {
+    const { dispatch, loop } = setup();
+    if (loop.steps.length < 3) throw new Error("fixture needs three steps");
+    dragCard(
+      rowOf(screen.getByLabelText("Nombre 1")),
+      rowOf(screen.getByLabelText("Nombre 3")),
+    );
+    const ids = loop.steps.map((s) => s.id);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/reorder",
+      loopId: loop.id,
+      stepIds: [ids[1], ids[2], ids[0], ...ids.slice(3)],
+    });
+  });
+});

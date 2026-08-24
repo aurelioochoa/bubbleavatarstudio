@@ -8,6 +8,7 @@ import type { Bubble } from "../../domain/document/types";
 import type { Action } from "./store";
 import type { MessageKey } from "../i18n";
 import { Menu, MenuItem } from "./ui";
+import { useDragReorder } from "./dragReorder";
 
 export interface BubbleRailProps {
   bubbles: Bubble[];
@@ -26,6 +27,13 @@ export function BubbleRail({
   t,
 }: BubbleRailProps) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  // docs/05 §1: the rail drags; the menu's move up/down stays the fallback.
+  const drag = useDragReorder(
+    bubbles.map((b) => b.id),
+    (ids) => {
+      dispatch({ type: "bubble/reorder", ids });
+    },
+  );
 
   return (
     <nav
@@ -36,6 +44,7 @@ export function BubbleRail({
         {bubbles.map((b, i) => (
           <RailItem
             key={b.id}
+            dragProps={drag.itemProps(b.id)}
             bubble={b}
             active={b.id === activeId}
             first={i === 0}
@@ -71,6 +80,7 @@ export function BubbleRail({
 }
 
 function RailItem({
+  dragProps,
   bubble,
   active,
   first,
@@ -83,6 +93,9 @@ function RailItem({
   onToggleMenu,
   onCloseMenu,
 }: {
+  dragProps: ReturnType<
+    ReturnType<typeof useDragReorder>["itemProps"]
+  >;
   bubble: Bubble;
   active: boolean;
   first: boolean;
@@ -112,7 +125,7 @@ function RailItem({
   };
 
   return (
-    <li className="relative">
+    <li {...dragProps} className="relative data-[dragging]:opacity-40">
       <button
         type="button"
         aria-label={bubble.name}

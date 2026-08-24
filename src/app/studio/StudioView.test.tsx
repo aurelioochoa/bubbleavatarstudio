@@ -1,7 +1,13 @@
 // FR-9 studio shell smoke test (jsdom). rAF is stubbed; the engine is
 // exercised in unit tests, here we verify the UI tree and interactions.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StudioView } from "./StudioView";
 import { createDefaultDocument, starterKit } from "../../domain/document/create";
@@ -276,6 +282,39 @@ describe("StudioView", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
     expect(screen.queryByRole("button", { name: "idle" })).toBeNull();
+  });
+
+  it("reorders the rail by dragging one bubble onto another (FR-1.4)", async () => {
+    // Two distinctly named bubbles, or "the order changed" is unobservable.
+    globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
+    render(<StudioView />);
+
+    // The fixture carries locale "en", so the rail announces itself in English.
+    await screen.findByRole("button", { name: "Alpha" });
+    const rail = screen.getByRole("navigation", { name: "Bubbles" });
+    const names = () =>
+      within(rail)
+        .getAllByRole("listitem")
+        .map((li) =>
+          within(li).getAllByRole("button")[0]?.getAttribute("aria-label"),
+        );
+    expect(names()).toEqual(["Alpha", "Beta"]);
+
+    const rows = within(rail).getAllByRole("listitem");
+    const [first, second] = rows;
+    if (!first || !second) throw new Error("rail should hold two bubbles");
+    const data = new Map<string, string>();
+    const dataTransfer = {
+      setData: (k: string, v: string) => data.set(k, v),
+      getData: (k: string) => data.get(k) ?? "",
+      effectAllowed: "",
+      dropEffect: "",
+    };
+    fireEvent.dragStart(first, { dataTransfer });
+    fireEvent.dragOver(second, { dataTransfer });
+    fireEvent.drop(second, { dataTransfer });
+
+    expect(names()).toEqual(["Beta", "Alpha"]);
   });
 
   it("asks for confirmation before deleting a mood", async () => {
