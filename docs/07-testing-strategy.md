@@ -19,7 +19,8 @@
 | `export/`        | Vitest                           | Avatar/project file builders (round-trip: export → validate → import → deep-equal), loop pruning, orphan-mood pruning, error codes                                             |
 | `app/` UI        | Vitest + Testing Library (jsdom) | User flows: create bubble, edit mood deltas with cancel restoring stage, linked-eye mirroring, loop step reorder keeps moodId, import confirmation gate, i18n key parity es/en |
 | `runtime/`       | Vitest + Testing Library         | Renders resting face from a definition; starts/pauses; identical SVG vs studio for same state (FR-10.4)                                                                        |
-| Visual smoke     | Playwright (F5 only)             | Screenshots of studio boot, each panel, a playing loop; manual review vs `05-ui-design.md`                                                                                     |
+| Theme a11y       | Vitest (parses `styles.css`)     | Contrast ratios computed from the real tokens: >= 4.5:1 for every text pair, >= 3:1 for non-text marks (`docs/05` §3). A palette edit that breaks the rule fails here             |
+| Visual smoke     | Playwright (F5 only)             | Screenshots of studio boot, each panel, a playing loop and the rail context menu; asserts the stage dock and status pill; manual review vs `05-ui-design.md`                   |
 
 ## 3. Timing tests (the critical ones — FR-6.3)
 
@@ -51,9 +52,14 @@ described them as existing before they were written.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of the P2 parity work: **21 Vitest files, 195 tests**, plus **1 Playwright
-spec** covering boot, panels and a playing loop. Production bundle 254.96 kB JS
-/ 13.98 kB CSS (78.27 / 3.54 gzipped).
+As of the P4 UI pass: **22 Vitest files, 223 tests**, plus **1 Playwright
+spec** of **4 scenarios** covering boot, panels, a playing loop and the rail
+context menu. Production bundle 267.09 kB JS / 26.20 kB CSS (81.73 / 5.74
+gzipped).
+
+The CSS roughly doubled against the P2 figure recorded here before
+(13.98 kB): the design tokens, the collapsible-card chrome and the explicit
+range/swatch styling in `styles.css` are all new surface area.
 
 Re-derive rather than trusting these: `pnpm test` prints the file and test
 counts, `pnpm build` prints the bundle sizes. They are recorded here as a

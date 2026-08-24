@@ -28,15 +28,23 @@ under `docs/screenshots/` by `pnpm e2e`.
 
 Working toward feature parity with the concept it reimplements; see
 `docs/08-roadmap.md` for phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **195 tests across 21 files**, plus
-a Playwright smoke — re-derive with `pnpm test` rather than trusting this line.
+requirements each one closes. Current gate: **223 tests across 22 files**, plus
+a Playwright smoke of 4 scenarios — re-derive with `pnpm test` rather than
+trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio
 shell reaching the whole body model; a projected face that gives the character
-volume; and idle behaviour (blink, micro-saccades, breathing) so a resting
-bubble looks alive. Still open: the shape families reaching the schema and UI,
-a larger starter library, and the stage/loops/share surfaces listed under
-roadmap P4. `docs/05-ui-design.md` marks each item **[built]** or **[target]**.
+volume; idle behaviour (blink, micro-saccades, breathing) so a resting bubble
+looks alive; and the P4 UI pass — a 56px rail of live thumbnails with a
+rename/duplicate/reorder/delete menu, a stage carrying the status pill and the
+transport dock, and a 360px inspector of collapsible cards on shared design
+tokens.
+
+Still open: the shape families reaching the schema and UI, a larger starter
+library, and the rest of roadmap P4 — the rotation gizmo and guide overlay,
+the blink card and loop summary, drag-reorder and drag-to-scrub, and the Share
+loop checklist and radial background.
+`docs/05-ui-design.md` marks each item **[built]** or **[target]**.
 
 ## Architecture
 

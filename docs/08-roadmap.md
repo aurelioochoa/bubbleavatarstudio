@@ -74,12 +74,28 @@ Bring the app level with what the concept demands, per the feature inventory in
   control in the Look panel.
 - **P3** Content: a starter library of at least 24 moods (FR-4.7) and at least
   20 loops grouped life/reaction (FR-5.7), all original.
-- **P4** Remaining UI surfaces: loop rename/duplicate, step reorder, blink card
-  and loop summary (FR-5.2, FR-5.5, FR-5.8); stage transport dock with status
-  pill and rotation gizmo plus the guide overlay (FR-6.2, FR-8.2, FR-8.4);
-  Share loop picker, radial background and package example (FR-10.1, FR-10.3,
-  FR-10.5); rail rename, reorder and thumbnails (FR-1.2, FR-1.4); drag-to-scrub
-  numeric labels (FR-9.5).
+- **P4 (in progress)** Remaining UI surfaces.
+
+  _Done:_ stage transport dock with status pill, owning playback for the whole
+  app (FR-6.2); rail thumbnails, rename and reorder behind a context menu
+  (FR-1.2, FR-1.4); loop duplicate and step reorder via the accessible ↑ ↓
+  fallback (FR-5.2, FR-5.5); mood duplicate; collapsible inspector cards on
+  shared design tokens; the rail and inspector at their documented 56px / 360px.
+
+  _Open:_ loop rename, blink card and loop summary (FR-5.8); rotation gizmo and
+  guide overlay (FR-8.2, FR-8.4); Share loop picker, radial background and
+  package example (FR-10.1, FR-10.3, FR-10.5); drag-reorder proper (the button
+  fallback exists, the drag does not); drag-to-scrub numeric labels (FR-9.5).
+
+  _a11y gaps surfaced by the docs audit and since closed:_
+
+  - Loop and mood delete now confirm, matching bubble-delete and import
+    (`docs/05` §3). Both were pre-existing, not P4 regressions.
+  - The primary indigo split by role so text-bearing fills clear 4.5:1
+    (`#505bbd` / `#5662cc`) while the vivid `#6c7bff` stays on non-text marks.
+    The audit had measured only the resting fill at 3.55:1; the contrast test
+    written for the fix caught the hover fill at 2.66:1 as well.
+    `src/app/theme.test.ts` now guards the whole palette.
 
 - **AC:** `pnpm check` green per step; every FR above covered by a test that
   names it; a visual pass in a real browser, not only jsdom.
