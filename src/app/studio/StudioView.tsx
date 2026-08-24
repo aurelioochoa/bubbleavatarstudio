@@ -248,6 +248,7 @@ export function StudioView() {
               kit={kit}
               doc={state.doc}
               dispatch={dispatch}
+              overlayHost={inspector}
               t={t}
             />
           )}

@@ -115,6 +115,14 @@ export type MessageKey =
   | "share.bgTransparent"
   | "share.bgSolid"
   | "share.bgGradient"
+  | "share.bgRadial"
+  | "share.bgFrom"
+  | "share.bgTo"
+  | "share.preview"
+  | "share.loops"
+  | "share.importTitle"
+  | "share.importReplace"
+  | "share.solidColor"
   | "share.exportProject"
   | "share.importProject"
   | "common.remove"
@@ -246,6 +254,14 @@ const es: Record<MessageKey, string> = {
   "share.bgTransparent": "Sin fondo",
   "share.bgSolid": "Sólido",
   "share.bgGradient": "Degradado",
+  "share.bgRadial": "Radial",
+  "share.bgFrom": "Color inicial",
+  "share.bgTo": "Color final",
+  "share.preview": "Vista previa",
+  "share.loops": "Ciclos incluidos",
+  "share.importTitle": "¿Reemplazar el proyecto?",
+  "share.importReplace": "Reemplazar",
+  "share.solidColor": "Color del fondo",
   "share.exportProject": "Exportar proyecto",
   "share.importProject": "Importar proyecto",
   "common.remove": "Eliminar",
@@ -378,6 +394,14 @@ const en: Record<MessageKey, string> = {
   "share.bgTransparent": "Transparent",
   "share.bgSolid": "Solid",
   "share.bgGradient": "Gradient",
+  "share.bgRadial": "Radial",
+  "share.bgFrom": "From color",
+  "share.bgTo": "To color",
+  "share.preview": "Preview",
+  "share.loops": "Included loops",
+  "share.importTitle": "Replace the project?",
+  "share.importReplace": "Replace",
+  "share.solidColor": "Background color",
   "share.exportProject": "Export project",
   "share.importProject": "Import project",
   "common.remove": "Remove",

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AVATAR_VERSION,
   buildPortableAvatar,
+  packageFiles,
   readPortableAvatar,
   snapshotSvg,
 } from "./avatar";
@@ -10,6 +11,7 @@ import { createBubble, createDefaultDocument } from "../domain/document/create";
 import { addMood } from "../domain/document/mutate";
 import { validateDocument } from "../domain/document/validate";
 import full from "../test/fixtures/full.json";
+import pkg from "../../package.json";
 import type { StudioDocument } from "../domain/document/types";
 
 const doc = full as unknown as StudioDocument;
@@ -106,5 +108,88 @@ describe("export integrity", () => {
       starterKit: avatar.kit,
     };
     expect(validateDocument(projected).ok).toBe(true);
+  });
+});
+
+// FR-10.3: the export chooses which loops travel with the character, and the
+// mood pruning has to follow that choice rather than the whole kit.
+describe("loop selection (FR-10.3)", () => {
+  const withTwoLoops = () => {
+    const d = createDefaultDocument();
+    const b = d.bubbles[0];
+    const kit = b.ownKit ?? d.starterKit;
+    return { d, b, kit };
+  };
+
+  it("embeds every loop by default", () => {
+    const { d, b, kit } = withTwoLoops();
+    expect(buildPortableAvatar(b, d).kit.loops).toHaveLength(
+      kit.loops.filter((l) => l.steps.length > 0).length,
+    );
+  });
+
+  it("embeds only the chosen loops", () => {
+    const { d, b, kit } = withTwoLoops();
+    const keep = kit.loops[1];
+    if (!keep) throw new Error("fixture needs two loops");
+    const built = buildPortableAvatar(b, d, [keep.id]);
+    expect(built.kit.loops.map((l) => l.id)).toEqual([keep.id]);
+  });
+
+  it("prunes moods to the ones the chosen loops actually reference", () => {
+    const { d, b, kit } = withTwoLoops();
+    const keep = kit.loops[1];
+    if (!keep) throw new Error("fixture needs two loops");
+    const built = buildPortableAvatar(b, d, [keep.id]);
+    const used = new Set(keep.steps.map((s) => s.moodId));
+    expect(new Set(built.kit.moods.map((m) => m.id))).toEqual(used);
+    // And the result is still internally consistent, which is the point.
+    expect(
+      validateDocument({ ...d, bubbles: [built.bubble], starterKit: built.kit })
+        .ok,
+    ).toBe(true);
+  });
+
+  it("an empty selection embeds no loops rather than all of them", () => {
+    const { d, b } = withTwoLoops();
+    const built = buildPortableAvatar(b, d, []);
+    expect(built.kit.loops).toHaveLength(0);
+    expect(built.kit.moods).toHaveLength(0);
+  });
+});
+
+// FR-10.5: the package is meant to be openable and usable, so it carries a
+// minimal example alongside the definition.
+describe("package files (FR-10.5)", () => {
+  it("ships the definition, a snapshot, a README and a usage example", () => {
+    const d = createDefaultDocument();
+    const names = packageFiles(d.bubbles[0], d).map((f) => f.name);
+    expect(names).toEqual([
+      "bubble.bubble-avatar.json",
+      "bubble.svg",
+      "README.md",
+      "example.tsx",
+    ]);
+  });
+
+  it("the example names the runtime component and an embedded loop", () => {
+    const d = createDefaultDocument();
+    const files = packageFiles(d.bubbles[0], d);
+    const avatar = buildPortableAvatar(d.bubbles[0], d);
+    const example = files.find((f) => f.name === "example.tsx");
+    expect(example?.text).toContain("<BubbleAvatar");
+    expect(example?.text).toContain("bubble.bubble-avatar.json");
+    // The import has to name the package the runtime actually ships in, or
+    // the "minimal usage example" is not usable (FR-10.5).
+    expect(example?.text).toContain(`from "${pkg.name}/runtime"`);
+    expect(example?.text).toContain(avatar.kit.loops[0]?.name ?? "");
+  });
+
+  it("omits the loop prop when nothing is embedded to play", () => {
+    const d = createDefaultDocument();
+    const example = packageFiles(d.bubbles[0], d, [])
+      .find((f) => f.name === "example.tsx");
+    expect(example?.text).toContain("<BubbleAvatar");
+    expect(example?.text).not.toContain("loop=");
   });
 });

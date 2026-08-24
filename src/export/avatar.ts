@@ -35,17 +35,28 @@ export function readPortableAvatar(input: PortableAvatar): PortableAvatar {
   return next;
 }
 
-/** Kit inlined; orphan moods (not referenced by any kept loop) are pruned. */
+/**
+ * Kit inlined; orphan moods (not referenced by any kept loop) are pruned.
+ *
+ * `loopIds` is the export's loop picker (FR-10.3): omit it and every playable
+ * loop travels, pass a list and only those do — with the mood pruning keyed to
+ * that same list, so a two-loop selection never drags the whole library along.
+ */
 export function buildPortableAvatar(
   bubble: Bubble,
   doc: StudioDocument,
+  loopIds?: readonly string[],
 ): PortableAvatar {
   const kit = bubble.ownKit ?? doc.starterKit;
+  const chosen =
+    loopIds === undefined
+      ? kit.loops
+      : kit.loops.filter((l) => loopIds.includes(l.id));
+  const loops = chosen.filter((l) => l.steps.length > 0);
   const usedMoodIds = new Set(
-    kit.loops.flatMap((l) => l.steps.map((s) => s.moodId)),
+    loops.flatMap((l) => l.steps.map((s) => s.moodId)),
   );
   const moods = kit.moods.filter((m) => usedMoodIds.has(m.id));
-  const loops = kit.loops.filter((l) => l.steps.length > 0);
   return {
     version: AVATAR_VERSION,
     kind: AVATAR_FORMAT,
@@ -54,9 +65,89 @@ export function buildPortableAvatar(
   };
 }
 
+/** One file of the export package, ready for `createZip` (FR-10.5). */
+export interface PackageFile {
+  name: string;
+  text: string;
+}
+
+const DEFINITION_FILE = "bubble.bubble-avatar.json";
+/** Where the example imports the runtime from — this repo's own package name. */
+const RUNTIME_PACKAGE = "bubbleavatarstudio/runtime";
+
+/**
+ * The package a user unzips: the definition, a snapshot to look at, a README,
+ * and a minimal example that actually compiles against the runtime — the
+ * loop it names is one that is really embedded, so copying it works.
+ */
+export function packageFiles(
+  bubble: Bubble,
+  doc: StudioDocument,
+  loopIds?: readonly string[],
+): PackageFile[] {
+  const avatar = buildPortableAvatar(bubble, doc, loopIds);
+  const loop = avatar.kit.loops.at(0);
+  const loopProp = loop ? `\n      loop="${loop.name}"\n      autoplay` : "";
+  return [
+    { name: DEFINITION_FILE, text: JSON.stringify(avatar, null, 2) },
+    {
+      name: "bubble.svg",
+      text: snapshotSvg(bubble, { size: 1024, background: null }),
+    },
+    {
+      name: "README.md",
+      text: [
+        `# ${bubble.name}`,
+        "",
+        "A Bubble Avatar export.",
+        "",
+        `- \`${DEFINITION_FILE}\` — the portable definition the runtime reads.`,
+        "- `bubble.svg` — a 1024px snapshot of the resting pose.",
+        "- `example.tsx` — the smallest thing that renders it.",
+        "",
+        `Loops in this package: ${
+          avatar.kit.loops.map((l) => l.name).join(", ") || "(none)"
+        }.`,
+        "",
+        "The runtime ships as a package; it is not inlined here.",
+        "",
+      ].join("\n"),
+    },
+    {
+      name: "example.tsx",
+      text: [
+        `import { BubbleAvatar } from "${RUNTIME_PACKAGE}";`,
+        `import definition from "./${DEFINITION_FILE}";`,
+        "",
+        "export function Example() {",
+        "  return (",
+        "    <BubbleAvatar",
+        "      definition={definition}" + loopProp,
+        "      size={256}",
+        "    />",
+        "  );",
+        "}",
+        "",
+      ].join("\n"),
+    },
+  ];
+}
+
 export interface SnapshotOptions {
   size: 512 | 1024 | 2048;
   background: SvgOptions["background"];
+}
+
+/**
+ * A small framed render of what a snapshot would produce (docs/05 §2). Same
+ * scene and same background as `snapshotSvg`; only the box differs, which is
+ * what makes it an honest preview rather than an approximation of one.
+ */
+export function previewSvg(
+  bubble: Bubble,
+  opts: { background: SvgOptions["background"]; size: number },
+): string {
+  return sceneToSvg(restingScene(bubble, 0), opts);
 }
 
 /** Deterministic resting-pose snapshot SVG string at the requested size. */
