@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { StudioView } from "./StudioView";
 import { createDefaultDocument } from "../../domain/document/create";
 import { STORAGE_KEY } from "../persistence";
+import full from "../../test/fixtures/full.json";
 
 beforeEach(() => {
   cleanup();
@@ -106,6 +107,22 @@ describe("StudioView", () => {
     await user.click(stop);
     expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
     expect(stop.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("stops when the target bubble cannot play the current loop (FR-6.4)", async () => {
+    const user = userEvent.setup();
+    // Alpha owns a kit whose "wave" loop Beta, on the starter kit, does not have.
+    globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
+    render(<StudioView />);
+    await user.click(screen.getByRole("tab", { name: "Loops" }));
+    await user.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Beta" }));
+    expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Stop" }).hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   it("renders a stored document whose kit has no loops (FR-5.2, FR-6.2)", () => {

@@ -68,6 +68,15 @@ describe("live frame with a playing loop", () => {
     );
   });
 
+  it("falls back to the resting face for a loop the kit does not have (FR-6.4)", () => {
+    const head = { x: 0, y: 0, z: 0 };
+    const frame = liveFrame(bubble, kit, "loop_from_another_kit", 3000, head);
+    expect(frame.player).toBeNull();
+    expect(sceneToSvg(frame.scene)).toBe(
+      sceneToSvg(restingScene(bubble, 3000, head)),
+    );
+  });
+
   it("head rotation changes the transform deterministically", () => {
     const a = liveFrame(bubble, kit, loopId, 3000, {
       x: 15,

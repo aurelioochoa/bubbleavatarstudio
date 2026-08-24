@@ -150,16 +150,23 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   };
 }
 
-/** Convenience: evaluate a fully live frame for a playing loop. */
+/**
+ * Convenience: evaluate a fully live frame for a playing loop. A loop id the
+ * kit does not know — a bubble switched to a different kit lineage, say —
+ * falls back to the resting face rather than throwing, so playback stops
+ * cleanly instead of tearing down the frame loop (FR-6.4).
+ */
 export function liveFrame(
   bubble: Bubble,
   kit: Kit,
   loopId: string,
   tAbsMs: number,
   headRotation: LiveInput["headRotation"],
-): { scene: Scene; player: ReturnType<LoopPlayer["advance"]> } {
+): { scene: Scene; player: ReturnType<LoopPlayer["advance"]> | null } {
   const loop = kit.loops.find((l) => l.id === loopId);
-  if (!loop) throw new Error(`unknown loop ${loopId}`);
+  if (!loop) {
+    return { scene: restingScene(bubble, tAbsMs, headRotation), player: null };
+  }
   const player = new LoopPlayer(loop, kit);
   const st = player.advance(tAbsMs);
   const ambient = ambientAt(bubble.ambient, tAbsMs);

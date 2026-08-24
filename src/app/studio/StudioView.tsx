@@ -54,6 +54,15 @@ export function StudioView() {
     state.doc.bubbles[0];
   const kit = empty ? null : effectiveKit(bubble, state.doc);
 
+  // FR-6.4: playback follows a bubble switch only when the target kit knows the
+  // loop; otherwise it stops cleanly instead of playing something that is gone.
+  const playableLoopId = transport.loopId;
+  useEffect(() => {
+    if (playableLoopId && !kit?.loops.some((l) => l.id === playableLoopId)) {
+      setTransport({ loopId: null, mode: "stopped" });
+    }
+  }, [kit, playableLoopId]);
+
   const tabs: { id: Tab; label: string }[] = [
     { id: "look", label: t("tab.look") },
     { id: "moods", label: t("tab.moods") },

@@ -39,7 +39,10 @@ export function LoopsPanel({
   const [selected, setSelected] = useState<string | null>(
     kit.loops[0]?.id ?? null,
   );
-  const loop = kit.loops.find((l) => l.id === selected) ?? null;
+  // Switching bubbles can leave `selected` pointing at another kit's loop;
+  // fall back to this kit's first loop rather than showing nothing (FR-6.4).
+  const loop =
+    kit.loops.find((l) => l.id === selected) ?? kit.loops.at(0) ?? null;
   const playingThis =
     loop !== null &&
     transport.loopId === loop.id &&
