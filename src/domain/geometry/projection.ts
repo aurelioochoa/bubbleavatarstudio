@@ -27,13 +27,24 @@ export interface FaceProjection {
 export interface ProjectionInput {
   width: number;
   height: number;
-  /** 0 keeps the face flat, 1 applies the full turn. */
+  /**
+   * How much of the commanded rotation the face actually takes: 0 keeps it
+   * flat (a sticker the turn never reaches), 1 applies the full turn.
+   *
+   * It scales the *angle*, not the result. Blending the identity with the
+   * rotated position — the obvious reading of "0 flat, 1 full" — is only a
+   * rotation near 0; the two disagree more the further the head turns, and at
+   * half a turn they point opposite ways and cancel. That collapsed the face
+   * frame toward the origin instead of carrying it around the head (at the
+   * default 0.6, to a fifth of its size), which is why a full-range turn
+   * stacked both eyes in the middle of the skull. A scaled angle is a real
+   * rotation at every setting, so nothing ever shrinks; and since a rotation
+   * by `perspective * angle` matches the blend to first order, small turns
+   * look as they always did.
+   */
   perspective: number;
   rotation: { x: number; y: number; z: number };
 }
-
-const lerp = (from: number, to: number, t: number): number =>
-  from + (to - from) * t;
 
 export function projectFace({
   width,
@@ -45,8 +56,8 @@ export function projectFace({
   const ry = Math.max(height, 1) / 2;
   const rz = Math.min(rx, ry) * DEPTH_RATIO;
 
-  const yaw = rotation.y * DEG;
-  const pitch = rotation.x * DEG;
+  const yaw = rotation.y * perspective * DEG;
+  const pitch = rotation.x * perspective * DEG;
   const cosYaw = Math.cos(yaw);
   const sinYaw = Math.sin(yaw);
   const cosPitch = Math.cos(pitch);
@@ -59,8 +70,8 @@ export function projectFace({
     Math.hypot(inPlane * cos, rz * sin) / inPlane;
 
   return {
-    scaleX: lerp(1, apparent(rx, cosYaw, sinYaw), perspective),
-    scaleY: lerp(1, apparent(ry, cosPitch, sinPitch), perspective),
+    scaleX: apparent(rx, cosYaw, sinYaw),
+    scaleY: apparent(ry, cosPitch, sinPitch),
 
     project(px, py) {
       // Height of the front hemisphere above the anchor; anchors outside the
@@ -75,11 +86,7 @@ export function projectFace({
       const yPitch = py * cosPitch - zYaw * sinPitch;
       const zPitch = py * sinPitch + zYaw * cosPitch;
 
-      return {
-        x: lerp(px, xYaw, perspective),
-        y: lerp(py, yPitch, perspective),
-        depth: lerp(z0, zPitch, perspective),
-      };
+      return { x: xYaw, y: yPitch, depth: zPitch };
     },
   };
 }

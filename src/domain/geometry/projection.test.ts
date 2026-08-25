@@ -76,6 +76,58 @@ describe("projectFace", () => {
     );
   });
 
+  it("keeps a turn rigid at every perspective (never shrinks the face)", () => {
+    // A blend between the identity and a rotation is not a rotation. Lerping
+    // the two agreed near 0 and disagreed everywhere else: at half a turn they
+    // point opposite ways, so the blend cancelled and pulled the whole face
+    // frame toward the origin. At the shipped default of 0.6 that left the two
+    // eyes 15u apart instead of 76u, stacked in the middle of the head, which
+    // is exactly what a full-range turn showed. Scaling the *angle* instead
+    // keeps every intermediate pose a real rotation, and a rotation is rigid.
+    const span = (p: ReturnType<typeof projectFace>): number => {
+      const a = p.project(-38, 0);
+      const b = p.project(38, 0);
+      return Math.hypot(a.x - b.x, a.y - b.y, a.depth - b.depth);
+    };
+    for (const perspective of [0, 0.25, 0.6, 1]) {
+      for (const y of [-180, -140, -90, 0, 90, 140, 180]) {
+        for (const x of [-180, -45, 0, 45, 180]) {
+          const p = projectFace({
+            ...SIZE,
+            perspective,
+            rotation: { x, y, z: 0 },
+          });
+          expect(span(p)).toBeCloseTo(76, 6);
+        }
+      }
+    }
+  });
+
+  it("keeps the silhouette the envelope of the surface", () => {
+    // scaleX and project() have to describe the same head. They were computed
+    // by two different blends, so they drifted apart as the turn grew: at half
+    // a turn the surface had shrunk to a fifth of the body while the outline
+    // was still full width, and the stage drew a full-size blob with a stubby
+    // equator rattling around inside it. Sweeping the equator has to touch the
+    // rim, at every angle and every perspective.
+    const rx = SIZE.width / 2;
+    for (const perspective of [0, 0.25, 0.6, 1]) {
+      for (const y of [-180, -120, -55, 0, 55, 120, 180]) {
+        const p = projectFace({
+          ...SIZE,
+          perspective,
+          rotation: { x: 0, y, z: 0 },
+        });
+        let reach = 0;
+        for (let i = 0; i <= 2000; i++) {
+          const px = -rx + (2 * rx * i) / 2000;
+          reach = Math.max(reach, Math.abs(p.project(px, 0).x));
+        }
+        expect(reach / rx).toBeCloseTo(p.scaleX, 3);
+      }
+    }
+  });
+
   it("is deterministic and never returns NaN outside the surface", () => {
     const p = projectFace({
       ...SIZE,
