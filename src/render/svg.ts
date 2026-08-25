@@ -69,7 +69,8 @@ export function sceneToSvg(
     ? `<defs><radialGradient id="${shading.id}" cx="${fmt(shading.cx)}" cy="${fmt(shading.cy)}" r="${fmt(shading.radius)}">` +
       `<stop offset="0" stop-color="${shading.crown}"/>` +
       `<stop offset="0.55" stop-color="${shading.base}"/>` +
-      `<stop offset="1" stop-color="${shading.edge}"/>` +
+      `<stop offset="0.93" stop-color="${shading.edge}"/>` +
+      `<stop offset="1" stop-color="${shading.rim}"/>` +
       `</radialGradient></defs>`
     : "";
   const bodyFill = shading ? `url(#${shading.id})` : scene.body.fill;

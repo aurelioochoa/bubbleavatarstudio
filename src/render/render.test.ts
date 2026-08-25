@@ -110,10 +110,38 @@ describe("volume: the surface is shaded", () => {
     expect(svg).toContain("radialGradient");
     expect(svg).toMatch(/<path id="body"[^>]*fill="url\(#bs-[a-z0-9]+\)"/);
     const stops = [...svg.matchAll(/stop-color="([^"]+)"/g)].map((m) => m[1]);
-    expect(stops).toHaveLength(3);
-    const [crown, base, edge] = stops;
+    expect(stops).toHaveLength(4);
+    const [crown, base, edge, rim] = stops;
     expect(luminance(crown ?? "")).toBeGreaterThan(luminance(base ?? ""));
     expect(luminance(edge ?? "")).toBeLessThan(luminance(base ?? ""));
+    // A rim light: the last thing before the contour comes back up. Without it
+    // the body just gets darker and darker toward its edge, which is what a
+    // flat disc does, not what a solid lit from one side does.
+    expect(luminance(rim ?? "")).toBeGreaterThan(luminance(edge ?? ""));
+    // It must not out-shine the key light, or the character reads inside-out.
+    expect(luminance(rim ?? "")).toBeLessThan(luminance(crown ?? ""));
+  });
+
+  // The gradient lives inside the head group, so it inherited the roll. A light
+  // that rolls with the head is not a light, it is a decal — the crown swung
+  // round the body as the character tilted.
+  it("keeps the light still while the head rolls", () => {
+    const lit = (rollDeg: number): { cx: number; cy: number } => {
+      const b = structuredClone(bubble);
+      b.body.surface.rotationDeg = rollDeg;
+      const svg = sceneToSvg(restingScene(b, 0));
+      const m = /<radialGradient[^>]*cx="([-\d.]+)" cy="([-\d.]+)"/.exec(svg);
+      if (!m) throw new Error("no gradient");
+      return { cx: Number(m[1]), cy: Number(m[2]) };
+    };
+    const flat = lit(0);
+    const rolled = lit(40);
+    // Rolling the body must move the crown *against* the roll by the same
+    // amount, so it lands on the same place in the world.
+    const angle = (p: { cx: number; cy: number }): number =>
+      Math.atan2(p.cy - 0.5, p.cx - 0.5);
+    const swung = ((angle(rolled) - angle(flat)) * 180) / Math.PI;
+    expect(swung).toBeCloseTo(-40, 0);
   });
 
   it("slides the lit crown as the head turns", () => {
@@ -455,7 +483,14 @@ describe("projection guide (FR-8.4)", () => {
 
 // Defects found probing a full turn (docs/research/3d-bubble-exploration.md).
 describe("volume: the light survives a full turn", () => {
-  const bubble: Bubble = doc.bubbles[0];
+  // Upright on purpose. The fixture carries a 4-degree authored tilt, and the
+  // light is world-fixed now, so a tilted character's crown is legitimately
+  // counter-rotated off the resting figures this pins.
+  const bubble: Bubble = (() => {
+    const b = structuredClone(doc.bubbles[0]);
+    b.body.surface.rotationDeg = 0;
+    return b;
+  })();
   const shadingAt = (rotation: { x: number; y: number; z: number }) => {
     const s = buildScene(bubble, {
       tAbsMs: 0,

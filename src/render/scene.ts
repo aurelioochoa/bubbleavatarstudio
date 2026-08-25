@@ -65,6 +65,12 @@ export interface Shading {
   crown: string;
   base: string;
   edge: string;
+  /**
+   * The contour itself, lit. A body that only gets darker toward its edge is
+   * what a flat disc does; a solid lit from one side catches light again where
+   * it turns away, and that last bright line is most of what says "round".
+   */
+  rim: string;
 }
 
 /**
@@ -260,6 +266,7 @@ const CROWN_PITCH = (2 * 0.2) / Math.PI;
 function shadingFor(
   fill: string,
   head: { x: number; y: number; z: number },
+  rollDeg: number,
 ): Shading {
   const lit = luminance(fill);
   // Pale characters need a deeper terminator, dark ones a stronger crown, or
@@ -272,10 +279,20 @@ function shadingFor(
   // a full turn has to survive. A sine bounds the travel and closes the loop at
   // 360°; its amplitude is chosen to match the old slope at rest, so a small
   // turn looks exactly as it did and the goldens do not move.
-  const cx = 0.5 - 0.15 - CROWN_YAW * Math.sin(head.y * DEG);
-  const cy = 0.5 - 0.18 - CROWN_PITCH * Math.sin(head.x * DEG);
+  const offX = -0.15 - CROWN_YAW * Math.sin(head.y * DEG);
+  const offY = -0.18 - CROWN_PITCH * Math.sin(head.x * DEG);
+  // The gradient is emitted inside the head group, so it inherits the roll.
+  // A light that rolls with the head is not a light, it is a decal: the crown
+  // swung round the body as the character tilted. Counter-rotating by the roll
+  // leaves it where the room put it.
+  const roll = -rollDeg * DEG;
+  const cx = 0.5 + offX * Math.cos(roll) - offY * Math.sin(roll);
+  const cy = 0.5 + offX * Math.sin(roll) + offY * Math.cos(roll);
+  // The rim sits on the far side of the key light, which is where the gradient
+  // runs out — so the last stop is the one that lands on the shadowed contour.
+  const rim = lighten(fill, 0.12 + (1 - lit) * 0.14);
   const id = `bs-${hashId(`${fill}:${fmt(cx)}:${fmt(cy)}`)}`;
-  return { id, cx, cy, radius: 0.78, crown, base: fill, edge };
+  return { id, cx, cy, radius: 0.78, crown, base: fill, edge, rim };
 }
 
 /** Short stable id so two avatars on one page never share a gradient. */
@@ -525,7 +542,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       ...bodyShape,
       fill: bodyFill,
       opacity: 1,
-      shading: shadingFor(bodyFill, live.headRotation),
+      shading: shadingFor(bodyFill, live.headRotation, bodyRot),
     },
     extras,
     eyes: { left, right },
