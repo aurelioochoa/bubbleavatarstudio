@@ -801,3 +801,61 @@ describe("volume: the face is cut off by the body, not faded", () => {
     expect(svg).not.toContain('opacity="1"');
   });
 });
+
+// Their lobes merge into the body invisibly. Ours were flat-filled while the
+// body carried a gradient, so a body-coloured extra sat on it as a visible
+// patch — the one place an assembled character stopped reading as one solid.
+describe("volume: body-coloured extras share the body's volume", () => {
+  const withLobe = (role: "body" | "accent"): Bubble => {
+    const b = structuredClone(doc.bubbles[0]);
+    b.body.extras = [
+      {
+        id: "prim_lobe",
+        kind: "circle",
+        width: 90,
+        height: 90,
+        roundness: 1,
+        x: -70,
+        y: -40,
+        rotationDeg: 0,
+        z: 0,
+        colorRole: role,
+        color: "#ffffff",
+      },
+    ];
+    return b;
+  };
+
+  it("shades a body-coloured extra with the same light as the body", () => {
+    const scene = restingScene(withLobe("body"), 0);
+    const lobe = scene.extras[0];
+    expect(lobe?.shading).toBeTruthy();
+    // Its own gradient, but placed so the lit crown continues across the seam
+    // rather than restarting in the middle of the lobe.
+    expect(lobe?.shading?.id).not.toBe(scene.body.shading?.id);
+    expect(lobe?.shading?.crown).toBe(scene.body.shading?.crown);
+  });
+
+  it("leaves an accent-coloured extra flat, because it is another material", () => {
+    const scene = restingScene(withLobe("accent"), 0);
+    expect(scene.extras[0]?.shading ?? null).toBeNull();
+  });
+
+  it("does not restart the gradient in the middle of the lobe", () => {
+    // The failure this guards is a lobe that carries its own little copy of
+    // the body's ramp, lit at its own centre — which is exactly what reusing
+    // the body's objectBoundingBox gradient would produce, and it reads as a
+    // bubble stuck on a bubble.
+    const scene = restingScene(withLobe("body"), 0);
+    const lobe = scene.extras[0]?.shading;
+    const body = scene.body.shading;
+    if (!lobe || !body) throw new Error("unshaded");
+
+    // The lobe sits up and left of centre, so the body's light is off to its
+    // right — nowhere near where the lobe's own crown would sit.
+    expect(lobe.cx).toBeGreaterThan(0.6);
+    expect(Math.abs(lobe.cx - body.cx)).toBeGreaterThan(0.4);
+    // And the ramp is stretched to the body's scale, not the lobe's.
+    expect(lobe.radius).toBeGreaterThan(body.radius * 1.5);
+  });
+});

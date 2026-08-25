@@ -305,6 +305,63 @@ function hashId(seed: string): string {
   return (h >>> 0).toString(36);
 }
 
+/**
+ * The body's shading, re-expressed in an extra's own bounding box.
+ *
+ * A body-coloured extra used to be a flat fill sitting on a gradient body — a
+ * visible patch exactly where an assembled character is supposed to stop
+ * looking assembled. It cannot simply reuse the body's gradient: SVG's
+ * objectBoundingBox units are relative to whatever element references them, so
+ * the same definition would restart in the middle of the lobe. Instead the
+ * light is located in the face frame and re-projected into the extra's box, so
+ * one lit crown runs across the seam.
+ *
+ * Only body-coloured extras get this. An accent or custom colour is another
+ * material, and lighting it with the body's own ramp would be a lie.
+ */
+function extraShading(
+  body: Shading,
+  surface: Bubble["body"]["surface"],
+  e: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotationDeg: number;
+  },
+): Shading {
+  const rx = Math.max(surface.width, 1) / 2;
+  const ry = Math.max(surface.height, 1) / 2;
+  // Where the crown sits in the face frame, from its position in the body box.
+  const lx = rx * (2 * body.cx - 1);
+  const ly = ry * (2 * body.cy - 1);
+
+  // Into the extra's own frame: undo its translate, then its rotation.
+  const rot = -e.rotationDeg * DEG;
+  const dx = lx - e.x;
+  const dy = ly - e.y;
+  const ex = dx * Math.cos(rot) - dy * Math.sin(rot);
+  const ey = dx * Math.sin(rot) + dy * Math.cos(rot);
+
+  const ew = Math.max(e.width, 1);
+  const eh = Math.max(e.height, 1);
+  // A gradient radius in objectBoundingBox units is measured against the box's
+  // normalised diagonal, so carrying the same physical radius across means
+  // rescaling by the ratio of the two diagonals.
+  const diag = (w: number, h: number): number => Math.hypot(w, h) / Math.SQRT2;
+  const radius = (body.radius * diag(2 * rx, 2 * ry)) / diag(ew, eh);
+
+  const cx = (ex + ew / 2) / ew;
+  const cy = (ey + eh / 2) / eh;
+  return {
+    ...body,
+    id: `bs-${hashId(`${body.base}:${fmt(cx)}:${fmt(cy)}:${fmt(radius)}`)}`,
+    cx,
+    cy,
+    radius,
+  };
+}
+
 /** Gap between the body's lowest point and the ground it sits on. */
 const GROUND_GAP = 16;
 /** Bob height at which the shadow has shrunk and faded as far as it goes. */
@@ -451,6 +508,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   // fmtScale, not fmt: breathing spans under a hundredth, so two decimals would
   // quantise the swell into visible steps.
   const bodyScale = live.ambient.bodyScale;
+  const bodyShading = shadingFor(bodyFill, live.headRotation, bodyRot);
   const turned =
     surface.perspective !== 0 &&
     (live.headRotation.x !== 0 || live.headRotation.y !== 0);
@@ -503,6 +561,17 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
                 : e.color,
           transform: `translate(${fmt(anchor.x)} ${fmt(anchor.y)}) rotate(${fmt(e.rotationDeg)})`,
           opacity: rimFade(surface, anchor.depth),
+          ...(e.colorRole === "body"
+            ? {
+                shading: extraShading(bodyShading, surface, {
+                  x: e.x,
+                  y: e.y,
+                  width: e.width * local.x,
+                  height: e.height * local.y,
+                  rotationDeg: e.rotationDeg,
+                }),
+              }
+            : {}),
         },
       };
     })
@@ -542,7 +611,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       ...bodyShape,
       fill: bodyFill,
       opacity: 1,
-      shading: shadingFor(bodyFill, live.headRotation, bodyRot),
+      shading: bodyShading,
     },
     extras,
     eyes: { left, right },
