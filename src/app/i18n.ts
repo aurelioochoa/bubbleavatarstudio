@@ -22,6 +22,10 @@ export type MessageKey =
   | "look.shapeRound"
   | "look.shapeOrganic"
   | "look.shapeDrop"
+  | "look.shapeCapsule"
+  | "look.shapeCylinder"
+  | "look.shapeCone"
+  | "look.shapeDiamond"
   | "look.lobes"
   | "look.wobble"
   | "look.seed"
@@ -163,6 +167,10 @@ const es: Record<MessageKey, string> = {
   "look.shapeRound": "Redonda",
   "look.shapeOrganic": "Orgánica",
   "look.shapeDrop": "Gota",
+  "look.shapeCapsule": "Cápsula",
+  "look.shapeCylinder": "Cilindro",
+  "look.shapeCone": "Cono",
+  "look.shapeDiamond": "Rombo",
   "look.lobes": "Lóbulos",
   "look.wobble": "Irregularidad",
   "look.seed": "Semilla",
@@ -311,6 +319,10 @@ const en: Record<MessageKey, string> = {
   "look.shapeRound": "Round",
   "look.shapeOrganic": "Organic",
   "look.shapeDrop": "Drop",
+  "look.shapeCapsule": "Capsule",
+  "look.shapeCylinder": "Cylinder",
+  "look.shapeCone": "Cone",
+  "look.shapeDiamond": "Diamond",
   "look.lobes": "Lobes",
   "look.wobble": "Wobble",
   "look.seed": "Seed",

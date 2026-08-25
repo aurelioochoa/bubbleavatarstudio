@@ -2,7 +2,7 @@
 // its parameters — the renderer, the goldens and the exported files all depend
 // on identical input producing identical bytes.
 import { describe, expect, it } from "vitest";
-import { surfacePath } from "./shapes";
+import { SHAPE_FAMILIES, surfacePath } from "./shapes";
 import { blobPath } from "./primitives";
 
 const SIZE = { width: 220, height: 200, roundness: 0.9 };
@@ -89,5 +89,165 @@ describe("surfacePath · drop", () => {
     expect(surfacePath({ ...SIZE, shape: "drop" })).toBe(
       surfacePath({ ...SIZE, shape: "drop" }),
     );
+  });
+});
+
+/**
+ * Only the knots — every third coordinate pair after the opening M. The
+ * Bézier control points between them are not on the outline, and a claim about
+ * where the outline actually runs has to ignore them.
+ */
+function knots(path: string): { x: number; y: number }[] {
+  const all = points(path);
+  const [first, ...rest] = all;
+  const out = first ? [first] : [];
+  for (let i = 2; i < rest.length; i += 3) {
+    const k = rest[i];
+    if (k) out.push(k);
+  }
+  return out;
+}
+
+/** Half-width of the outline at the sampled height nearest `y`. */
+function widthAt(path: string, y: number): number {
+  const near = knots(path).filter((p) => Math.abs(p.y - y) < 6);
+  return near.length ? Math.max(...near.map((p) => Math.abs(p.x))) : 0;
+}
+
+const TALL = { width: 140, height: 220, roundness: 0.9 };
+
+describe("surfacePath · capsule", () => {
+  it("runs straight down its sides and caps the ends", () => {
+    const path = surfacePath({ ...TALL, shape: "capsule" });
+    // Straight sides: the outline is at full half-width all the way from the
+    // waist to well up the body, which no superellipse does.
+    expect(widthAt(path, 0)).toBeCloseTo(70, 0);
+    expect(widthAt(path, -40)).toBeCloseTo(70, 0);
+    // ...and then the cap closes: at 96% of the height it is down to under
+    // 40% of its half-width. Measured near the tip on purpose — at -95 the
+    // outline is still on the shoulder of the cap and legitimately wide.
+    expect(widthAt(path, -108)).toBeLessThan(0.4 * 70);
+  });
+
+  it("caps the long axis, so a wide body is a lying-down capsule", () => {
+    // 220 x 140: the ends are now left and right, not top and bottom.
+    const wide = surfacePath({
+      width: 220,
+      height: 140,
+      roundness: 0.9,
+      shape: "capsule",
+    });
+    const tallest = (x: number) =>
+      Math.max(
+        ...knots(wide)
+          .filter((p) => Math.abs(p.x - x) < 6)
+          .map((p) => Math.abs(p.y)),
+      );
+    expect(tallest(0)).toBeCloseTo(70, 0);
+    expect(tallest(108)).toBeLessThan(0.4 * 70);
+  });
+
+  it("is not any of the families we already had", () => {
+    for (const shape of ["round", "drop"] as const) {
+      expect(surfacePath({ ...TALL, shape: "capsule" })).not.toBe(
+        surfacePath({ ...TALL, shape }),
+      );
+    }
+  });
+});
+
+describe("surfacePath · cylinder", () => {
+  it("keeps the straight sides but flattens the ends", () => {
+    const cyl = surfacePath({ ...TALL, shape: "cylinder" });
+    const cap = surfacePath({ ...TALL, shape: "capsule" });
+    // Same waist...
+    expect(widthAt(cyl, 0)).toBeCloseTo(70, 0);
+    // ...but a shallower cap, so it is still near full width where the
+    // capsule has already curved away.
+    expect(widthAt(cyl, -85)).toBeGreaterThan(widthAt(cap, -85));
+  });
+
+  it("is deterministic", () => {
+    expect(surfacePath({ ...TALL, shape: "cylinder" })).toBe(
+      surfacePath({ ...TALL, shape: "cylinder" }),
+    );
+  });
+});
+
+describe("surfacePath · cone", () => {
+  it("tapers the whole way up, harder than a drop does", () => {
+    const cone = surfacePath({ ...SIZE, shape: "cone" });
+    const drop = surfacePath({ ...SIZE, shape: "drop" });
+    const band = 0.6 * (SIZE.height / 2);
+    const widest = (path: string, keep: (y: number) => boolean) =>
+      Math.max(...knots(path).filter((p) => keep(p.y)).map((p) => Math.abs(p.x)));
+    const top = (path: string) => widest(path, (y) => y < -band);
+    const base = (path: string) => widest(path, (y) => y > band);
+    // A cone's apex is a point, not a shoulder.
+    expect(top(cone) / base(cone)).toBeLessThan(0.3);
+    expect(top(cone) / base(cone)).toBeLessThan(top(drop) / base(drop));
+  });
+
+  it("sits on a flat base rather than a rounded one", () => {
+    // Half the width still there a tenth off the floor is what makes it read
+    // as a cone standing up rather than a teardrop lying point-up.
+    const cone = surfacePath({ ...SIZE, shape: "cone" });
+    const floor = SIZE.height / 2;
+    const nearFloor = Math.max(
+      ...knots(cone).filter((p) => p.y > floor * 0.9).map((p) => Math.abs(p.x)),
+    );
+    expect(nearFloor).toBeGreaterThan(0.5 * (SIZE.width / 2));
+  });
+});
+
+describe("surfacePath · diamond", () => {
+  it("reaches full extent on the axes and pulls in between them", () => {
+    const path = surfacePath({ ...SIZE, shape: "diamond" });
+    const ks = knots(path);
+    const reach = (p: { x: number; y: number }) =>
+      Math.hypot(p.x / 110, p.y / 100);
+    // On-axis knots still touch the box...
+    expect(Math.max(...ks.map(reach))).toBeCloseTo(1, 1);
+    // ...while the corners between the axes are cut well inside the ellipse,
+    // which is the whole of what makes a rhombus a rhombus.
+    const corner = ks.filter(
+      (p) => Math.abs(Math.abs(p.x / 110) - Math.abs(p.y / 100)) < 0.12,
+    );
+    expect(corner.length).toBeGreaterThan(0);
+    expect(Math.max(...corner.map(reach))).toBeLessThan(0.85);
+  });
+
+  it("gets rounder as roundness rises, without becoming an ellipse", () => {
+    const cut = (roundness: number) =>
+      Math.max(
+        ...knots(surfacePath({ ...SIZE, roundness, shape: "diamond" }))
+          .filter((p) => Math.abs(Math.abs(p.x / 110) - Math.abs(p.y / 100)) < 0.12)
+          .map((p) => Math.hypot(p.x / 110, p.y / 100)),
+      );
+    expect(cut(1)).toBeGreaterThan(cut(0));
+    expect(cut(1)).toBeLessThan(0.9);
+  });
+});
+
+describe("the family list is the whole story", () => {
+  it("draws a distinct outline for every family", () => {
+    // `surfacePath` picks its branch with a chain of ifs, so a family added to
+    // the union but not to that chain falls through and silently renders as
+    // the round one. Nothing about that is a typecheck error, so it is a test.
+    // Organic at zero wobble is the one documented duplicate, so give it some.
+    const drawn = new Map<string, string>();
+    for (const shape of SHAPE_FAMILIES) {
+      const path = surfacePath({
+        ...TALL,
+        shape,
+        ...(shape === "organic" ? { wobble: 0.4, lobes: 5, seed: 1 } : {}),
+      });
+      const clash = drawn.get(path);
+      expect(clash, `${shape} draws the same outline as ${clash}`).toBe(
+        undefined,
+      );
+      drawn.set(path, shape);
+    }
+    expect(drawn.size).toBe(SHAPE_FAMILIES.length);
   });
 });

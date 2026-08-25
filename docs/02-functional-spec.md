@@ -29,8 +29,14 @@
 - **FR-2.6** The surface has a **shape family**, chosen per bubble: `round`
   (superellipse from rectangle to ellipse via roundness), `organic` (an outline
   whose radius varies around the perimeter, giving lumpy and lopsided forms),
-  and `drop` (a teardrop taper). Every family is a deterministic function of its
-  parameters — same values, same path, byte for byte.
+  `drop` (a teardrop taper), `capsule` and `cylinder` (straight sides with a
+  cap at each end of the long axis — deep and semicircular for the capsule,
+  shallow for the cylinder), `cone` (a full-height taper standing on a flat
+  base) and `diamond` (a rhombus whose corners soften but never round into an
+  ellipse). Every family is a deterministic function of its parameters — same
+  values, same path, byte for byte. `roundness` means corner softening *within*
+  a family: no family collapses into another at either end of its range, which
+  is why each maps the 0–1 dial onto its own span.
 - **FR-2.7** Organic shapes take `lobes` (how many bumps), `wobble` (how far the
   radius strays, 0 = the round family) and `seed` (which arrangement of bumps).
 

@@ -2,7 +2,23 @@
 // (FR-2.1, FR-2.2, FR-2.6, FR-2.7).
 import { NumberField, Slider, type SectionProps } from "./fields";
 import { Card, Segmented } from "../../ui";
+import { SHAPE_FAMILIES } from "../../../../domain/geometry/shapes";
 import type { ShapeFamily } from "../../../../domain/document/types";
+import type { MessageKey } from "../../../i18n";
+
+/**
+ * Exhaustive by construction: a family added to the union without a label here
+ * fails typecheck rather than reaching the picker as a blank button.
+ */
+const SHAPE_LABELS: Record<ShapeFamily, MessageKey> = {
+  round: "look.shapeRound",
+  organic: "look.shapeOrganic",
+  drop: "look.shapeDrop",
+  capsule: "look.shapeCapsule",
+  cylinder: "look.shapeCylinder",
+  cone: "look.shapeCone",
+  diamond: "look.shapeDiamond",
+};
 
 export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
   const surface = bubble.body.surface;
@@ -12,11 +28,10 @@ export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
       <Segmented<ShapeFamily>
         label={t("look.shape")}
         value={surface.shape}
-        options={[
-          { value: "round", label: t("look.shapeRound") },
-          { value: "organic", label: t("look.shapeOrganic") },
-          { value: "drop", label: t("look.shapeDrop") },
-        ]}
+        options={SHAPE_FAMILIES.map((value) => ({
+          value,
+          label: t(SHAPE_LABELS[value]),
+        }))}
         onChange={(shape) => {
           dispatch({ type: "surface/patch", patch: { shape } });
         }}

@@ -1,9 +1,30 @@
 // Surface shape families (FR-2.6, FR-2.7). Pure math: every family is a
 // deterministic function of its parameters, because the renderer, the goldens
 // and the exported files all rely on identical input giving identical bytes.
-import { smoothClosedPath, superellipsePoints, type Point } from "./primitives";
+import {
+  clamp,
+  lerp,
+  smoothClosedPath,
+  superellipsePoints,
+  type Point,
+} from "./primitives";
 
-export type ShapeFamily = "round" | "organic" | "drop";
+/**
+ * Every family, in the order the picker offers them. This array is the single
+ * source: the type is derived from it, the validator accepts exactly it, and
+ * the picker maps over it — so a new family cannot be half-added.
+ */
+export const SHAPE_FAMILIES = [
+  "round",
+  "organic",
+  "drop",
+  "capsule",
+  "cylinder",
+  "cone",
+  "diamond",
+] as const;
+
+export type ShapeFamily = (typeof SHAPE_FAMILIES)[number];
 
 export interface SurfaceShapeOptions {
   shape: ShapeFamily;
@@ -24,6 +45,24 @@ export interface SurfaceShapeOptions {
 const WOBBLE_REACH = 0.35;
 /** How much a drop narrows toward its top. */
 const DROP_TAPER = 0.55;
+/** Half-width left at a cone's apex, as a fraction of the base. */
+const CONE_APEX = 0.1;
+/**
+ * A cone reads as a cone because it stands on a flat base. Roundness still
+ * softens its corners, but only across the lower part of its range — carried
+ * straight through, the shipped default of ~0.96 would round the base into an
+ * ellipse and leave a teardrop balanced point-up.
+ */
+const CONE_BASE_ROUNDNESS = 0.45;
+/** Cap depth as a fraction of the short half-axis, from square to fully round. */
+const CAPSULE_CAP = { min: 0.5, max: 1 };
+const CYLINDER_CAP = { min: 0.15, max: 0.42 };
+/**
+ * Superellipse exponent for the diamond family: 1 is the bare rhombus, 2 the
+ * ellipse. It stops short of 2 on purpose — a diamond that can be dialled all
+ * the way into a circle is not a family, it is the round one with extra steps.
+ */
+const DIAMOND_EXPONENT = { sharp: 1, soft: 1.35 };
 
 /** Deterministic hash of a number to [0,1). */
 function hash01(n: number): number {
@@ -45,6 +84,64 @@ function wobbleAt(theta: number, lobes: number, seed: number): number {
   return primary * (1 - weight) + secondary * weight;
 }
 
+/**
+ * Straight sides with a curved cap at each end — the silhouette both a
+ * cylinder and a capsule present, differing only in how deep the cap is. The
+ * caps go on the ends of the *long* axis, so a body wider than it is tall is a
+ * capsule lying down rather than a squashed one standing up.
+ *
+ * No superellipse can do this: its sides are always curving somewhere. That is
+ * the point of the family — the straight run is what the eye reads as a
+ * turned cylinder.
+ */
+function barrelPoints(
+  width: number,
+  height: number,
+  capFraction: number,
+  samples: number,
+): Point[] {
+  const upright = height >= width;
+  // Work upright, then lay the result down if that is what was asked for.
+  const a = (upright ? width : height) / 2;
+  const b = (upright ? height : width) / 2;
+  const cap = Math.min(b, a * capFraction);
+  const flat = b - cap;
+
+  const pts: Point[] = [];
+  for (let i = 0; i < samples; i++) {
+    const t = (i / samples) * Math.PI * 2;
+    const along = b * Math.sin(t);
+    // Inside the straight run the outline is at full half-width; past it the
+    // cap closes as a quarter-ellipse.
+    const into = Math.max(0, Math.abs(along) - flat);
+    const across =
+      a * Math.sign(Math.cos(t)) * Math.sqrt(Math.max(0, 1 - (into / cap) ** 2));
+    pts.push(upright ? { x: across, y: along } : { x: along, y: across });
+  }
+  return pts;
+}
+
+/**
+ * Pulls each point of an ellipse in toward the rhombus that shares its box.
+ * `n` is the superellipse exponent: at 2 the scale is exactly 1 and nothing
+ * moves, at 1 every point lands on |x/a| + |y/b| = 1.
+ */
+function diamondPoints(
+  width: number,
+  height: number,
+  n: number,
+  samples: number,
+): Point[] {
+  return superellipsePoints({ width, height, roundness: 1, samples }).map(
+    (p, i) => {
+      const t = (i / samples) * Math.PI * 2;
+      const s =
+        (Math.abs(Math.cos(t)) ** n + Math.abs(Math.sin(t)) ** n) ** (-1 / n);
+      return { x: p.x * s, y: p.y * s };
+    },
+  );
+}
+
 export function surfacePath({
   shape,
   width,
@@ -55,14 +152,40 @@ export function surfacePath({
   seed = 0,
   samples = 48,
 }: SurfaceShapeOptions): string {
-  const base = superellipsePoints({ width, height, roundness, samples });
+  if (shape === "capsule" || shape === "cylinder") {
+    const range = shape === "capsule" ? CAPSULE_CAP : CYLINDER_CAP;
+    const cap = lerp(range.min, range.max, clamp(roundness, 0, 1));
+    return smoothClosedPath(barrelPoints(width, height, cap, samples));
+  }
+
+  if (shape === "diamond") {
+    const { sharp, soft } = DIAMOND_EXPONENT;
+    return smoothClosedPath(
+      diamondPoints(width, height, lerp(sharp, soft, clamp(roundness, 0, 1)), samples),
+    );
+  }
+
+  const base = superellipsePoints({
+    width,
+    height,
+    roundness: shape === "cone" ? roundness * CONE_BASE_ROUNDNESS : roundness,
+    samples,
+  });
 
   if (shape === "round" || (shape === "organic" && wobble === 0)) {
     return smoothClosedPath(base);
   }
 
+  const halfHeight = Math.max(height, 1) / 2;
   const shaped: Point[] = base.map((p, i) => {
     const theta = (i / base.length) * Math.PI * 2;
+    if (shape === "cone") {
+      // Taper across the whole height rather than only the upper half, which
+      // is what gives a cone its straight slanted sides. 0 at the apex, 1 at
+      // the base; SVG y grows downward, so the base is positive y.
+      const up = clamp((p.y / halfHeight + 1) / 2, 0, 1);
+      return { x: p.x * lerp(CONE_APEX, 1, up), y: p.y };
+    }
     if (shape === "drop") {
       // SVG y grows downward, so the upper half is where sin is negative.
       const rise = Math.max(0, -Math.sin(theta));

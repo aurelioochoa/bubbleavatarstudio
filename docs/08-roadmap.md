@@ -75,7 +75,9 @@ landed in F5.
   breathing (FR-7).
 - **P2 (done)** Shape vocabulary: the `round`, `organic` and `drop` families
   and their parameters (FR-2.6, FR-2.7), schema v2 plus the v1→v2 migration,
-  and a shape control in the Look panel.
+  and a shape control in the Look panel. Later extended to seven families —
+  `capsule`, `cylinder`, `cone` and `diamond` — with no schema change, since
+  widening an enum leaves every saved document valid.
 
   The geometry had landed a step earlier (`9d957cf`) but nothing imported it —
   `scene.ts` still drew one superellipse. The wire-up is what closed P2:

@@ -1,4 +1,5 @@
 // Validation per docs/03 §7. Pure structural + referential + range checks.
+import { SHAPE_FAMILIES } from "../geometry/shapes";
 import type { Bubble, Kit, Mood } from "./types";
 
 export type ErrorCode =
@@ -26,7 +27,7 @@ const EXTRA_KINDS = new Set(["blob", "capsule", "circle", "ring"]);
 const COLOR_ROLES = new Set(["body", "accent", "custom"]);
 const TRANSITIONS = new Set(["linear", "ease", "spring", "step"]);
 const MODES = new Set(["loop", "once", "pingpong"]);
-const SHAPE_FAMILIES = new Set(["round", "organic", "drop"]);
+const SHAPES = new Set<string>(SHAPE_FAMILIES);
 
 class Ctx {
   readonly issues: ValidationIssue[] = [];
@@ -273,7 +274,7 @@ function validateBubble(
   }
   const s = surface as Record<string, unknown>;
   oneOf(ctx, s.kind, new Set(["blob"]), `${path}.body.surface.kind`);
-  oneOf(ctx, s.shape, SHAPE_FAMILIES, `${path}.body.surface.shape`);
+  oneOf(ctx, s.shape, SHAPES, `${path}.body.surface.shape`);
   pos(ctx, s.width, `${path}.body.surface.width`);
   pos(ctx, s.height, `${path}.body.surface.height`);
   num(ctx, s.roundness, `${path}.body.surface.roundness`, 0, 1);

@@ -214,8 +214,13 @@ integrity (every step's `moodId` exists in the inlined kit).
    `E_VERSION`. A v1 file is upgraded by `migrate()` before it is validated,
    so it never reaches this rule as a v1.
 2. Unique IDs within their scope; step `moodId` must exist in the same kit.
-3. Shape family (FR-2.6): `shape` is `round` | `organic` | `drop`. `roundness`
-   counts up toward round — 0 squares the silhouette off, 1 is an ellipse.
+3. Shape family (FR-2.6): `shape` is `round` | `organic` | `drop` | `capsule` |
+   `cylinder` | `cone` | `diamond` — `SHAPE_FAMILIES` in
+   `src/domain/geometry/shapes.ts` is the one list, and the type, the validator
+   and the picker all derive from it. `roundness` counts up toward round: for
+   `round` and `organic` 0 squares the silhouette off and 1 is an ellipse, and
+   every other family maps the same dial onto its own corner softening without
+   ever collapsing into a neighbour.
    `lobes` 3–10 and `wobble` 0–1 only bite on `organic`; `seed` is any integer
    and picks which arrangement of bumps you get. Every family is deterministic.
 4. Numeric ranges: roundness 0–1, perspective 0–1, springSpeed 0.1–3,

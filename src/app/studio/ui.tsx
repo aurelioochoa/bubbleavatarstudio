@@ -84,7 +84,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex gap-0.5 rounded-field bg-panel p-0.5"
+      className="flex flex-wrap gap-0.5 rounded-field bg-panel p-0.5"
     >
       {options.map((o) => (
         <button
@@ -95,7 +95,7 @@ export function Segmented<T extends string>({
           onClick={() => {
             onChange(o.value);
           }}
-          className={`min-w-0 flex-1 truncate rounded-[6px] px-2 py-1 text-xs transition-colors duration-150 ease-out ${
+          className={`min-w-0 flex-1 basis-[4.5rem] truncate rounded-[6px] px-2 py-1 text-xs transition-colors duration-150 ease-out ${
             value === o.value
               ? "bg-primary text-white"
               : "text-ink-dim hover:bg-white/6 hover:text-ink"

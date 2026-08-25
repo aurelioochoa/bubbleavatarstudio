@@ -93,7 +93,8 @@ scrolled away from.
 
 Sections as collapsible cards:
 
-1. **Surface** — a segmented shape family (round / organic / drop, FR-2.6);
+1. **Surface** — a segmented shape family, seven options wrapping onto two
+   rows (round / organic / drop / capsule / cylinder / cone / diamond, FR-2.6);
    the organic parameters — lobes, wobble, seed (FR-2.7) — appear only while
    organic is the family, since they do not bite on the others;
    width/height/roundness/perspective numeric steppers (unit suffixes u/×),
