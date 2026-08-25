@@ -298,3 +298,68 @@ describe("solidRadii · a cube is not a solid of revolution", () => {
     expect(worstRatio(got, want)).toBeLessThan(0.06);
   });
 });
+
+describe("solidRadii · a cube stays a cube from every side", () => {
+  // A superellipse is parameterised by angle, but at a boxy exponent almost
+  // every parameter value maps to a corner: |cos psi|^0.15 is within a hair of
+  // 1 across most of its range and then falls off a cliff. Sampling psi evenly
+  // therefore samples the corners densely and the flat faces barely at all,
+  // and a cross-section that is really four points instead of a square
+  // projects to spikes. Face-on it was hidden — the corners still bound the
+  // silhouette — but pitched it came apart into a pinwheel.
+  const spread = (r: Float64Array): number => {
+    let lo = Infinity;
+    let hi = 0;
+    for (const v of r) {
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    return lo / hi;
+  };
+
+  /** Worst jump between neighbouring bins, as a fraction of the widest. */
+  const jitter = (r: Float64Array): number => {
+    let hi = 0;
+    for (const v of r) hi = Math.max(hi, v);
+    let worst = 0;
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i] ?? 0;
+      const b = r[(i + 1) % r.length] ?? 0;
+      worst = Math.max(worst, Math.abs(a - b));
+    }
+    return worst / hi;
+  };
+
+  it("never collapses into spikes, at any pitch or yaw", () => {
+    for (let x = 0; x <= 180; x += 12) {
+      for (const y of [0, 35, 90, 146]) {
+        const r = solidRadii(
+          at({ shape: "cube", roundness: 0.25, rotation: { x, y, z: 0 } }),
+        );
+        // A solid box never presents a silhouette whose narrowest radius is a
+        // small fraction of its widest; a pinwheel's narrowest is near zero.
+        expect({ x, y, spread: spread(r) }).toMatchObject({
+          spread: expect.any(Number),
+        });
+        expect(spread(r)).toBeGreaterThan(0.3);
+      }
+    }
+  });
+
+  // The spike test alone was not enough: at 48 azimuths a nearly edge-on cube
+  // still ran 36, 48, 36 across neighbouring bins at its top edge, where the
+  // truth is a flat 88. It looked like a pair of notches bitten out of the top
+  // and bottom. A boxy cross-section simply needs more samples round it than a
+  // round one — its face-centres live in a sliver of the parameter.
+  it("draws a flat edge as flat, not as a row of notches", () => {
+    for (let x = 60; x <= 180; x += 10) {
+      const r = solidRadii(
+        at({ shape: "cube", roundness: 0.25, rotation: { x, y: 0, z: 0 } }),
+      );
+      expect({ x, jitter: jitter(r) }).toMatchObject({
+        jitter: expect.any(Number),
+      });
+      expect(jitter(r)).toBeLessThan(0.06);
+    }
+  });
+});

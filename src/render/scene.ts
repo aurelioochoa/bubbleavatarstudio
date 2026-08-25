@@ -9,11 +9,13 @@ import {
   fmtScale,
 } from "../domain/geometry/primitives";
 import { surfacePath } from "../domain/geometry/shapes";
-import { isAnalyticSolid, solidOutline } from "../domain/geometry/solid";
+import {
+  isAnalyticSolid,
+  solidMesh,
+  solidOutline,
+} from "../domain/geometry/solid";
 import {
   projectFace,
-  rotatePoint,
-  turnAngles,
   type FaceProjection,
 } from "../domain/geometry/projection";
 import { ambientAt, blinkAt, RESTING_BLINK } from "../domain/playback/ambient";
@@ -402,27 +404,14 @@ function shadowFor(
   };
 }
 
-/** How many points each guide arc is sampled at; enough to read as a curve. */
-const GUIDE_SAMPLES = 24;
-/** Latitude rings, evenly spaced between the poles but not including them. */
-const GUIDE_PARALLELS = 5;
-/** Great circles through the poles. Each spans both sides of the solid. */
-const GUIDE_MERIDIANS = 6;
-
 /**
- * A lat/long wireframe over the solid, plus a highlight tracing the
- * character's own outline.
+ * A wireframe over the solid, plus a highlight tracing the character's own
+ * outline.
  *
- * Two arcs used to be enough to say "the face sits on an ellipsoid". They are
- * not enough to say "this is a solid object" — that is what a mesh says, and
- * saying it is the whole job of an overlay that appears while you turn the
- * thing. The far half of every ring is drawn too: a near-hemisphere-only mesh
- * reads as a bowl, and it is seeing the lines run round the back that makes it
- * read as a sphere.
- *
- * It shares `rotatePoint` with the face anchors and the body silhouette, so
- * what it draws is literally where the surface is rather than an illustration
- * of it.
+ * Both come from `solid.ts`, so the cage is the shape it is drawn on: a cube
+ * wears a boxy one, a cone's rings shrink toward its apex. Built on the
+ * ellipsoid instead — which is what it used to do — every character wore the
+ * same sphere, which is the opposite of what a wireframe is there to say.
  */
 function guideFor(
   surface: Bubble["body"]["surface"],
@@ -430,45 +419,24 @@ function guideFor(
   bodyScale: number,
   body: { path: string; transform: string },
 ): GuideRender {
-  const rx = Math.max(surface.width, 1) / 2;
-  const ry = Math.max(surface.height, 1) / 2;
-  const rz = Math.max(surface.depth, 1) / 2;
-  const turn = turnAngles(surface.perspective, headRotation);
-
-  /** A point on the ellipsoid at latitude `u` and longitude `v`. */
-  const at = (u: number, v: number): string => {
-    const q = rotatePoint(
-      rx * Math.cos(u) * Math.cos(v),
-      ry * Math.sin(u),
-      rz * Math.cos(u) * Math.sin(v),
-      turn,
-    );
-    return `${fmt(q.x * bodyScale)} ${fmt(q.y * bodyScale)}`;
+  return {
+    outline: { path: body.path, transform: body.transform },
+    arcs: solidMesh(
+      {
+        shape: surface.shape,
+        lobes: surface.lobes,
+        wobble: surface.wobble,
+        seed: surface.seed,
+        width: surface.width,
+        height: surface.height,
+        roundness: surface.roundness,
+        depth: surface.depth,
+        rotation: headRotation,
+        perspective: surface.perspective,
+      },
+      bodyScale,
+    ),
   };
-
-  const trace = (path: (t: number) => string): string =>
-    Array.from(
-      { length: GUIDE_SAMPLES + 1 },
-      (_, i) => `${i === 0 ? "M" : "L"} ${path(i / GUIDE_SAMPLES)}`,
-    ).join(" ");
-
-  const arcs: string[] = [];
-  for (let i = 1; i <= GUIDE_PARALLELS; i++) {
-    // Rings between the poles, poles excluded — a ring of radius zero is a dot.
-    const u = -Math.PI / 2 + (Math.PI * i) / (GUIDE_PARALLELS + 1);
-    arcs.push(trace((t) => at(u, 2 * Math.PI * t)));
-  }
-  for (let j = 0; j < GUIDE_MERIDIANS; j++) {
-    // Half a great circle at this longitude; the other half is the meridian
-    // half a turn away, so `GUIDE_MERIDIANS` of these close the cage.
-    const v = (Math.PI * j) / GUIDE_MERIDIANS;
-    arcs.push(trace((t) => at(-Math.PI / 2 + Math.PI * t, v)));
-    arcs.push(trace((t) => at(-Math.PI / 2 + Math.PI * t, v + Math.PI)));
-  }
-
-  // The highlight is the body's own silhouette, not an ellipse around it. On a
-  // lumpy character an ellipse visibly is not the thing being edited.
-  return { outline: { path: body.path, transform: body.transform }, arcs };
 }
 
 export function buildScene(bubble: Bubble, live: LiveInput): Scene {

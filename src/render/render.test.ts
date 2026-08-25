@@ -859,3 +859,41 @@ describe("volume: body-coloured extras share the body's volume", () => {
     expect(lobe.radius).toBeGreaterThan(body.radius * 1.5);
   });
 });
+
+// The mesh was built straight on the ellipsoid, so every character wore the
+// same sphere cage — a cube got round latitude rings, which says the opposite
+// of what a wireframe is there to say.
+describe("the wireframe follows the solid it is drawn on", () => {
+  const meshFor = (shape: "round" | "cube" | "cone"): string[] => {
+    const b = structuredClone(doc.bubbles[0]);
+    b.body.surface.shape = shape;
+    b.body.surface.roundness = 0.25;
+    const scene = restingScene(b, 0, { x: 15, y: 25, z: 0 }, { guide: true });
+    return scene.guide?.arcs ?? [];
+  };
+
+  it("draws a different cage for a cube than for a sphere", () => {
+    expect(meshFor("cube")).not.toEqual(meshFor("round"));
+  });
+
+  it("draws a different cage for a cone than for a sphere", () => {
+    expect(meshFor("cone")).not.toEqual(meshFor("round"));
+  });
+
+  it("keeps the mesh inside the silhouette it is drawn over", () => {
+    const b = structuredClone(doc.bubbles[0]);
+    b.body.surface.shape = "cone";
+    const scene = restingScene(b, 0, { x: 0, y: 0, z: 0 }, { guide: true });
+    const reach = (d: string): number =>
+      Math.max(
+        ...[...d.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((m) =>
+          Math.hypot(Number(m[1]), Number(m[2])),
+        ),
+      );
+    const body = reach(scene.body.path);
+    for (const arc of scene.guide?.arcs ?? []) {
+      // A cage that pokes out of the character is not a cage.
+      expect(reach(arc)).toBeLessThanOrEqual(body * 1.02);
+    }
+  });
+});

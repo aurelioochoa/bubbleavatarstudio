@@ -33,7 +33,7 @@ import {
   type ShapeFamily,
   type SurfaceShapeOptions,
 } from "./shapes";
-import { smoothClosedPath, type Point } from "./primitives";
+import { fmt, smoothClosedPath, type Point } from "./primitives";
 import { rotatePoint, turnAngles } from "./projection";
 
 /**
@@ -54,6 +54,18 @@ const PROFILE_SAMPLES = 192;
  * head is actually moving.
  */
 const AZIMUTHS = 48;
+/**
+ * Azimuths a boxy cross-section needs.
+ *
+ * A superellipse spends almost all of its parameter on the corners and crosses
+ * each flat face in a sliver of it, so the face centres — the samples that
+ * decide how wide a nearly edge-on box looks — are the first thing lost. At 48
+ * a cube pitched past about 80 degrees ran 36, 48, 36 across neighbouring bins
+ * along its top edge, where the truth is a flat 88, and it read as a pair of
+ * notches bitten out of the silhouette. At 128 that edge is flat, and 512 is
+ * indistinguishable from it.
+ */
+const BOXY_AZIMUTHS = 128;
 /**
  * Output knots, and the number of angular bins.
  *
@@ -106,69 +118,128 @@ export function isAnalyticSolid(
  * wrong — it would fill in the valleys between an organic character's lumps,
  * and the valleys are half of what makes it that character.
  */
-export function solidRadii(o: SolidOutlineOptions): Float64Array {
-  const { width, depth, rotation, perspective } = o;
-  const azimuths = Math.max(3, o.azimuths ?? AZIMUTHS);
-  const bins = Math.max(3, o.knots ?? KNOTS);
+/**
+ * The solid itself: the outline that generates it, the cross-section it is
+ * swept through, and the turn that is about to be applied.
+ *
+ * Shared so the silhouette and the wireframe are built from one description.
+ * A mesh drawn on an ellipsoid while the body was a cube said the opposite of
+ * what a wireframe is for.
+ */
+interface Sweep {
+  profile: Point[];
+  ring: Point[];
+  turn: ReturnType<typeof turnAngles>;
+  organic: boolean;
+  lobes: number;
+  wobble: number;
+  seed: number;
+}
 
-  const rx = Math.max(width, 1) / 2;
+function buildSweep(
+  o: SolidOutlineOptions,
+  profileSamples: number,
+  requestedAzimuths?: number,
+): Sweep {
+  const rx = Math.max(o.width, 1) / 2;
   // Depth enters as the aspect between the depth radius and the in-plane one,
-  // so a shallow character revolves into a disc and a deep one into a barrel.
-  const kappa = Math.max(depth, 1) / 2 / rx;
+  // so a shallow character sweeps into a disc and a deep one into a barrel.
+  const kappa = Math.max(o.depth, 1) / 2 / rx;
 
   // How the sweep goes round. Six families are solids of revolution, so their
-  // rings are circles. `cube` is the one that is not: revolve a square profile
-  // and you get a cylinder, which is a different character entirely. Sweeping
-  // it with superelliptic functions instead builds a real superellipsoid — and
-  // because both reduce to (1, 0) at psi = 0, either way the flat outline is
-  // still the solid's own equator.
+  // cross-section is an ellipse. `cube` is the one that is not: revolve a
+  // square profile and you get a cylinder, which is a different character
+  // entirely. Sweeping it with superelliptic functions instead builds a real
+  // superellipsoid — and because both start at (1, 0), either way the flat
+  // outline is still the solid's own equator.
   const boxy = o.shape === "cube";
+  const azimuths = Math.max(
+    3,
+    requestedAzimuths ?? (boxy ? BOXY_AZIMUTHS : AZIMUTHS),
+  );
   // The same exponent the profile was drawn at. Sweep at a different one and
   // the solid meets itself at a crease, which shows as the silhouette notching
   // inward once the head turns.
   const power = boxy ? 2 / cubeExponent(o.roundness) : 1;
-  const across = (psi: number): number =>
-    boxy ? signedPow(Math.cos(psi), power) : Math.cos(psi);
-  const along = (psi: number): number =>
-    boxy ? signedPow(Math.sin(psi), power) : Math.sin(psi);
+
+  // The cross-section, sampled evenly along its own perimeter rather than
+  // evenly in the parameter that draws it.
+  //
+  // This matters only for `cube`, and it matters enormously. A superellipse is
+  // parameterised by angle, but at a boxy exponent almost every parameter
+  // value lands on a corner — |cos psi|^0.15 sits within a hair of 1 across
+  // most of its range and then falls off a cliff. Sampling psi evenly samples
+  // the corners densely and the flat faces barely at all, so the ring is four
+  // points pretending to be a square. Face-on that hid, because the corners
+  // still bound the silhouette; pitched, the solid came apart into a pinwheel.
+  const ring = evenlySpaced(
+    Array.from({ length: azimuths * 4 }, (_, j) => {
+      const psi = (2 * Math.PI * j) / (azimuths * 4);
+      return boxy
+        ? {
+            x: signedPow(Math.cos(psi), power),
+            y: kappa * signedPow(Math.sin(psi), power),
+          }
+        : { x: Math.cos(psi), y: kappa * Math.sin(psi) };
+    }),
+    azimuths,
+  );
 
   const organic = o.shape === "organic" && (o.wobble ?? 0) !== 0;
-  // For organic the wobble is applied to the *rotated ring*, not carried along
-  // it — see fact 2 above. Everything else revolves its own outline directly.
-  const profile: Point[] = evenlySpaced(
+  // For organic the wobble is applied to the swept point, not carried along
+  // the ring — see fact 2 at the top. Everything else sweeps its own outline.
+  const profile = evenlySpaced(
     organic ? surfacePoints({ ...o, shape: "round" }) : surfacePoints(o),
-    PROFILE_SAMPLES,
+    profileSamples,
   );
-  const lobes = o.lobes ?? 5;
-  const wobble = o.wobble ?? 0;
-  const seed = o.seed ?? 0;
 
-  const turn = turnAngles(perspective, rotation);
+  return {
+    profile,
+    ring,
+    turn: turnAngles(o.perspective, o.rotation),
+    organic,
+    lobes: o.lobes ?? 5,
+    wobble: o.wobble ?? 0,
+    seed: o.seed ?? 0,
+  };
+}
+
+/** One point of the solid, turned and ready to have its z dropped. */
+function sweptPoint(
+  s: Sweep,
+  p: Point,
+  ring: Point,
+): { x: number; y: number; z: number } {
+  // The ring starts at (1, 0), so its first sample is the outline point
+  // itself — which is what makes the flat outline the solid's own equator
+  // whichever cross-section it is swept through.
+  let x = p.x * ring.x;
+  let y = p.y;
+  let z = p.x * ring.y;
+
+  if (s.organic) {
+    const m =
+      1 + wobbleAt(Math.atan2(y, x), s.lobes, s.seed) * s.wobble * WOBBLE_REACH;
+    x *= m;
+    y *= m;
+    z *= m;
+  }
+
+  // The same arithmetic `projectFace` uses, so the silhouette, the wireframe
+  // and the face anchors all describe one head.
+  return rotatePoint(x, y, z, s.turn);
+}
+
+export function solidRadii(o: SolidOutlineOptions): Float64Array {
+  const bins = Math.max(3, o.knots ?? KNOTS);
+  const s = buildSweep(o, PROFILE_SAMPLES, o.azimuths);
 
   const radii = new Float64Array(bins);
   const step = (2 * Math.PI) / bins;
 
-  for (const p of profile) {
-    for (let j = 0; j < azimuths; j++) {
-      const psi = (2 * Math.PI * j) / azimuths;
-      // Revolve about the vertical axis. At psi = 0 this is the outline point
-      // itself, which is what makes the flat outline the solid's own equator.
-      let x = p.x * across(psi);
-      let y = p.y;
-      let z = p.x * kappa * along(psi);
-
-      if (organic) {
-        const m =
-          1 + wobbleAt(Math.atan2(y, x), lobes, seed) * wobble * WOBBLE_REACH;
-        x *= m;
-        y *= m;
-        z *= m;
-      }
-
-      // The same arithmetic `projectFace` uses, so the silhouette and the face
-      // anchors describe one head.
-      const q = rotatePoint(x, y, z, turn);
-
+  for (const p of s.profile) {
+    for (const ring of s.ring) {
+      const q = sweptPoint(s, p, ring);
       // Orthographic: drop z.
       const r = Math.hypot(q.x, q.y);
       if (r === 0) continue;
@@ -182,6 +253,62 @@ export function solidRadii(o: SolidOutlineOptions): Float64Array {
   }
 
   return smoothRadii(fillGaps(radii));
+}
+
+/** Latitude rings the wireframe draws. */
+const MESH_PARALLELS = 5;
+/** Great circles through the poles. Each spans both sides of the solid. */
+const MESH_MERIDIANS = 6;
+/** Points along each mesh line. */
+const MESH_SAMPLES = 40;
+
+/**
+ * A lat/long wireframe over the solid, as SVG path data.
+ *
+ * Built from the same profile and cross-section the silhouette is, so a cube
+ * wears a boxy cage and a cone's rings shrink toward its apex. Drawn on the
+ * ellipsoid instead, every character wore the same sphere — which is the
+ * opposite of what a wireframe is there to say.
+ *
+ * Both halves of every line are kept. A near-hemisphere-only mesh reads as a
+ * bowl; it is seeing the lines run round the back that makes it read as solid.
+ */
+export function solidMesh(o: SolidOutlineOptions, scale = 1): string[] {
+  const s = buildSweep(o, MESH_SAMPLES * 2, MESH_SAMPLES);
+  const nProfile = s.profile.length;
+  const nRing = s.ring.length;
+
+  const trace = (
+    at: (i: number) => { x: number; y: number },
+    n: number,
+  ): string =>
+    Array.from({ length: n }, (_, i) => {
+      const q = at(i);
+      return `${i === 0 ? "M" : "L"} ${fmt(q.x * scale)} ${fmt(q.y * scale)}`;
+    }).join(" ");
+
+  const lines: string[] = [];
+
+  // Parallels: one closed cross-section at each of several heights. The poles
+  // are skipped, where a ring is a dot.
+  for (let i = 1; i <= MESH_PARALLELS; i++) {
+    // The profile runs right side, bottom, left side, top; sampling the first
+    // half walks it from one pole to the other exactly once.
+    const idx = Math.round((nProfile / 2) * (i / (MESH_PARALLELS + 1)));
+    const p = s.profile[idx];
+    lines.push(trace((j) => sweptPoint(s, p, s.ring[j % nRing]), nRing + 1));
+  }
+
+  // Meridians: the whole profile swept to one azimuth, so each is the
+  // character's own outline stood up at that angle.
+  for (let m = 0; m < MESH_MERIDIANS; m++) {
+    const ring = s.ring[Math.round((nRing * m) / MESH_MERIDIANS) % nRing];
+    lines.push(
+      trace((i) => sweptPoint(s, s.profile[i % nProfile], ring), nProfile + 1),
+    );
+  }
+
+  return lines;
 }
 
 /** |v|^m keeping v's sign, which is what a superellipse needs. */
