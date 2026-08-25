@@ -74,10 +74,13 @@ export function sceneToSvg(
     : "";
   const bodyFill = shading ? `url(#${shading.id})` : scene.body.fill;
   const extras = scene.extras
-    .map(
-      (e) =>
-        `<path d="${e.path}" fill="${e.fill}" transform="${e.transform}"/>`,
-    )
+    .map((e) => {
+      // Omitted at full opacity, the same rule the eyes follow, so a face-on
+      // render keeps its minimal markup.
+      const opacity =
+        e.opacity >= 1 ? "" : ` opacity="${fmt(Math.max(e.opacity, 0))}"`;
+      return `<path d="${e.path}" fill="${e.fill}" transform="${e.transform}"${opacity}/>`;
+    })
     .join("");
   const eyes =
     eyeElement("eye-left", scene.eyes.left) +

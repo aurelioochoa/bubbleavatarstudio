@@ -407,3 +407,146 @@ describe("projection guide (FR-8.4)", () => {
     );
   });
 });
+
+// Defects found probing a full turn (docs/research/3d-bubble-exploration.md).
+describe("volume: the light survives a full turn", () => {
+  const bubble: Bubble = doc.bubbles[0];
+  const shadingAt = (rotation: { x: number; y: number; z: number }) => {
+    const s = buildScene(bubble, {
+      tAbsMs: 0,
+      mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+      blink: 0,
+      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale: 1 },
+      headRotation: rotation,
+    }).body.shading;
+    if (!s) throw new Error("body is unshaded");
+    return s;
+  };
+
+  it("leaves a face-on character's gradient exactly where it was", () => {
+    const s = shadingAt({ x: 0, y: 0, z: 0 });
+    expect(s.cx).toBeCloseTo(0.35, 10);
+    expect(s.cy).toBeCloseTo(0.32, 10);
+  });
+
+  it("keeps the lit crown on the character at every yaw", () => {
+    for (let yaw = 0; yaw < 360; yaw += 10) {
+      const { cx } = shadingAt({ x: 0, y: yaw, z: 0 });
+      expect({ yaw, cx }).toMatchObject({ cx: expect.any(Number) });
+      expect(cx).toBeGreaterThan(0.15);
+      expect(cx).toBeLessThan(0.85);
+    }
+  });
+
+  it("keeps it on the character at every pitch too", () => {
+    for (let pitch = 0; pitch < 360; pitch += 10) {
+      const { cy } = shadingAt({ x: pitch, y: 0, z: 0 });
+      expect(cy).toBeGreaterThan(0.15);
+      expect(cy).toBeLessThan(0.85);
+    }
+  });
+
+  it("comes back to where it started after a whole turn", () => {
+    const start = shadingAt({ x: 0, y: 0, z: 0 });
+    const round = shadingAt({ x: 360, y: 360, z: 0 });
+    expect(round.cx).toBeCloseTo(start.cx, 6);
+    expect(round.cy).toBeCloseTo(start.cy, 6);
+  });
+});
+
+describe("volume: extras sit on the surface too (FR-8.2)", () => {
+  const base: Bubble = doc.bubbles[0];
+  const near = "#111111"; // screen-left, authored underneath
+  const far = "#222222"; // screen-right, authored on top
+  const extra = (
+    x: number,
+    z: number,
+    color: string,
+  ): Bubble["body"]["extras"][number] => ({
+    id: `ext_${color.slice(1)}`,
+    kind: "circle",
+    width: 40,
+    height: 40,
+    roundness: 1,
+    x,
+    y: 0,
+    rotationDeg: 0,
+    z,
+    colorRole: "custom",
+    color,
+  });
+  const bubble: Bubble = {
+    ...base,
+    body: {
+      surface: { ...base.body.surface, perspective: 1 },
+      extras: [extra(-60, 0, near), extra(60, 1, far)],
+    },
+  };
+
+  const at = (rotation: { x: number; y: number; z: number }) =>
+    buildScene(bubble, {
+      tAbsMs: 0,
+      mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+      blink: 0,
+      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale: 1 },
+      headRotation: rotation,
+    });
+
+  const of = (
+    scene: ReturnType<typeof at>,
+    color: string,
+  ): (typeof scene.extras)[number] => {
+    const found = scene.extras.find((e) => e.fill === color);
+    if (!found) throw new Error(`no extra filled ${color}`);
+    return found;
+  };
+  const xOf = (e: { transform: string }) =>
+    Number(/translate\(([-0-9.]+)/.exec(e.transform)?.[1] ?? "0");
+
+  it("leaves a face-on character's extras exactly as they were", () => {
+    const scene = at({ x: 0, y: 0, z: 0 });
+    expect(of(scene, near).transform).toBe("translate(-60 0) rotate(0)");
+    expect(of(scene, far).transform).toBe("translate(60 0) rotate(0)");
+    expect(of(scene, near).opacity).toBe(1);
+  });
+
+  it("carries an extra around the surface rather than sliding it flat", () => {
+    // The eyes are the reference: an extra on the same surface travels with
+    // them, and the far side of the head foreshortens toward the silhouette.
+    const facing = at({ x: 0, y: 0, z: 0 });
+    const turned = at({ x: 0, y: 40, z: 0 });
+    // Every anchor on the surface travels the same way the eyes do.
+    const eyeTravel = turned.eyes.left.x - facing.eyes.left.x;
+    expect(eyeTravel).toBeGreaterThan(0);
+    expect(xOf(of(turned, near)) - xOf(of(facing, near))).toBeGreaterThan(0);
+    expect(xOf(of(turned, far)) - xOf(of(facing, far))).toBeGreaterThan(0);
+    // ...and none of them is still sitting on its authored coordinate.
+    expect(xOf(of(turned, near))).not.toBeCloseTo(-60, 1);
+    expect(xOf(of(turned, far))).not.toBeCloseTo(60, 1);
+  });
+
+  it("foreshortens an extra as its part of the surface turns away", () => {
+    const facing = of(at({ x: 0, y: 0, z: 0 }), far);
+    const turned = of(at({ x: 0, y: 45, z: 0 }), far);
+    expect(turned.path.length).toBeGreaterThan(0);
+    expect(turned.path).not.toBe(facing.path);
+  });
+
+  it("fades an extra that has rotated behind the silhouette", () => {
+    expect(of(at({ x: 0, y: 120, z: 0 }), far).opacity).toBe(0);
+    expect(of(at({ x: 0, y: 120, z: 0 }), near).opacity).toBeGreaterThan(0);
+  });
+
+  it("orders extras by the depth the turn gives them, not by z alone", () => {
+    // Face on, the authored z decides: `far` was put on top.
+    expect(at({ x: 0, y: 0, z: 0 }).extras.at(-1)?.fill).toBe(far);
+    // Turned, the one that swung toward the viewer is in front of it.
+    expect(at({ x: 0, y: 60, z: 0 }).extras.at(-1)?.fill).toBe(near);
+  });
+
+  it("omits the opacity attribute while an extra is fully visible", () => {
+    const svg = sceneToSvg(at({ x: 0, y: 0, z: 0 }));
+    expect(svg).not.toContain('opacity="1"');
+    expect(sceneToSvg(at({ x: 0, y: 120, z: 0 }))).toContain('opacity="0"');
+  });
+});

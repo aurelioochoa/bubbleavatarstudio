@@ -43,6 +43,8 @@ export interface ShapeRender {
   path: string;
   fill: string;
   transform: string;
+  /** Fades to 0 as the shape wraps behind the silhouette (FR-8.2). */
+  opacity: number;
   /** Volume shading; null renders as a flat fill. */
   shading?: Shading | null;
 }
@@ -145,6 +147,17 @@ function surfaceScale(
   return { x: Math.abs(dx), y: Math.abs(dy) };
 }
 
+/**
+ * How much of a shape survives at `depth`: full in front of the equator,
+ * fading out over the last sliver so nothing pops out of existence. The rim is
+ * measured off the body so a small character fades over a proportionally small
+ * distance.
+ */
+function rimFade(surface: Bubble["body"]["surface"], depth: number): number {
+  const rim = Math.max(1, Math.min(surface.width, surface.height) * 0.06);
+  return Math.max(0, Math.min(1, depth / rim));
+}
+
 function eyeRender(
   bubble: Bubble,
   side: "left" | "right",
@@ -161,13 +174,8 @@ function eyeRender(
   const flatY = place.offsetY + moodEye.offsetY + ambientEye.y;
   const anchor = projection.project(flatX, flatY);
   const surface = surfaceScale(projection, flatX, flatY);
-  // Wrapping past the equator hides the eye; the last stretch fades so it does
-  // not pop out of existence.
-  const rim = Math.max(
-    1,
-    Math.min(bubble.body.surface.width, bubble.body.surface.height) * 0.06,
-  );
-  const opacity = Math.max(0, Math.min(1, anchor.depth / rim));
+  // Wrapping past the equator hides the eye.
+  const opacity = rimFade(bubble.body.surface, anchor.depth);
   const x = anchor.x;
   const y = anchor.y;
   return {
@@ -200,6 +208,10 @@ function eyeRender(
  * turns, so the lit crown slides across the surface — that travel is most of
  * what sells the volume.
  */
+/** Amplitudes matching the previous 0.22-per-90° and 0.2-per-90° slopes. */
+const CROWN_YAW = (2 * 0.22) / Math.PI;
+const CROWN_PITCH = (2 * 0.2) / Math.PI;
+
 function shadingFor(
   fill: string,
   head: { x: number; y: number; z: number },
@@ -209,8 +221,14 @@ function shadingFor(
   // the shading either blows out or disappears.
   const crown = lighten(fill, 0.34 - lit * 0.16);
   const edge = darken(fill, 0.2 + lit * 0.22);
-  const cx = 0.5 - 0.15 - (head.y / 90) * 0.22;
-  const cy = 0.5 - 0.18 - (head.x / 90) * 0.2;
+  // The crown's travel is a rotation, not a ramp. The old linear term carried
+  // the lit centre clean off the shape past ~140° of yaw (cx reached -0.02 at
+  // 150°), so the body flattened into a dead silhouette at exactly the angles
+  // a full turn has to survive. A sine bounds the travel and closes the loop at
+  // 360°; its amplitude is chosen to match the old slope at rest, so a small
+  // turn looks exactly as it did and the goldens do not move.
+  const cx = 0.5 - 0.15 - CROWN_YAW * Math.sin(head.y * DEG);
+  const cy = 0.5 - 0.18 - CROWN_PITCH * Math.sin(head.x * DEG);
   const id = `bs-${hashId(`${fill}:${fmt(cx)}:${fmt(cy)}`)}`;
   return { id, cx, cy, radius: 0.78, crown, base: fill, edge };
 }
@@ -281,18 +299,42 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   const moodColors = live.mood.colorOverride;
   const bodyFill = moodColors?.body ?? bubble.colors.body;
 
+  // Extras are anchored on the same ellipsoid the eyes are, so a turn carries
+  // them around it, foreshortens them locally and eventually takes them behind
+  // the silhouette. Drawn from their authored x/y alone they slid across a
+  // turning head like decals stuck to the lens.
+  const rest = projectFace({
+    width: surface.width,
+    height: surface.height,
+    perspective: surface.perspective,
+    rotation: { x: 0, y: 0, z: 0 },
+  });
   const extras: ShapeRender[] = [...bubble.body.extras]
     .sort((a, b) => a.z - b.z)
-    .map((e) => ({
-      path: extraPath(e.kind, e.width, e.height),
-      fill:
-        e.colorRole === "body"
-          ? bodyFill
-          : e.colorRole === "accent"
-            ? bubble.colors.accent
-            : e.color,
-      transform: `translate(${fmt(e.x)} ${fmt(e.y)}) rotate(${fmt(e.rotationDeg)})`,
-    }));
+    .map((e) => {
+      const anchor = projection.project(e.x, e.y);
+      const local = surfaceScale(projection, e.x, e.y);
+      return {
+        // How far the turn has carried this anchor toward or away from the
+        // viewer. Authored z stays the order at rest — it is a control the
+        // user sets — and only the travel a rotation induces reorders them,
+        // which is zero for every extra while the head faces front.
+        travel: anchor.depth - rest.project(e.x, e.y).depth,
+        render: {
+          path: extraPath(e.kind, e.width * local.x, e.height * local.y),
+          fill:
+            e.colorRole === "body"
+              ? bodyFill
+              : e.colorRole === "accent"
+                ? bubble.colors.accent
+                : e.color,
+          transform: `translate(${fmt(anchor.x)} ${fmt(anchor.y)}) rotate(${fmt(e.rotationDeg)})`,
+          opacity: rimFade(surface, anchor.depth),
+        },
+      };
+    })
+    .sort((a, b) => a.travel - b.travel)
+    .map((x) => x.render);
 
   const eyeFill = moodColors?.eyes ?? bubble.colors.eyes;
   const left = {
@@ -334,6 +376,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
         roundness: surface.roundness,
       }),
       fill: bodyFill,
+      opacity: 1,
       shading: shadingFor(bodyFill, live.headRotation),
       // Turning the head foreshortens the silhouette; breathing swells it.
       // fmtScale, not fmt: breathing spans under a hundredth, so two decimals
