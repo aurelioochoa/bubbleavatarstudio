@@ -70,7 +70,12 @@
   has no loops (FR-5.2). Top-right, the gizmo button opens a rotation pad
   covering X, Y and Z across ±180° — a drag reaches only X and Y and clamps to
   ±60, so roll and a full turn are reachable only here — and the guide toggle
-  draws the projection surface (FR-8.4). The character casts a contact shadow
+  draws the wireframe: a lat/long mesh over the solid, both hemispheres, with a
+  highlight tracing the character's own silhouette rather than an ellipse
+  around it (FR-8.4). The same mesh comes up on its own for the length of a
+  drag, which is when a character most needs to say it is a solid; the toggle
+  and the drag are held separately, so a drag never switches off a mesh the
+  user asked for. The character casts a contact shadow
   here too — stage chrome like the guide, never baked into an export, since an
   avatar dropped into someone else's page has no ground to cast onto. Every
   overlay is a sibling of the engine's host element, never a child, or the next
@@ -86,7 +91,7 @@ idle motion (FR-7.1), and drag-to-scrub on every numeric label (FR-9.5) — pres
 the label and drag horizontally to move the value by the field's own step. The
 cards collapse and reopen, remembering nothing across a reload by design.
 
-The projection guide toggle (FR-8.4) shipped on the stage's top-right cluster
+The wireframe toggle (FR-8.4) shipped on the stage's top-right cluster
 rather than inside the Surface card: it is a stage overlay, and it belongs
 beside the gizmo it is used with rather than in a panel the user may have
 scrolled away from.
@@ -97,7 +102,7 @@ Sections as collapsible cards:
    rows (round / organic / drop / capsule / cylinder / cone / diamond, FR-2.6);
    the organic parameters — lobes, wobble, seed (FR-2.7) — appear only while
    organic is the family, since they do not bite on the others;
-   width/height/roundness/perspective numeric steppers (unit suffixes u/×),
+   width/height/depth/roundness/perspective numeric steppers (unit suffixes u/×),
    rotation slider ±180°.
 2. **Colors** — body / accent / eyes swatch pickers (preset palette + hex input).
 3. **Extras** — list of primitives with kind icon, up/down z buttons, edit

@@ -218,7 +218,7 @@ readout for which way round the head is.
 
 ### Body construction: a primary shape plus assembled primitives
 
-Double-clicking a character opens a panel headed *body construction*, described
+Double-clicking a character opens a panel headed _body construction_, described
 as choosing the primary shape and then assembling primitives around it. The
 primary is flagged as the one that **carries the eyes** — the face anchors ride
 it, exactly the relationship our `restingFace` has with `body.surface`.
@@ -248,3 +248,51 @@ are editing". Separate from the projection guide, which draws the surface.
 8. An authored depth for the body, rather than a derived one.
 9. Assembled primitives as part of body construction, capped at 16.
 10. A silhouette highlight while a body is being edited.
+
+## Session 2026-08-25 (b) — how their 3D is actually made
+
+Driven as a user again, screenshots only. One new method note: their character
+answers `document.elementFromPoint` as a `path`, and the wireframe overlay is
+vector too. **Their renderer is SVG, not WebGL.** That is a fact about
+capability, and it settles a question our own exploration doc had left open on
+architectural grounds — matching them never needed a 3D library.
+
+### Their character has no shading at all
+
+At rest their orange character is a single flat fill. No gradient, no specular,
+no rim light, no contact shadow, no stroke. We had assumed the reverse and it
+inverts the obvious plan: on lighting we were already ahead, and the gap was
+entirely geometry and interaction.
+
+### The silhouette genuinely turns
+
+Dragged through roughly 50° of yaw, a character built from a body and three
+lobes shows its lobes swing from the left side around to the back while the
+crown grows new bumps. The outline reshapes; it does not squash. Our own
+measurements said ours could not do this — the outline was computed once and
+given a uniform scale.
+
+### The body is a primary solid plus assembled 3D primitives
+
+The wireframe shows a curved lat/long grid over a rounded-superellipsoid body,
+with each lobe carrying its own silhouette. In the ordinary render they merge
+into one continuous contour, because they share a fill and carry no stroke.
+
+### Eyes are cut off by the body, not faded
+
+At about 35° of yaw the far eye is a white sliver truncated flat along the
+body's own contour. Ours faded out on an opacity ramp, which reads as a decal
+ghosting rather than as something going round the side of a solid.
+
+### A wireframe appears while the pointer is held on the character
+
+A full sphere grid with the far-side lines visible through it, plus a bright
+outline hugging the silhouette. It is up only for the duration of the press.
+This is a large part of why the thing announces itself as a solid object, and
+ours had nothing equivalent — one equator and one meridian, behind a toggle.
+
+### Parity gaps, updated
+
+11. Eyes clipped by the silhouette rather than faded at the rim.
+12. A wireframe mesh raised for the duration of a pointer press, rather than
+    only from a toggle.

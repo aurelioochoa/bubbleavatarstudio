@@ -41,6 +41,12 @@
   values, same path, byte for byte. `roundness` means corner softening _within_
   a family: no family collapses into another at either end of its range, which
   is why each maps the 0–1 dial onto its own span.
+- **FR-2.8** The surface is a **solid**, not an outline. Each family's outline
+  is the generatrix of a solid of revolution about the vertical axis, and the
+  drawn silhouette is that solid rotated by the head rotation and projected. A
+  turn therefore reshapes the outline rather than only scaling it, and a lumpy
+  character shows different lumps as it turns. `round` keeps the analytic
+  ellipsoid silhouette, which is the same solid's closed form.
 - **FR-2.7** Organic shapes take `lobes` (how many bumps), `wobble` (how far the
   radius strays, 0 = the round family) and `seed` (which arrangement of bumps).
 
@@ -120,8 +126,15 @@
   X/Y/Z; projection foreshortens the surface and shifts eye anchors accordingly.
 - **FR-8.3** Any direct manipulation pauses playback (FR-6.1) and is undoable
   (single-level undo of the drag is acceptable v1: restore pre-drag values on Esc).
-- **FR-8.4** An optional **guide overlay** draws the projection surface, so the
-  volume the eyes are anchored to is visible while posing.
+- **FR-8.4** A **wireframe overlay** draws a lat/long mesh over the solid —
+  both hemispheres, so it reads as a cage around a volume rather than a bowl —
+  plus a highlight tracing the character's own silhouette. It is raised for the
+  duration of a stage drag and can also be held up by a toggle for posing by
+  number. Stage chrome: it never reaches an export.
+- **FR-8.5** The face is **clipped by the body's silhouette**, so an eye that
+  has travelled toward the limb is cut flat along the contour rather than faded
+  out. An eye is either on the surface or behind it; there is no partial
+  opacity.
 
 ## FR-9 Studio shell & persistence
 

@@ -1,6 +1,8 @@
 # Exploring a solid-object bubble
 
-> Branch `explore/3d-bubble`. Investigation only — no production code changed yet.
+> **Status: built.** Option B shipped; what follows was the investigation that
+> led to it, with an outcome section at the end recording what the build
+> measured and where it disagreed with the guesses here.
 > Method: reading our own render layer, plus measurements taken against it
 > (recorded below). Behavioural targets come from `blackbox-notes.md`; no
 > upstream source was read, per `docs/CLEANROOM.md` §3.
@@ -155,3 +157,54 @@ authored and stored, since `Surface` currently persists a 2D vocabulary.
    exported snapshot and the runtime, or studio-stage only?~~ **Answered:
    studio-stage only.** If a shadow ever belongs in an export it wants to be an
    authored property of the character, not a render-time default.
+
+## Outcome — what the build measured
+
+Option B is in. `src/domain/geometry/solid.ts` revolves each family's flat
+outline about the vertical axis, rotates the solid, projects it and reads the
+silhouette back as a radius per screen angle. Five things this document got
+wrong or left open, and what the build found:
+
+**Option A was not just architecturally wrong, it was not even a match.** A
+black-box pass established that their renderer is SVG (their character answers
+`elementFromPoint` as a `path`). Nothing about their result needed WebGL.
+
+**The lumps could not have travelled without changing the 2D outline first.**
+A surface of revolution about the vertical axis has, under pure yaw, a
+silhouette that is _exactly_ its flat outline scaled in x. So lifting `organic`
+to a solid was only worth anything because its wobble moved from the
+superellipse sampling parameter to the polar angle: keyed on the parameter, the
+modulation is constant around every revolved ring, the solid is a surface of
+revolution, and the lumps provably cannot move however lumpy the field is. That
+was the single load-bearing change, and it is what the travel test guards.
+
+**This document's "organic and drop" is wrong about drop.** Drop is a solid of
+revolution, so it gains volume from pitch and from combined poses, never from
+yaw alone. Only `organic` gains anything under a yaw-only turn.
+
+**Sampling by parameter leaves real holes.** Families sample themselves by
+their own parameter, which clusters points where it moves slowly — a cone puts
+almost everything on its flat base and carries no vertex at all between 5° and
+25°. Revolving only ever sweeps a point toward the vertical, so those angles
+had nothing to fill them and the silhouette came out 16% too wide at the
+shoulders. Profiles are now resampled evenly along the perimeter first.
+
+**Cost is higher than the 0.247 ms prototyped here, and it did not matter.**
+192 profile samples × 48 azimuths → 96 knots measures about a tenth of a frame.
+A last-call memo keyed on the eleven inputs the outline actually depends on
+makes that free unless the head is moving, which is the only time it is spent.
+
+Resolution of the open questions:
+
+1. **Derived, not authored.** The 3D shape comes from today's `lobes`, `wobble`
+   and `seed`, so every saved character gained volume without a migration. The
+   only schema change was `Surface.depth` (v3), which was parity gap 8 and is
+   about how deep a solid is, not what shape it is.
+2. **No back of the head.** Half a turn shows a full-width, featureless, lit
+   solid — which is what turning a solid around actually shows, and what the
+   reference does. The rim light is what keeps it from reading as a dead blob,
+   which was the real complaint behind defect 3.
+3. Already answered: the contact shadow is studio-stage only.
+
+Defect 3 is therefore closed as answered rather than fixed, and all four
+defects this document raised are now resolved.

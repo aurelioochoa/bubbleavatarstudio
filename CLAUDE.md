@@ -53,7 +53,8 @@ These are non-negotiable and predate any individual task. `docs/07` and
 Layers depend downward only (`docs/04-architecture.md` §1 has the full diagram):
 
 - **`src/domain/`** — pure: document types, validation, mutations, geometry
-  (superellipse/organic outlines, ellipsoid face projection), easing,
+  (superellipse/organic outlines, solids of revolution and the silhouettes they
+  project when turned, ellipsoid face projection), easing,
   `LoopPlayer`, blink, ambient idle motion, loop and document summaries, the
   library top-up.
 - **`src/domain/content/`** — pure literal data, no logic: the 24-mood /
@@ -69,7 +70,28 @@ Layers depend downward only (`docs/04-architecture.md` §1 has the full diagram)
 - **`src/export/`** — portable `*.bubble-avatar.json`, SVG/PNG snapshots, ZIP.
 - **`src/runtime/`** — SSR-safe `<BubbleAvatar/>`.
 
-Seven cross-cutting mechanics that are not obvious from any single file:
+Eight cross-cutting mechanics that are not obvious from any single file:
+
+**The body is a solid, and one branch of it is analytic.** `surfacePath` gives
+a family's flat outline; `solid.ts` treats that outline as the generatrix of a
+solid of revolution, turns it, and reads the silhouette back as a radius per
+screen angle — which is why a lumpy character shows different lumps as it
+turns. Two consequences that will bite otherwise. First, `round` (and `organic`
+at wobble 0) keeps the old `scale()` on the flat outline at **every** rotation,
+because the round family revolved _is_ the ellipsoid `projectFace` models and
+the scale is that solid's exact closed form; this is also why the goldens never
+go through the sampler and must not move when it changes. Second,
+`ShapeRender.transform` therefore means different things on the two branches —
+the contract is that the drawn silhouette is `transform` applied to `path`, so
+test the composed result and never the split.
+
+`organic` is the only family that is not a solid of revolution, and only
+because its wobble is keyed on `atan2(y, x)` rather than on the superellipse
+sampling parameter. Key it on the parameter and the modulation is constant
+around every revolved ring, the solid becomes one of revolution, and a
+revolution solid's yaw silhouette is provably just its flat outline scaled —
+the lumps could not travel however lumpy the field was. That one line is what
+the travel test in `solid.test.ts` exists to guard.
 
 **Copy-on-write kits.** A `Bubble` has `ownKit: Kit | null`; `null` means it
 inherits `doc.starterKit`. Always resolve with `effectiveKit(bubble, doc)`

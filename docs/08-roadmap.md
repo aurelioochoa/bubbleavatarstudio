@@ -241,7 +241,13 @@ shading gradient walks off the character past ~140° of yaw, extras get no
 foreshortening or depth sort so they slide across a turning head like decals,
 and there is no contact shadow at all.
 
-Those three are ordinary defect work. The larger idea — deriving the
+**Built.** See the outcome section of that document: the body is a solid, the
+silhouette turns, depth is authored (schema v3), the guide is a wireframe
+raised on a drag, the face clips at the limb, and the body carries a rim light
+that a roll no longer drags around with it. The three defects below are all
+closed.
+
+Those three were ordinary defect work. The larger idea — deriving the
 silhouette from a radius field over the sphere, measured at 1.5% of a frame
 and prototyped to keep the goldens frozen — needs a decision first, chiefly
 whether the 3D shape stays derived from today's `lobes`/`wobble`/`seed` or
