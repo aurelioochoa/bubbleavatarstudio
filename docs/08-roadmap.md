@@ -61,14 +61,14 @@ regression test that reproduced it first.
 
 - **AC:** each fix has a test confirmed red before it and green after.
 
-## P — Parity (P1–P4 done; one affordance outstanding)
+## P — Parity (done)
 
 Bring the app level with what the concept demands, per the feature inventory in
 `docs/research/blackbox-notes.md` session 3.
 
-Every FR the four sub-phases name is now covered by a test that cites it. What
-is left in this phase is a single piece of UI — the button that calls
-`topUpLibrary()` — recorded under P3 below.
+Every FR the four sub-phases name is covered by a test that cites it. The last
+piece of UI this phase was waiting on — the row that calls `topUpLibrary()` —
+landed in F5.
 
 - **P1 (done)** Volume: anchor the face on a projected surface (FR-8.2), shade
   the body, and keep a resting character alive — blinking, micro-saccades,
@@ -133,8 +133,8 @@ is left in this phase is a single piece of UI — the button that calls
   content and nothing forks behind the user's back), its private kit when it
   has already diverged.
 
-  _Open:_ the affordance that calls it. The domain is done and tested; no UI
-  dispatches it yet, so the gap is closed in principle and not in the app.
+  _Closed in F5:_ the Moods panel measures the gap with `libraryGap()` and
+  offers it as a row for as long as there is one, dispatching `library/topUp`.
 
 - **P4 (done)** Remaining UI surfaces.
 
@@ -192,32 +192,41 @@ is left in this phase is a single piece of UI — the button that calls
 
 - **AC:** `pnpm check` green per step; every FR above covered by a test that
   names it; a visual pass in a real browser, not only jsdom. The first two
-  hold at 343 tests across 31 files. The browser pass is **not done** — it
-  belongs to F5, and `pnpm e2e` has not been re-run since the surfaces above
-  landed.
+  hold at 343 tests across 31 files. The browser pass was **done in F5**,
+  against a re-archived `pnpm e2e` run.
 
-## F5 — Hardening & final verification (next)
+## F5 — Hardening & final verification (done)
 
-Full `pnpm check`; Playwright visual smoke (boot, panels, playing loop);
-README; final clean-room audit (grep for any upstream identifiers); tag v0.1.0.
+All five items closed, in the order they are listed.
 
-Concretely, what F5 has to do from here:
+1. **The starter-library affordance.** `topUpLibrary()` has a call site: a
+   `library/topUp` action through the same transactional commit as every other
+   mutation, and a Moods-panel row that measures the gap with `libraryGap()`
+   and shows only while it is non-zero. It needs no confirmation because the
+   domain function only ever appends. A fresh document is built from the
+   current library, so the row is invisible there by construction — which is
+   also why the test that asserts it stays hidden was checked against an
+   unconditional row before being trusted.
+2. **The smoke is ten scenarios**, weighted towards what jsdom models loosely:
+   the mood editor's focus behaviour, the gizmo surviving a rendered frame,
+   the guide reaching the SVG, the Share preview, and both drags. Both drag
+   tests were confirmed to fail against a sabotaged build rather than trusted
+   for passing.
+3. **The visual pass is read.** Eleven frames against `docs/05` §1–§4; one
+   defect, a background segment clipping "Degradado" to "Degrada…" at 360px,
+   now "Lineal" / "Linear". Two non-defects are written into `docs/05` so the
+   next read does not re-open them.
+4. **The `invalid/` fixtures** exist: nine documents, one per validation rule,
+   each broken in exactly one place, globbed by `validate.test.ts` from their
+   filenames. Writing them found `E_ID` declared in the union and emitted
+   nowhere; it is gone.
+5. **The audit is recorded** as `docs/CLEANROOM.md` §6, with the greps to
+   re-derive it. It found one piece of upstream UI copy — the Share panel's
+   "Photo Mode", which is their name for that card — now "Instantánea" /
+   "Snapshot", the name `docs/05` had used all along. Tagged **v0.1.0**.
 
-1. **The starter-library affordance.** `topUpLibrary()` has no call site. It
-   needs a store action and a row in the Moods panel shown only while
-   `libraryGap()` is non-zero, so it disappears once used.
-2. **Widen the Playwright smoke.** Its 4 scenarios predate the mood editor,
-   the gizmo, the guide, the Share preview and both drag behaviours. Drag and
-   modal focus behaviour are exactly the things jsdom models loosely, so they
-   are the ones that most need a real browser.
-3. **Re-archive the screenshots** under `docs/screenshots/` and read them
-   against `docs/05-ui-design.md` — the visual pass P4's AC defers to here.
-4. **The `invalid/` fixtures** §4b of `docs/07` still lists as not built.
-5. **Clean-room audit and tag.** Grep for upstream identifiers per
-   `docs/CLEANROOM.md` §3, then v0.1.0.
-
-- **AC:** all gates green; screenshots archived under `docs/screenshots/`;
-  audit clean.
+- **AC:** all gates green (360 tests / 31 files, 10 e2e scenarios); eleven
+  screenshots archived under `docs/screenshots/`; audit clean and recorded.
 
 ## Beyond the roadmap — the 3D question
 

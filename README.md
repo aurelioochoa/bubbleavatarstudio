@@ -21,15 +21,17 @@ pnpm e2e        # Playwright visual smoke against the preview build
 `make help` lists the same targets if you prefer make; it delegates to these
 scripts, which stay the single source of truth.
 
-Screenshots of the smoke scenarios (boot, panels, playing loop) are archived
-under `docs/screenshots/` by `pnpm e2e`.
+Screenshots of the ten smoke scenarios are archived under `docs/screenshots/`
+by `pnpm e2e`. They are artifacts for a human to read against
+`docs/05-ui-design.md`, not goldens — the stage animates, so pixels differ
+between runs.
 
 ## Status
 
-Working toward feature parity with the concept it reimplements; see
-`docs/08-roadmap.md` for phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **343 tests across 31 files**, plus
-a Playwright smoke of 4 scenarios — re-derive with `pnpm test` rather than
+**v0.1.0.** Every roadmap phase is closed, F5 included. See
+`docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
+requirements each one closes. Current gate: **360 tests across 31 files**, plus
+a Playwright smoke of 10 scenarios — re-derive with `pnpm test` rather than
 trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio
@@ -50,14 +52,14 @@ summary that shares its step expansion with the player; a Share panel with a
 live preview, radial backgrounds, a loop checklist and an import confirmation
 that counts what is in the file; and drag-to-scrub on every numeric label.
 
-Still open, all of it roadmap **F5**:
-
-- The starter library still reaches **new** documents only. `topUpLibrary()`
-  in `src/domain/document/library.ts` closes that additively and is tested,
-  but nothing in the UI calls it yet (see `docs/08-roadmap.md` P3).
-- The Playwright smoke predates most of the surfaces above, and the visual
-  pass against `docs/05-ui-design.md` has not been re-run since they landed.
-- The `invalid/` validation fixtures, the clean-room audit, and the v0.1.0 tag.
+**F5 closed it out.** The starter library now reaches saved projects too: the
+Moods panel offers what a kit lacks, and only while it lacks something. The
+smoke grew to ten scenarios, weighted towards what jsdom models loosely —
+modal focus and both drags. The screenshots were re-archived and read against
+`docs/05-ui-design.md`, which found one clipped label. The `invalid/` fixtures
+exist, one per validation rule. The clean-room audit is recorded as
+`docs/CLEANROOM.md` §6; it found one piece of upstream UI copy ("Photo Mode"),
+now our own word.
 
 Separately, `docs/research/3d-bubble-exploration.md` records three real
 rendering defects around a full turn — the shading gradient walking off the

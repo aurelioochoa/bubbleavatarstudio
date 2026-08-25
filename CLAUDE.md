@@ -110,8 +110,9 @@ Matching is by _name_, because a saved document holds no link back to the
 library entry it came from — so a renamed starter mood reads as missing and the
 library entry returns beside the rename. `topUpLibrary(doc, bubbleId)` routes
 to the kit that bubble actually reads: the shared starter kit when it inherits
-(no copy-on-write fork), its own kit when it has diverged. Nothing in the UI
-calls it yet — that is the last open P4/P3 item.
+(no copy-on-write fork), its own kit when it has diverged. The Moods panel is
+the call site: it measures with `libraryGap()` and shows a top-up row only
+while the gap is non-zero, dispatching `library/topUp`.
 
 **Inspector overlays portal out of the scroll box.** `Modal` and
 `Menu`/`MenuItem` live in `src/app/studio/ui.tsx`. `Modal` positions itself
