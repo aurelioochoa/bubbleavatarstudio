@@ -61,10 +61,14 @@ regression test that reproduced it first.
 
 - **AC:** each fix has a test confirmed red before it and green after.
 
-## P — Parity (in progress)
+## P — Parity (P1–P4 done; one affordance outstanding)
 
 Bring the app level with what the concept demands, per the feature inventory in
 `docs/research/blackbox-notes.md` session 3.
+
+Every FR the four sub-phases name is now covered by a test that cites it. What
+is left in this phase is a single piece of UI — the button that calls
+`topUpLibrary()` — recorded under P3 below.
 
 - **P1 (done)** Volume: anchor the face on a projected surface (FR-8.2), shade
   the body, and keep a resting character alive — blinking, micro-saccades,
@@ -109,62 +113,125 @@ Bring the app level with what the concept demands, per the feature inventory in
   **unchanged**, as predicted — they are driven by `test/fixtures/full.json`,
   not by `starterKit()`.
 
-  _Open, found by running the app rather than the tests:_ `starterKit()` is
-  called only from `createDefaultDocument()`, so the library reaches **new**
-  documents only. Any project already in localStorage keeps the kit it was
-  saved with, and no UI offers to refresh it — a returning user still sees four
-  moods. Defensible, since the kit is user-editable and refreshing would
-  clobber renamed or retuned moods, but FR-4.7's promise ("a new bubble is
-  expressive before the user authors anything") is currently kept for new
-  projects only. Needs a decision before P4 builds the Moods surface on it:
-  leave as is, offer an explicit "add the starter moods to this project"
-  action, or migrate on load. Not a blocker for P4a.
+  _Found by running the app rather than the tests, and since decided:_
+  `starterKit()` is called only from `createDefaultDocument()`, so the library
+  reaches **new** documents only. A project already in localStorage keeps the
+  kit it was saved with, and a returning user still sees four moods while the
+  tests assert twenty-four.
 
-- **P4 (in progress)** Remaining UI surfaces.
+  Of the three options that were open — leave it, offer an explicit action,
+  migrate on load — the decision is the middle one. Migrating on load would
+  resurrect a mood the user had deliberately deleted, on every reload, which
+  is worse than the gap it closes. `domain/document/library.ts` therefore
+  holds an additive `topUpKit()`: it appends every library mood and loop the
+  kit lacks and touches nothing else, so no existing loop can lose its
+  referent. Matching is by name, because a saved document carries no link back
+  to the library entry it came from — a renamed starter mood reads as missing
+  and the entry returns _beside_ the rename rather than overwriting it.
+  `topUpLibrary(doc, bubbleId)` routes it to the kit that bubble actually
+  reads: the shared starter kit when it inherits (so sibling bubbles gain the
+  content and nothing forks behind the user's back), its private kit when it
+  has already diverged.
 
-  _Done:_ stage transport dock with status pill, owning playback for the whole
-  app (FR-6.2); rail thumbnails, rename and reorder behind a context menu
-  (FR-1.2, FR-1.4); loop duplicate and step reorder via the accessible ↑ ↓
-  fallback (FR-5.2, FR-5.5); mood duplicate; collapsible inspector cards on
-  shared design tokens; the rail and inspector at their documented 56px / 360px.
+  _Open:_ the affordance that calls it. The domain is done and tested; no UI
+  dispatches it yet, so the gap is closed in principle and not in the app.
 
-  _Open:_ loop rename, blink card and loop summary (FR-5.8); the Moods modal
-  editor with per-eye deltas and mirror, plus mood rename/reorder and a kebab
-  (docs/05 §2 — the roadmap had omitted these, docs/05 is the fuller list);
-  rotation gizmo and guide overlay (FR-8.2, FR-8.4); Share loop picker, radial
-  background, live preview, import summary and package example (FR-10.1,
-  FR-10.3, FR-10.5); drag-reorder proper (the button fallback exists, the drag
-  does not); drag-to-scrub numeric labels (FR-9.5).
+- **P4 (done)** Remaining UI surfaces.
 
-  _Groundwork the open items need:_ there is no modal/dialog primitive anywhere
-  in `src/app` yet, and both the Moods editor and the import summary want one;
-  and `Menu`/`MenuItem` are still private to `BubbleRail.tsx`, so giving Moods
-  or Loops a kebab means lifting them into `studio/ui.tsx` first. Most of the
-  rest needs no new reducer actions — `loop/update` already carries `name`,
-  `group` and `blink`, `mood/reorder` exists with zero call sites, and `svg.ts`
-  already renders a radial background nothing offers in the UI.
+  The first pass built the stage transport dock and status pill (FR-6.2), rail
+  thumbnails with rename/duplicate/reorder/delete (FR-1.2, FR-1.4), loop
+  duplicate and the accessible ↑ ↓ step reorder (FR-5.2, FR-5.5), mood
+  duplicate, collapsible inspector cards on shared tokens, and the rail and
+  inspector at their documented 56px / 360px.
 
-  _Defect found while planning, still open:_ FR-8.3 says Esc restores the
-  pre-drag rotation; `Stage.tsx` resets head rotation to zero instead. Needs a
-  red-first regression test.
+  The completion pass closed the rest:
 
-  _a11y gaps surfaced by the docs audit and since closed:_
+  - **The defect first.** FR-8.3 says Esc restores the pre-drag rotation;
+    `Stage.tsx` reset it to zero, and the test that asserted the zero
+    behaviour was rewritten and watched fail before the fix.
+  - **Loops** (FR-5.8, FR-5.2): a summary of steps, holds, whole cycle and
+    blink schedule; rename; the blink card; and a list grouped by `group` with
+    a control that moves loops between groups. `summarizeLoop()` shares
+    `cycleSteps()` with `LoopPlayer`, so the summary cannot drift from the
+    playback it describes — a pingpong cycle is longer than its holds sum to,
+    and both now say so from one place.
+  - **Moods** (FR-4.1–4.3): a modal editor carrying all seven deltas per eye —
+    rotation X and Y had been in the renderer since `0f29cee` with no control
+    to set them — plus a mirror action, a colour override covering body _and_
+    eyes independently, and a per-card menu with edit, duplicate, move up/down
+    and delete-with-confirm. `mood/reorder` finally has a call site.
+  - **Stage** (FR-8.2, FR-8.4): a rotation gizmo spanning ±180° on all three
+    axes, where a drag reaches only X and Y and clamps to ±60; and the
+    projection guide, whose arcs are sampled through the same `project()` the
+    eyes go through, so it shows where an anchor would really land. Both are
+    siblings of the engine's host element, asserted directly, because a child
+    is erased by the next `innerHTML` write.
+  - **Share** (FR-10.1, FR-10.3, FR-10.5, FR-9.3): a live preview of the
+    framed result, radial backgrounds with configurable stops, a loop
+    checklist that also drives the mood pruning, an import confirmation that
+    counts what is in the file instead of a hard-coded `confirm()` string, and
+    the `example.tsx` the package was missing.
+  - **Direct manipulation** (FR-9.5, FR-1.4, FR-5.2): drag-to-scrub on every
+    numeric label, and drag-to-reorder for the rail, the mood grid and the
+    loop timeline — the ↑ ↓ buttons stay as the accessible path underneath.
 
-  - Loop and mood delete now confirm, matching bubble-delete and import
-    (`docs/05` §3). Both were pre-existing, not P4 regressions.
-  - The primary indigo split by role so text-bearing fills clear 4.5:1
-    (`#505bbd` / `#5662cc`) while the vivid `#6c7bff` stays on non-text marks.
-    The audit had measured only the resting fill at 3.55:1; the contrast test
-    written for the fix caught the hover fill at 2.66:1 as well.
-    `src/app/theme.test.ts` now guards the whole palette.
+  _Two shared primitives made the rest possible._ `Modal` and
+  `Menu`/`MenuItem` now live in `studio/ui.tsx`; the menu is the rail's own,
+  lifted, with the rail's existing tests as the evidence the lift changed no
+  behaviour. The modal is scoped to its positioned ancestor rather than the
+  viewport, and portals into the inspector column: the point of editing a mood
+  is watching the stage change under the slider, so a full-screen dim would
+  hide the thing being edited, and rendering in place would let the column's
+  scroll box clip the dialog header.
+
+  _One test taught a lesson worth keeping._ The rail's drag case was first
+  written against two bubbles the studio both names "Bubble" — a list of two
+  identical names reads the same reversed, so it passed with the wiring
+  removed. It now seeds the Alpha/Beta fixture. A regression test seen only
+  passing is not evidence.
 
 - **AC:** `pnpm check` green per step; every FR above covered by a test that
-  names it; a visual pass in a real browser, not only jsdom.
+  names it; a visual pass in a real browser, not only jsdom. The first two
+  hold at 343 tests across 31 files. The browser pass is **not done** — it
+  belongs to F5, and `pnpm e2e` has not been re-run since the surfaces above
+  landed.
 
-## F5 — Hardening & final verification
+## F5 — Hardening & final verification (next)
 
 Full `pnpm check`; Playwright visual smoke (boot, panels, playing loop);
 README; final clean-room audit (grep for any upstream identifiers); tag v0.1.0.
 
+Concretely, what F5 has to do from here:
+
+1. **The starter-library affordance.** `topUpLibrary()` has no call site. It
+   needs a store action and a row in the Moods panel shown only while
+   `libraryGap()` is non-zero, so it disappears once used.
+2. **Widen the Playwright smoke.** Its 4 scenarios predate the mood editor,
+   the gizmo, the guide, the Share preview and both drag behaviours. Drag and
+   modal focus behaviour are exactly the things jsdom models loosely, so they
+   are the ones that most need a real browser.
+3. **Re-archive the screenshots** under `docs/screenshots/` and read them
+   against `docs/05-ui-design.md` — the visual pass P4's AC defers to here.
+4. **The `invalid/` fixtures** §4b of `docs/07` still lists as not built.
+5. **Clean-room audit and tag.** Grep for upstream identifiers per
+   `docs/CLEANROOM.md` §3, then v0.1.0.
+
 - **AC:** all gates green; screenshots archived under `docs/screenshots/`;
   audit clean.
+
+## Beyond the roadmap — the 3D question
+
+`docs/research/3d-bubble-exploration.md` is an investigation, not a committed
+phase. It measured that our body outline does not turn: `surfacePath` takes no
+rotation, so an `organic` character keeps the same lumps in the same screen
+positions and merely squashes, which is the strongest "flat sticker" tell we
+have. It also found three defects worth fixing whichever way that goes — the
+shading gradient walks off the character past ~140° of yaw, extras get no
+foreshortening or depth sort so they slide across a turning head like decals,
+and there is no contact shadow at all.
+
+Those three are ordinary defect work. The larger idea — deriving the
+silhouette from a radius field over the sphere, measured at 1.5% of a frame
+and prototyped to keep the goldens frozen — needs a decision first, chiefly
+whether the 3D shape stays derived from today's `lobes`/`wobble`/`seed` or
+becomes an authored field with a v3 migration. It is not scheduled.

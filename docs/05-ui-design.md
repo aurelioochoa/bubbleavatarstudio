@@ -11,6 +11,13 @@
 > The rail and inspector now ship at the documented sizes (56px / 360px,
 > `w-14` / `w-90`); an earlier note here recorded them as 176px and 288px,
 > which the P4 UI pass closed.
+>
+> As of the P4 completion pass there are no **[target]** items left in §1–§4:
+> every one has been built and is covered by a test that names its FR. What is
+> still unverified is not the behaviour but the _look_ — the visual pass
+> against this document is F5 work, against fresh `pnpm e2e` screenshots.
+> Where the built shape differs from the sketch below, the **[built]**
+> paragraph is the description and the bullets are the original target.
 
 ## 1. Layout
 
@@ -39,23 +46,34 @@
   **Drag turns the head** (FR-8.1, amended — see `docs/02` and the session-2
   recon notes); position is set numerically in the Look panel. Esc restores the
   pre-drag rotation.
-  **[built]** drag-to-turn with Esc restore, the projected surface the face is
-  anchored to, the radial backdrop, the top-left status pill (dot + words, so
-  state never rests on colour alone) and the bottom transport dock with its
-  loop selector. The dock owns playback for the whole app and is reachable from
-  every tab; it hides itself when the kit has no loops (FR-5.2).
-  **[target]** the gizmo and its rotation pad, and the guide overlay (FR-8.4).
+  **[built]** all of the above. Drag-to-turn with Esc restore — Esc restores
+  the pose held when the drag began, not the resting pose, which is what
+  FR-8.3 asks for and what the code did _not_ do until the P4 completion pass.
+  The projected surface the face is anchored to, the radial backdrop, the
+  top-left status pill (dot + words, so state never rests on colour alone) and
+  the bottom transport dock with its loop selector. The dock owns playback for
+  the whole app and is reachable from every tab; it hides itself when the kit
+  has no loops (FR-5.2). Top-right, the gizmo button opens a rotation pad
+  covering X, Y and Z across ±180° — a drag reaches only X and Y and clamps to
+  ±60, so roll and a full turn are reachable only here — and the guide toggle
+  draws the projection surface (FR-8.4). Every overlay is a sibling of the
+  engine's host element, never a child, or the next frame's `innerHTML` write
+  erases it.
 - **Inspector (360px):** tab strip + scrollable panel.
 
 ## 2. Panels
 
 ### Look (body & resting face)
 
-**[built]** every section below, the shape-family control, and an Ambient card
-for idle motion (FR-7.1). The cards collapse and reopen, remembering nothing
-across a reload by design. **[target]** drag-to-scrub on the numeric labels
-(FR-9.5), and the projection guide toggle that belongs with the Surface card
-(FR-8.4).
+**[built]** every section below, the shape-family control, an Ambient card for
+idle motion (FR-7.1), and drag-to-scrub on every numeric label (FR-9.5) — press
+the label and drag horizontally to move the value by the field's own step. The
+cards collapse and reopen, remembering nothing across a reload by design.
+
+The projection guide toggle (FR-8.4) shipped on the stage's top-right cluster
+rather than inside the Surface card: it is a stage overlay, and it belongs
+beside the gizmo it is used with rather than in a panel the user may have
+scrolled away from.
 
 Sections as collapsible cards:
 
@@ -73,11 +91,22 @@ Sections as collapsible cards:
 
 ### Moods
 
-**[built]** the card grid with true mini-renders, click-to-preview on the stage,
-the delta sliders (each with a translated label, its own range and a unit), the
-colour override with a clear action, duplicate, and cancelable edits.
-**[target]** the modal editor, per-eye editing with mirror, rename/reorder, and
-the kebab menu.
+**[built]** all of the above. The card grid with true mini-renders,
+click-to-preview on the stage, and a modal editor opened by double-click or
+from the card's kebab. The editor carries all seven deltas for each eye
+separately (FR-4.1) — rotation X and Y had reached the renderer long before
+any control set them — each with a translated label, its own range and a unit;
+a mirror action applying FR-3.3's handedness rule, so roll and yaw flip sign
+and pitch and the scales do not; rename; a colour override covering body and
+eyes independently with a clear action (FR-4.3); and Save / Cancel, where
+Cancel discards the draft and puts the saved mood back on the stage (FR-4.4).
+The kebab carries edit, duplicate, move up/down and delete-with-confirm, and
+cards reorder by dragging as well (FR-4.2).
+
+The editor is a modal scoped to the inspector column rather than the viewport,
+so the stage stays visible behind it. That is not a detail: the point of
+dragging a delta slider is watching the character change, and a full-screen
+dim would hide exactly what is being edited.
 
 - Grid of mood cards (mini stage render + name), `+` card. Click = preview on
   stage (FR-4.4); double-click = open **Mood editor** (modal over inspector):
@@ -89,18 +118,34 @@ the kebab menu.
 
 ### Loops
 
-**[built]** the loop list, step list with hold and transition per step, add and
-remove step, the accessible ↑ ↓ reorder fallback, playback mode as a segmented
-control, springSpeed, and loop duplicate. Playback itself moved to the stage
-dock, so this panel no longer carries transport buttons. **[target]** grouping
-chips, drag-reorder itself, the blink card, the loop summary (FR-5.8), and loop
-rename.
+**[built]** all of the above. The loop list grouped by `group` in
+first-appearance order with a segmented control that moves a loop between
+groups; loop rename (blank names are not committed, matching FR-1.2's rule for
+bubbles); the step list with hold and transition per step, add and remove step,
+both the accessible ↑ ↓ fallback and drag-reorder; playback mode as a segmented
+control; springSpeed; the blink card (toggle, min/max interval, duration); the
+loop summary (FR-5.8); and loop duplicate. Playback itself lives on the stage
+dock, so this panel carries no transport buttons.
+
+The summary reads off `summarizeLoop()`, which shares its step expansion with
+`LoopPlayer`. A pingpong loop plays a mirrored leg back, so its whole cycle is
+longer than its holds sum to — the summary and the playback say so from one
+place and cannot disagree.
+
+Groups are free strings. The two the starter catalogue authors are translated;
+anything else — an imported loop's own word — reaches the UI as typed, and is
+kept selectable so its loops are never stranded without a chip.
 
 - Left: loop list grouped by `group` label (Life / Reactions custom chips);
   `+` new loop. Selecting a loop loads the **timeline**.
 - Timeline (bottom of panel, full width): horizontal step chips — mood
   thumbnail, name, holdMs stepper, transition select — drag to reorder
   (buttons ‹ › as accessible fallback); `+` opens mood picker; ✕ removes step.
+  _Built vertically, not horizontally:_ at the inspector's 360px a row of
+  chips carrying a select, a stepper and three buttons clips, so steps stack
+  and each one keeps its controls on two lines. The reorder buttons are ↑ ↓
+  rather than ‹ › for the same reason — they name the direction the list
+  actually moves in.
 - Loop settings row: mode segmented control (Loop / Once / Ping-pong),
   springSpeed slider 0.1–3, blink card (toggle + min/max interval + duration).
 - Transport "Play" always plays the selected loop. It lives on the stage dock
@@ -108,11 +153,16 @@ rename.
 
 ### Share (export)
 
-**[built]** resolution choice, transparent/solid/linear backgrounds, SVG and
-PNG download, the character JSON, the ZIP, project export and import behind a
-confirmation. **[target]** the radial background and configurable stops, the
-live preview, the loop checklist (FR-10.3), and the import summary counts.
-The language control ships in the header rather than this panel.
+**[built]** all of the above. Resolution choice; transparent, solid, linear and
+radial backgrounds with configurable stops; a live preview of the framed result
+on a checkerboard, rendering the same scene and background as the download so
+the pickers are judged by eye; SVG and PNG download; a loop checklist that
+starts with everything checked (FR-10.3) and drives the mood pruning as well as
+the embedded loops; the character JSON; the ZIP, which now carries the
+`example.tsx` FR-10.5 asks for; project export; and import behind a
+confirmation that lists what is in the file — N bubbles, M moods, K loops —
+counted across the starter kit _and_ every private kit a bubble has diverged
+into. The language control ships in the header rather than this panel.
 
 - **Snapshot card:** resolution segmented (512/1024/2048), background picker
   (transparent/solid/linear/radial + color stops), buttons _Download SVG_ /
@@ -127,10 +177,17 @@ The language control ships in the header rather than this panel.
 ## 3. Interaction states & a11y
 
 - **[built]** Every numeric input: label + unit suffix, ↑↓ steppers, arrow-key
-  support (`NumberField` in `panels/look/fields.tsx`).
+  support, and drag-to-scrub on the label (`NumberField` in
+  `panels/look/fields.tsx`).
 - **[built]** Focus rings visible on dark stage — a single `:focus-visible`
-  rule in `styles.css` paints the accent on every surface. Reorder actions have
-  button fallbacks (rail move up/down, step ↑ ↓).
+  rule in `styles.css` paints the accent on every surface. Every list that
+  drags also reorders from a button: rail move up/down, step ↑ ↓, and the mood
+  kebab's move up/down. The drag sits on top of the buttons; it never replaces
+  them.
+- **[built]** The mood editor and the import confirmation are modal dialogs
+  (`Modal` in `studio/ui.tsx`): named, `aria-modal`, focus moves in on open,
+  Tab cycles inside rather than escaping to the page behind, and Escape or the
+  backdrop closes.
 - **[built]** Empty state: no bubbles → "Crea tu primera bubble" + `+` hint.
 - **[built]** Destructive actions confirm: deleting a **bubble** (FR-1.5), a
   **loop**, or a **mood**, and replacing the project on **import** (FR-9.3).

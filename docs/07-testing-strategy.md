@@ -57,14 +57,24 @@ described them as existing before they were written.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of P3 (the starter library): **23 Vitest files, 254 tests**, plus **1
+As of the P4 completion pass: **31 Vitest files, 343 tests**, plus **1
 Playwright spec** of **4 scenarios** covering boot, panels, a playing loop and
-the rail context menu. Production bundle 274.55 kB JS / 26.20 kB CSS (83.79 /
-5.74 gzipped).
+the rail context menu. Production bundle 292.47 kB JS / 28.59 kB CSS (88.81 /
+6.08 gzipped).
 
-The JS grew 5.1 kB over P2 (269.46 kB): 24 mood records and 20 loop records now
-ship as literal data in `src/domain/content/`. CSS is unchanged — the library is
-data, and no panel gained new chrome to display it yet.
+The JS grew 17.9 kB over P3 (274.55 kB) and the CSS 2.4 kB (26.20 kB). That is
+the whole of P4's remaining surface arriving at once: the modal and menu
+primitives, the mood editor with fourteen delta sliders, the loop summary and
+blink card, the rotation gizmo and projection guide, the Share preview and loop
+picker, and the two drag behaviours.
+
+The test count grew 89 over P3's 254, across eight new files. Three are pure
+domain — `playback/summary.test.ts`, `document/summary.test.ts` and
+`document/library.test.ts` — and five are app: `ui.test.tsx`,
+`dragReorder.test.tsx`, `panels/MoodsPanel.test.tsx`,
+`panels/LoopsPanel.test.tsx` and `panels/look/fields.test.tsx`. Two of those
+panels had been covered only indirectly through `StudioView.test.tsx` before,
+which is why several of their behaviours had never been asserted at all.
 
 One trap when re-deriving the CSS figure: Tailwind v4 scans every non-ignored
 file in the repo for class candidates, **markdown included**. An untracked
@@ -72,12 +82,11 @@ research note containing the words "shadow" and "invisible" in prose adds
 `.shadow` and `.invisible` rules and inflates the CSS by ~0.27 kB. Measure on a
 clean tree, or the number reflects your scratch files rather than the app.
 
-At P2 the JS had grown 2.4 kB over the P4 UI pass (267.09 kB): the shape-family
-geometry started shipping, where before it was written but unreachable.
-
-The CSS had roughly doubled at the P4 UI pass against the P2 figure recorded
-here before it (13.98 kB): the design tokens, the collapsible-card chrome and
-the explicit range/swatch styling in `styles.css` were all new surface area.
+Earlier readings, kept as the trend rather than as claims about today: P3 was
+274.55 / 26.20 kB, P2 269.46 kB JS, and the first P4 UI pass 267.09 kB JS
+against a CSS that had roughly doubled from P2's 13.98 kB when the design
+tokens, the collapsible-card chrome and the explicit range/swatch styling
+arrived.
 
 Re-derive rather than trusting these: `pnpm test` prints the file and test
 counts, `pnpm build` prints the bundle sizes. They are recorded here as a

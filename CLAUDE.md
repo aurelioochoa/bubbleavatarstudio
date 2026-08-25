@@ -54,7 +54,8 @@ Layers depend downward only (`docs/04-architecture.md` §1 has the full diagram)
 
 - **`src/domain/`** — pure: document types, validation, mutations, geometry
   (superellipse/organic outlines, ellipsoid face projection), easing,
-  `LoopPlayer`, blink, ambient idle motion.
+  `LoopPlayer`, blink, ambient idle motion, loop and document summaries, the
+  library top-up.
 - **`src/domain/content/`** — pure literal data, no logic: the 24-mood /
   20-loop starter library (FR-4.7, FR-5.7). Loops name moods by a stable local
   `key`; `starterKit()` in `document/create.ts` is the only thing that turns
@@ -68,7 +69,7 @@ Layers depend downward only (`docs/04-architecture.md` §1 has the full diagram)
 - **`src/export/`** — portable `*.bubble-avatar.json`, SVG/PNG snapshots, ZIP.
 - **`src/runtime/`** — SSR-safe `<BubbleAvatar/>`.
 
-Five cross-cutting mechanics that are not obvious from any single file:
+Seven cross-cutting mechanics that are not obvious from any single file:
 
 **Copy-on-write kits.** A `Bubble` has `ownKit: Kit | null`; `null` means it
 inherits `doc.starterKit`. Always resolve with `effectiveKit(bubble, doc)`
@@ -87,19 +88,48 @@ mood a loop still references, FR-5.6). Mutations never throw.
 **The stage bypasses React per frame.** `StageEngine` owns the rAF loop and
 writes SVG straight into its host element via `innerHTML`; React never
 re-renders per frame (FR-11.2). Consequences: any stage overlay (status pill,
-transport dock) must be a _sibling_ of the engine's host element, never a child
-— a child is wiped on the next frame. The engine also skips the DOM write when
+transport dock, gizmo pad, guide toggle) must be a _sibling_ of the engine's
+host element, never a child — a child is wiped on the next frame, and
+`Stage.test.tsx` asserts that directly. The engine also skips the DOM write when
 the serialized SVG is byte-identical to the last frame, which is what makes a
 paused stage cheap.
 
 **The starter library reaches new documents only.** `starterKit()` runs inside
 `createDefaultDocument()`, so a document already in localStorage keeps whatever
-kit it was saved with — growing the library does not retro-fit saved projects,
-and no UI offers to refresh one. That is defensible (the kit is user-editable;
-refreshing would clobber renamed or retuned moods) but it means a returning
-user does not see new starter content, and it is easy to mistake for a bug when
-the app shows four moods while the tests assert twenty-four. Verify library
-changes against a _fresh_ origin, not a reloaded tab.
+kit it was saved with — growing the library does not retro-fit saved projects.
+That is deliberate: refreshing wholesale would clobber renamed or retuned
+moods. But it means a returning user does not see new starter content, and it
+is easy to mistake for a bug when the app shows four moods while the tests
+assert twenty-four. **Verify library changes against a _fresh_ origin, not a
+reloaded tab.**
+
+`domain/document/library.ts` is the way out, and it is additive by
+construction: `topUpKit()` appends only what a kit lacks and never renames,
+retunes, reorders or removes, so no existing loop can lose its referent.
+Matching is by _name_, because a saved document holds no link back to the
+library entry it came from — so a renamed starter mood reads as missing and the
+library entry returns beside the rename. `topUpLibrary(doc, bubbleId)` routes
+to the kit that bubble actually reads: the shared starter kit when it inherits
+(no copy-on-write fork), its own kit when it has diverged. Nothing in the UI
+calls it yet — that is the last open P4/P3 item.
+
+**Inspector overlays portal out of the scroll box.** `Modal` and
+`Menu`/`MenuItem` live in `src/app/studio/ui.tsx`. `Modal` positions itself
+against its nearest positioned ancestor rather than the viewport, and both the
+mood editor and the import confirmation portal into the inspector `<aside>`
+(`overlayHost`, threaded from `StudioView`). Two reasons, both load-bearing:
+rendered in place, the inspector's `overflow-y-auto` clips the dialog header
+against the tab strip; and a viewport-filling dim would hide the stage, which
+is the thing a mood edit is meant to be judged against (FR-4.4). A panel
+rendered without a host falls back to rendering in place, which is how the
+panel tests drive it.
+
+**The projection guide is opt-in at every layer.** `Scene.guide` is absent
+unless a caller asks; `restingScene`/`moodScene`/`liveFrame` default it off and
+only the stage passes true. That is what keeps snapshots, the ZIP, the runtime
+and all three goldens byte-unchanged by it (FR-8.4). Its stroke is
+`currentColor`, taken from the accent the stage host sets, so stage-only chrome
+never hard-codes a palette value into the pure render layer.
 
 **Three-state transport.** `playing | paused | stopped` (FR-6.2), owned by
 `StudioView` and rendered by the stage dock. `stopped` rewinds the loop clock

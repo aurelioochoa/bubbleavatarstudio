@@ -28,28 +28,42 @@ under `docs/screenshots/` by `pnpm e2e`.
 
 Working toward feature parity with the concept it reimplements; see
 `docs/08-roadmap.md` for phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **254 tests across 23 files**, plus
+requirements each one closes. Current gate: **343 tests across 31 files**, plus
 a Playwright smoke of 4 scenarios — re-derive with `pnpm test` rather than
 trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio
 shell reaching the whole body model; a projected face that gives the character
 volume; idle behaviour (blink, micro-saccades, breathing) so a resting bubble
-looks alive; and the P4 UI pass — a 56px rail of live thumbnails with a
-rename/duplicate/reorder/delete menu, a stage carrying the status pill and the
-transport dock, and a 360px inspector of collapsible cards on shared design
-tokens; and the shape families (round / organic / drop) reaching the schema,
-the renderer and the Look panel, on a v2 document that migrates v1 forward;
-and the starter library — 24 moods across six expressive bands and 20 loops
-split life/reaction, meeting FR-4.7 and FR-5.7.
+looks alive; the shape families (round / organic / drop) reaching the schema,
+the renderer and the Look panel, on a v2 document that migrates v1 forward; and
+the starter library — 24 moods across six expressive bands and 20 loops split
+life/reaction, meeting FR-4.7 and FR-5.7.
 
-Still open: the rest of roadmap P4 — the rotation gizmo and guide overlay, the
-blink card and loop summary, the Moods modal editor with per-eye deltas,
-drag-reorder and drag-to-scrub, and the Share loop checklist and radial
-background. The starter library reaches **new** documents only; a project
-already in localStorage keeps the kit it was saved with, and nothing in the UI
-offers to refresh it (see `docs/08-roadmap.md` P3).
-`docs/05-ui-design.md` marks each item **[built]** or **[target]**.
+Roadmap **P4 is complete**. The studio now has a 56px rail of live thumbnails
+that reorder by drag or by menu; a stage carrying the status pill, the
+transport dock, a rotation gizmo covering all three axes across ±180° and a
+projection guide drawn from the same projection the eyes use; a Moods modal
+editor with all seven deltas per eye, a mirror action and a colour override on
+body and eyes; a Loops panel with grouping, rename, the blink card and a
+summary that shares its step expansion with the player; a Share panel with a
+live preview, radial backgrounds, a loop checklist and an import confirmation
+that counts what is in the file; and drag-to-scrub on every numeric label.
+
+Still open, all of it roadmap **F5**:
+
+- The starter library still reaches **new** documents only. `topUpLibrary()`
+  in `src/domain/document/library.ts` closes that additively and is tested,
+  but nothing in the UI calls it yet (see `docs/08-roadmap.md` P3).
+- The Playwright smoke predates most of the surfaces above, and the visual
+  pass against `docs/05-ui-design.md` has not been re-run since they landed.
+- The `invalid/` validation fixtures, the clean-room audit, and the v0.1.0 tag.
+
+Separately, `docs/research/3d-bubble-exploration.md` records three real
+rendering defects around a full turn — the shading gradient walking off the
+character past ~140° of yaw, extras that do not participate in the projection,
+and no contact shadow — plus a larger, unscheduled idea for a silhouette that
+actually turns. None of it is on the roadmap yet.
 
 ## Architecture
 
