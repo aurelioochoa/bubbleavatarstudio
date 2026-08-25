@@ -149,7 +149,15 @@ describe("StageEngine transport (FR-6.1, FR-6.2)", () => {
     now = 900;
     engine.update(still);
     engine.update({ ...still, mode: "stopped" });
-    expect(host.innerHTML).toBe(asMarkup(sceneToSvg(restingScene(still.bubble, 0))));
+    // The stage always asks for the contact shadow, so the frame to compare
+    // against has to ask for it too.
+    expect(host.innerHTML).toBe(
+      asMarkup(
+        sceneToSvg(
+          restingScene(still.bubble, 0, { x: 0, y: 0, z: 0 }, { shadow: true }),
+        ),
+      ),
+    );
   });
 
   it("replays from the first step after a stop (FR-6.2)", () => {

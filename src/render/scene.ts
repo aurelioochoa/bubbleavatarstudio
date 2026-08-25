@@ -76,6 +76,20 @@ export interface GuideRender {
   arcs: string[];
 }
 
+/**
+ * The character's own shadow on the ground it sits on — the cheapest volume
+ * cue there is. Stage chrome, like the guide: an avatar composited into
+ * someone else's page has no ground to cast onto, so nothing but the studio
+ * stage asks for it and every exported byte is unaffected.
+ */
+export interface ShadowRender {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  opacity: number;
+}
+
 export interface Scene {
   /** Square viewBox side. */
   size: number;
@@ -86,10 +100,24 @@ export interface Scene {
    */
   head: { transform: string };
   body: ShapeRender;
-  /** Sorted back-to-front by z. */
+  /** Sorted back-to-front by z, then by the depth a turn gives them. */
   extras: ShapeRender[];
   eyes: { left: EyeRender; right: EyeRender };
   guide?: GuideRender;
+  /** Drawn before the head group, so it keeps neither the roll nor the bob. */
+  shadow?: ShadowRender;
+}
+
+/**
+ * Stage-only additions to a frame. Both default off at every layer, which is
+ * what keeps snapshots, the ZIP, the runtime and all three goldens unaffected
+ * by either of them (FR-8.4).
+ */
+export interface SceneChrome {
+  /** Draw the projection surface the face is anchored to (FR-8.4). */
+  guide?: boolean;
+  /** Draw the contact shadow under the character. */
+  shadow?: boolean;
 }
 
 /** Live (non-persisted) inputs for one frame. */
@@ -101,6 +129,8 @@ export interface LiveInput {
   headRotation: { x: number; y: number; z: number };
   /** Draw the projection guide over the character (FR-8.4). */
   guide?: boolean;
+  /** Draw the contact shadow under the character. */
+  shadow?: boolean;
 }
 
 export const SCENE_SIZE = 512;
@@ -241,6 +271,46 @@ function hashId(seed: string): string {
     h = Math.imul(h, 16777619);
   }
   return (h >>> 0).toString(36);
+}
+
+/** Gap between the body's lowest point and the ground it sits on. */
+const GROUND_GAP = 16;
+/** Bob height at which the shadow has shrunk and faded as far as it goes. */
+const LIFT_SPAN = 14;
+const SHADOW_FLATNESS = 0.17;
+// Black on a near-black stage has little room to work in, so the pool is
+// deeper than a shadow on paper would be.
+const SHADOW_OPACITY = 0.52;
+
+/**
+ * The shadow lives on the ground, not on the character: it takes the body's
+ * resting position — never the ambient bob — so a breathing character rises
+ * off a shadow that stays put, shrinking and fading as it goes. Its width
+ * follows the silhouette's own foreshortening, so a turned head casts a
+ * narrower shadow without anything extra being computed.
+ */
+function shadowFor(
+  surface: Bubble["body"]["surface"],
+  projection: FaceProjection,
+  ambient: { bodyY: number; bodyScale: number },
+): ShadowRender {
+  const halfHeight = (Math.max(surface.height, 1) / 2) * projection.scaleY;
+  // Up is negative y, so a rising character has a negative bodyY.
+  const lift = Math.max(0, Math.min(1, -ambient.bodyY / LIFT_SPAN));
+  const near = 1 - lift * 0.28;
+  const rx =
+    (Math.max(surface.width, 1) / 2) *
+    projection.scaleX *
+    ambient.bodyScale *
+    0.86 *
+    near;
+  return {
+    cx: surface.x,
+    cy: surface.y + halfHeight + GROUND_GAP,
+    rx,
+    ry: rx * SHADOW_FLATNESS,
+    opacity: SHADOW_OPACITY * near,
+  };
 }
 
 /** How many points each guide arc is sampled at; enough to read as a curve. */
@@ -390,6 +460,9 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
     ...(live.guide
       ? { guide: guideFor(surface, projection, live.ambient.bodyScale) }
       : {}),
+    ...(live.shadow
+      ? { shadow: shadowFor(surface, projection, live.ambient) }
+      : {}),
   };
 }
 
@@ -405,12 +478,12 @@ export function liveFrame(
   loopId: string,
   tAbsMs: number,
   headRotation: LiveInput["headRotation"],
-  guide = false,
+  chrome: SceneChrome = {},
 ): { scene: Scene; player: ReturnType<LoopPlayer["advance"]> | null } {
   const loop = kit.loops.find((l) => l.id === loopId);
   if (!loop) {
     return {
-      scene: restingScene(bubble, tAbsMs, headRotation, guide),
+      scene: restingScene(bubble, tAbsMs, headRotation, chrome),
       player: null,
     };
   }
@@ -424,7 +497,7 @@ export function liveFrame(
     blink,
     ambient,
     headRotation,
-    guide,
+    ...chrome,
   };
   return { scene: buildScene(bubble, live), player: st };
 }
@@ -438,7 +511,7 @@ export function moodScene(
   mood: MoodSample,
   tAbsMs = 0,
   headRotation: LiveInput["headRotation"] = { x: 0, y: 0, z: 0 },
-  guide = false,
+  chrome: SceneChrome = {},
 ): Scene {
   return buildScene(bubble, {
     tAbsMs,
@@ -446,7 +519,7 @@ export function moodScene(
     blink: blinkAt(RESTING_BLINK, bubble.id, tAbsMs),
     ambient: ambientAt(bubble.ambient, tAbsMs),
     headRotation,
-    guide,
+    ...chrome,
   });
 }
 
@@ -455,7 +528,7 @@ export function restingScene(
   bubble: Bubble,
   tAbsMs = 0,
   headRotation: LiveInput["headRotation"] = { x: 0, y: 0, z: 0 },
-  guide = false,
+  chrome: SceneChrome = {},
 ): Scene {
   const mood: MoodSample = {
     left: zeroEye(),
@@ -470,7 +543,7 @@ export function restingScene(
     blink: blinkAt(RESTING_BLINK, bubble.id, tAbsMs),
     ambient,
     headRotation,
-    guide,
+    ...chrome,
   });
 }
 

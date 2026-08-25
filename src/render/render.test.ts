@@ -375,7 +375,7 @@ describe("projection guide (FR-8.4)", () => {
   });
 
   it("draws the silhouette and the two great arcs when requested", () => {
-    const scene = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, true);
+    const scene = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, { guide: true });
     expect(scene.guide?.arcs).toHaveLength(2);
     expect(scene.guide?.outline.path.startsWith("M")).toBe(true);
     const svg = sceneToSvg(scene);
@@ -385,8 +385,8 @@ describe("projection guide (FR-8.4)", () => {
   });
 
   it("bends its arcs as the head turns", () => {
-    const face = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, true);
-    const turned = restingScene(bubble, 0, { x: 0, y: 40, z: 0 }, true);
+    const face = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, { guide: true });
+    const turned = restingScene(bubble, 0, { x: 0, y: 40, z: 0 }, { guide: true });
     expect(turned.guide?.arcs[0]).not.toBe(face.guide?.arcs[0]);
     expect(turned.guide?.outline.transform).not.toBe(
       face.guide?.outline.transform,
@@ -394,8 +394,8 @@ describe("projection guide (FR-8.4)", () => {
   });
 
   it("stays byte-stable like everything else the renderer emits", () => {
-    const once = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, true));
-    const twice = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, true));
+    const once = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, { guide: true }));
+    const twice = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, { guide: true }));
     expect(once).toBe(twice);
   });
 
@@ -548,5 +548,82 @@ describe("volume: extras sit on the surface too (FR-8.2)", () => {
     const svg = sceneToSvg(at({ x: 0, y: 0, z: 0 }));
     expect(svg).not.toContain('opacity="1"');
     expect(sceneToSvg(at({ x: 0, y: 120, z: 0 }))).toContain('opacity="0"');
+  });
+});
+
+// The cheapest volume cue there is, and the one the exploration notes found
+// missing: without it the character reads as art floating on a backdrop rather
+// than a solid sitting in a space. Stage chrome like the guide — an avatar
+// composited into someone else's page has no ground to cast onto, so the
+// snapshot, the ZIP and the runtime never ask for it and the goldens stay frozen.
+describe("contact shadow (stage chrome)", () => {
+  const bubble = doc.bubbles[0];
+  const lit = (
+    rotation: { x: number; y: number; z: number },
+    bodyY = 0,
+    bodyScale = 1,
+  ) =>
+    buildScene(bubble, {
+      tAbsMs: 0,
+      mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+      blink: 0,
+      ambient: { bodyY, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale },
+      headRotation: rotation,
+      shadow: true,
+    });
+
+  it("is absent unless requested", () => {
+    expect(restingScene(bubble, 0).shadow).toBeUndefined();
+    expect(sceneToSvg(restingScene(bubble, 0))).not.toContain("<ellipse");
+  });
+
+  it("draws an ellipse on the ground when requested", () => {
+    const scene = lit({ x: 0, y: 0, z: 0 });
+    expect(scene.shadow?.rx).toBeGreaterThan(0);
+    // Flat: a ground plane seen from the front, not a second body.
+    expect(scene.shadow?.ry).toBeLessThan((scene.shadow?.rx ?? 0) / 2);
+    expect(sceneToSvg(scene)).toContain("<ellipse");
+  });
+
+  it("sits under the character rather than inside the head group", () => {
+    // Inside #head it would inherit the roll and the bob, and a shadow that
+    // tilts with the character is not a shadow.
+    const svg = sceneToSvg(lit({ x: 0, y: 0, z: 30 }));
+    expect(svg).toContain("<ellipse");
+    expect(svg.indexOf("<ellipse")).toBeLessThan(svg.indexOf('id="head"'));
+  });
+
+  it("narrows with the silhouette as the head turns", () => {
+    const facing = lit({ x: 0, y: 0, z: 0 });
+    const turned = lit({ x: 0, y: 70, z: 0 });
+    expect(turned.shadow?.rx).toBeLessThan(facing.shadow?.rx ?? 0);
+  });
+
+  it("shrinks and fades as the character bobs up off the ground", () => {
+    const down = lit({ x: 0, y: 0, z: 0 }, 4);
+    const up = lit({ x: 0, y: 0, z: 0 }, -4);
+    expect(up.shadow?.rx).toBeLessThan(down.shadow?.rx ?? 0);
+    expect(up.shadow?.opacity).toBeLessThan(down.shadow?.opacity ?? 0);
+    expect(up.shadow?.opacity).toBeGreaterThan(0);
+  });
+
+  it("stays on the ground while the character bobs", () => {
+    const down = lit({ x: 0, y: 0, z: 0 }, 4);
+    const up = lit({ x: 0, y: 0, z: 0 }, -4);
+    expect(down.shadow?.cy).toEqual(expect.any(Number));
+    expect(up.shadow?.cy).toBe(down.shadow?.cy);
+  });
+
+  it("stays byte-stable like everything else the renderer emits", () => {
+    expect(sceneToSvg(lit({ x: 3, y: 9, z: 0 }))).toBe(
+      sceneToSvg(lit({ x: 3, y: 9, z: 0 })),
+    );
+  });
+
+  it("never reaches a snapshot, the ZIP or the runtime", async () => {
+    const { snapshotSvg } = await import("../export/avatar");
+    expect(snapshotSvg(bubble, { size: 512, background: null })).not.toContain(
+      "<ellipse",
+    );
   });
 });

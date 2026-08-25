@@ -93,15 +93,19 @@ export class StageEngine {
     this.advanceClocks(this.now());
     const { bubble, kit, loopId, mode, headRotation, preview, guide } =
       this.opts;
+    // The stage is the one caller that asks for chrome: the guide when the
+    // user toggles it, the contact shadow always — this is where the volume
+    // is being judged, and the exported character has no ground to sit on.
+    const chrome = { guide, shadow: true };
     let scene;
     if (preview) {
       // Manual selection owns the live state while it lasts (FR-6.1).
-      scene = moodScene(bubble, preview, this.ambientMs, headRotation, guide);
+      scene = moodScene(bubble, preview, this.ambientMs, headRotation, chrome);
     } else if (loopId && mode !== "stopped") {
-      scene = liveFrame(bubble, kit, loopId, this.loopMs, headRotation, guide)
+      scene = liveFrame(bubble, kit, loopId, this.loopMs, headRotation, chrome)
         .scene;
     } else {
-      scene = restingScene(bubble, this.ambientMs, headRotation, guide);
+      scene = restingScene(bubble, this.ambientMs, headRotation, chrome);
     }
     const svg = sceneToSvg(scene);
     // A paused stage re-serializes to the same bytes every frame; skip the write.

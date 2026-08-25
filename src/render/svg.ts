@@ -95,10 +95,23 @@ export function sceneToSvg(
       "</g>"
     : "";
 
+  // Outside the head group on purpose: a shadow that inherits the roll and the
+  // bob is not a shadow. The gradient is character-independent, so one fixed
+  // id serves every avatar on a page — the same rule `bg-gradient` follows.
+  const sh = scene.shadow;
+  const shadow = sh
+    ? `<defs><radialGradient id="shadow-fade" cx="0.5" cy="0.5" r="0.5">` +
+      `<stop offset="0" stop-color="#000000" stop-opacity="1"/>` +
+      `<stop offset="1" stop-color="#000000" stop-opacity="0"/>` +
+      `</radialGradient></defs>` +
+      `<ellipse cx="${fmt(sh.cx)}" cy="${fmt(sh.cy)}" rx="${fmt(Math.max(sh.rx, 0))}" ry="${fmt(Math.max(sh.ry, 0))}" fill="url(#shadow-fade)" opacity="${fmt(Math.max(sh.opacity, 0))}"/>`
+    : "";
+
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size)} ${fmt(scene.size)}" width="${box}" height="${box}">` +
     bg.join("") +
     `<g id="bubble" transform="translate(${center} ${center})">` +
+    shadow +
     // The head group owns position and roll; body, extras and eyes are all
     // expressed in the face frame and inherit it.
     `<g id="head" transform="${scene.head.transform}">` +
