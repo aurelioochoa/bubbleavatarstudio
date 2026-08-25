@@ -82,9 +82,20 @@ export function sceneToSvg(
       return `<path d="${e.path}" fill="${e.fill}" transform="${e.transform}"${opacity}/>`;
     })
     .join("");
-  const eyes =
+  // The face is cut off by the body rather than faded out at the limb, which
+  // is what makes an eye that has travelled round the side read as being on a
+  // solid. Extras are deliberately outside this: they are volumes assembled
+  // around the body, not marks on its surface, and they are meant to overhang.
+  const fc = scene.faceClip;
+  const clipDefs = fc
+    ? `<defs><clipPath id="${fc.id}">` +
+      `<path d="${fc.path}" transform="${fc.transform}"/>` +
+      `</clipPath></defs>`
+    : "";
+  const face =
     eyeElement("eye-left", scene.eyes.left) +
     eyeElement("eye-right", scene.eyes.right);
+  const eyes = fc ? `<g clip-path="url(#${fc.id})">${face}</g>` : face;
   // FR-8.4: stage chrome rather than character, so it takes its colour from
   // whatever the host sets — the accent token stays in styles.css.
   const g = scene.guide;
@@ -117,6 +128,7 @@ export function sceneToSvg(
     `<g id="head" transform="${scene.head.transform}">` +
     shadeDefs +
     `<path id="body" d="${scene.body.path}" fill="${bodyFill}" transform="${scene.body.transform}"/>` +
+    clipDefs +
     extras +
     eyes +
     guide +

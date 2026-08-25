@@ -55,6 +55,12 @@ export function Stage({
   // asked for. Overlays live beside the engine host, never inside it.
   const [gizmo, setGizmo] = useState(false);
   const [guide, setGuide] = useState(false);
+  // The wireframe also comes up for the length of a drag, which is when a
+  // character most needs to say it is a solid rather than a picture of one.
+  // Kept separate from the toggle so a drag never switches off something the
+  // user asked for.
+  const [dragging, setDragging] = useState(false);
+  const showGuide = guide || dragging;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -66,7 +72,7 @@ export function Stage({
       mode,
       headRotation: head,
       preview,
-      guide,
+      guide: showGuide,
     });
     engineRef.current = engine;
     engine.start();
@@ -84,12 +90,13 @@ export function Stage({
       mode,
       headRotation: head,
       preview,
-      guide,
+      guide: showGuide,
     });
-  }, [bubble, kit, loopId, mode, head, preview, guide]);
+  }, [bubble, kit, loopId, mode, head, preview, showGuide]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
+    setDragging(true);
     preDragRef.current = head;
     // Optional chain: jsdom and older embedders lack pointer capture.
     (e.target as Partial<HTMLElement> & EventTarget).setPointerCapture?.(
@@ -112,6 +119,7 @@ export function Stage({
 
   const onPointerUp = () => {
     dragRef.current = null;
+    setDragging(false);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -212,7 +220,13 @@ export function Stage({
         </div>
       )}
 
-      <StatusPill mode={mode} loopName={playing || mode === "paused" ? (selected?.name ?? null) : null} t={t} />
+      <StatusPill
+        mode={mode}
+        loopName={
+          playing || mode === "paused" ? (selected?.name ?? null) : null
+        }
+        t={t}
+      />
 
       {selected && (
         <div
@@ -331,12 +345,7 @@ function GuideIcon() {
         strokeWidth="1.3"
         strokeDasharray="2 1.6"
       />
-      <path
-        d="M2.5 8h11"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.1"
-      />
+      <path d="M2.5 8h11" fill="none" stroke="currentColor" strokeWidth="1.1" />
     </svg>
   );
 }

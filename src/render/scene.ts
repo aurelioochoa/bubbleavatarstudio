@@ -106,6 +106,16 @@ export interface Scene {
   /** Sorted back-to-front by z, then by the depth a turn gives them. */
   extras: ShapeRender[];
   eyes: { left: EyeRender; right: EyeRender };
+  /**
+   * The body's own silhouette, used to cut the face off at the limb.
+   *
+   * The eyes sit *on* the surface, so an eye that has travelled most of the way
+   * round should be a sliver cut flat along the contour — which is what a solid
+   * does. Fading it out instead read as a decal ghosting away. Extras are not
+   * clipped: they are volumes assembled around the body, and theirs are meant
+   * to stick out past it.
+   */
+  faceClip?: { id: string; path: string; transform: string };
   guide?: GuideRender;
   /** Drawn before the head group, so it keeps neither the roll nor the bob. */
   shadow?: ShadowRender;
@@ -207,8 +217,10 @@ function eyeRender(
   const flatY = place.offsetY + moodEye.offsetY + ambientEye.y;
   const anchor = projection.project(flatX, flatY);
   const surface = surfaceScale(projection, flatX, flatY);
-  // Wrapping past the equator hides the eye.
-  const opacity = rimFade(bubble.body.surface, anchor.depth);
+  // Wrapping past the equator hides the eye outright. There is no ramp: the
+  // silhouette clip has already cut away whatever crossed the limb, and by the
+  // time the anchor itself goes behind there is nothing much left to pop.
+  const opacity = anchor.depth >= 0 ? 1 : 0;
   const x = anchor.x;
   const y = anchor.y;
   return {
@@ -422,6 +434,9 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   // fmtScale, not fmt: breathing spans under a hundredth, so two decimals would
   // quantise the swell into visible steps.
   const bodyScale = live.ambient.bodyScale;
+  const turned =
+    surface.perspective !== 0 &&
+    (live.headRotation.x !== 0 || live.headRotation.y !== 0);
   const bodyShape = isAnalyticSolid(surface.shape, surface.wobble)
     ? {
         path: surfacePath(shapeOf),
@@ -514,6 +529,20 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
     },
     extras,
     eyes: { left, right },
+    // Only when there is a limb to cut against. A clip repeats the whole body
+    // path, which is already most of a render's bytes, and at rest it can never
+    // remove anything: the face frame is unturned, so no anchor has crossed the
+    // contour. Snapshots, the ZIP, the runtime and the mood thumbnails all draw
+    // an unturned character, so none of them pay for this.
+    ...(turned
+      ? {
+          faceClip: {
+            id: `bc-${hashId(`${bodyShape.path}:${bodyShape.transform}`)}`,
+            path: bodyShape.path,
+            transform: bodyShape.transform,
+          },
+        }
+      : {}),
     ...(live.guide
       ? {
           guide: guideFor(

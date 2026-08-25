@@ -5,7 +5,13 @@
 // Also covers the stage overlays of docs/05 §1: the status pill and the
 // transport dock, which own playback now that it has left the Loops panel.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Stage } from "./Stage";
 import { StageEngine } from "./StageEngine";
@@ -98,7 +104,11 @@ function drag(el: Element, dx: number, dy: number) {
     clientX: 100 + dx,
     clientY: 100 + dy,
   });
-  firePointer(el, "pointerup", { pointerId: 1, clientX: 100 + dx, clientY: 100 + dy });
+  firePointer(el, "pointerup", {
+    pointerId: 1,
+    clientX: 100 + dx,
+    clientY: 100 + dy,
+  });
 }
 
 interface UpdateOpts {
@@ -231,9 +241,9 @@ describe("Stage gizmo and guide (FR-8.2, FR-8.4)", () => {
     const { el } = setupStage();
     await user.click(screen.getByRole("button", { name: "Rotar cabeza" }));
     // The engine writes innerHTML every frame, so a child would be wiped.
-    expect(el.contains(screen.getByRole("group", { name: "Rotar cabeza" }))).toBe(
-      false,
-    );
+    expect(
+      el.contains(screen.getByRole("group", { name: "Rotar cabeza" })),
+    ).toBe(false);
   });
 
   it("sets all three rotation axes, including the roll drag cannot reach", async () => {
@@ -264,7 +274,49 @@ describe("Stage gizmo and guide (FR-8.2, FR-8.4)", () => {
     const user = userEvent.setup();
     setupStage();
     expect(lastOpts().guide).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Guía de proyección" }));
+    await user.click(
+      screen.getByRole("button", { name: "Guía de proyección" }),
+    );
+    expect(lastOpts().guide).toBe(true);
+  });
+});
+
+// The reference app shows its wireframe only while the pointer is held on the
+// character, which is what makes the thing announce itself as a solid at
+// exactly the moment you are turning it. Ours had the mesh but no way to see it
+// without hunting for a toggle first.
+describe("Stage wireframe on drag (FR-8.4)", () => {
+  it("shows the mesh while a drag is in progress and hides it after", () => {
+    const el = renderStage();
+    expect(lastOpts().guide).toBe(false);
+
+    firePointer(el, "pointerdown", {
+      pointerId: 1,
+      clientX: 100,
+      clientY: 100,
+    });
+    expect(lastOpts().guide).toBe(true);
+
+    firePointer(el, "pointermove", {
+      pointerId: 1,
+      clientX: 160,
+      clientY: 100,
+    });
+    expect(lastOpts().guide).toBe(true);
+
+    firePointer(el, "pointerup", { pointerId: 1, clientX: 160, clientY: 100 });
+    expect(lastOpts().guide).toBe(false);
+  });
+
+  it("leaves the mesh up after a drag when the toggle is what turned it on", async () => {
+    const t = translator("es");
+    const el = renderStage();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: t("stage.guide") }));
+    expect(lastOpts().guide).toBe(true);
+    drag(el, 60, 0);
+    // The drag must not switch off something the user asked for.
     expect(lastOpts().guide).toBe(true);
   });
 });

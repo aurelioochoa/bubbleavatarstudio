@@ -728,3 +728,41 @@ describe("volume: a lumpy body turns instead of squashing", () => {
     expect(turned.transform).not.toBe(rest.transform);
   });
 });
+
+// Their far eye at a turn is a sliver cut off flat along the body's contour.
+// Ours faded out on an opacity ramp, which reads as a decal ghosting rather
+// than as something going round the side of a solid.
+describe("volume: the face is cut off by the body, not faded", () => {
+  const bubble = doc.bubbles[0];
+
+  it("clips the face to the body's own silhouette", () => {
+    const svg = sceneToSvg(restingScene(bubble, 0, { x: 0, y: 55, z: 0 }));
+    expect(svg).toContain("<clipPath");
+    expect(svg).toContain("clip-path=");
+  });
+
+  it("never half-fades an eye: it is on the surface or behind it", () => {
+    // The old ramp put the far eye at fractional opacity across the last
+    // sliver of the turn, which is the decal look. Now the clip removes what
+    // has crossed the contour and the depth removes what has gone round.
+    const b = structuredClone(bubble);
+    b.body.surface.perspective = 1;
+    const seen = new Set<number>();
+    for (let y = 0; y <= 180; y += 5) {
+      const scene = restingScene(b, 0, { x: 0, y, z: 0 });
+      seen.add(scene.eyes.left.opacity);
+      seen.add(scene.eyes.right.opacity);
+    }
+    expect([...seen].sort()).toEqual([0, 1]);
+  });
+
+  // A clip repeats the entire body path, which is already most of a render's
+  // bytes. At rest it could not remove anything anyway, so it is not emitted —
+  // which is what keeps snapshots, the ZIP, the runtime and the 24 mood
+  // thumbnails exactly the size they were.
+  it("costs an unturned character nothing", () => {
+    const svg = sceneToSvg(restingScene(bubble, 0, { x: 0, y: 0, z: 0 }));
+    expect(svg).not.toContain("<clipPath");
+    expect(svg).not.toContain('opacity="1"');
+  });
+});
