@@ -4,6 +4,7 @@ import { useReducer } from "react";
 import { createDefaultDocument } from "../../domain/document/create";
 import { migrate } from "../../domain/document/migrate";
 import * as M from "../../domain/document/mutate";
+import { topUpLibrary } from "../../domain/document/library";
 import { validateDocument } from "../../domain/document/validate";
 import type { Locale, StudioDocument } from "../../domain/document/types";
 
@@ -61,7 +62,8 @@ export type Action =
     }
   | { type: "step/remove"; loopId: string; stepId: string }
   | { type: "step/reorder"; loopId: string; stepIds: string[] }
-  | { type: "kit/reset" };
+  | { type: "kit/reset" }
+  | { type: "library/topUp" };
 
 /** Applies a mutation result transactionally; failures keep the current doc. */
 function commit(doc: StudioDocument, r: M.MutationResult): StudioDocument {
@@ -156,6 +158,10 @@ export function studioReducer(state: StudioState, action: Action): StudioState {
       );
     case "kit/reset":
       return apply(M.resetKit(doc, bubbleId));
+    case "library/topUp":
+      // Additive by construction (see domain/document/library.ts), so this is
+      // the one kit action that needs no confirmation.
+      return apply(topUpLibrary(doc, bubbleId));
   }
 }
 

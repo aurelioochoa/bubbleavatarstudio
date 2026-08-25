@@ -180,3 +180,43 @@ describe("effectiveKit through the store", () => {
     expect(effectiveKit(bubble, s.doc)).toBe(s.doc.starterKit);
   });
 });
+
+describe("library top-up through the store (FR-4.7, FR-5.7)", () => {
+  /** A project saved before the library grew: it kept the kit it was saved with. */
+  const staleState = () => {
+    const base = initialStudioState();
+    const full = base.doc.starterKit;
+    return {
+      base,
+      full,
+      state: {
+        doc: {
+          ...base.doc,
+          starterKit: { moods: full.moods.slice(0, 2), loops: [] },
+        },
+        lastError: null,
+      },
+    };
+  };
+
+  it("library/topUp appends what the kit lacks", () => {
+    const { full, state } = staleState();
+    const s = studioReducer(state, { type: "library/topUp" });
+    expect(s.doc.starterKit.moods).toHaveLength(full.moods.length);
+    expect(s.doc.starterKit.loops).toHaveLength(full.loops.length);
+    expect(s.lastError).toBeNull();
+  });
+
+  it("keeps the two moods the kit already had, ids and all", () => {
+    const { state } = staleState();
+    const kept = state.doc.starterKit.moods;
+    const s = studioReducer(state, { type: "library/topUp" });
+    expect(s.doc.starterKit.moods.slice(0, 2)).toEqual(kept);
+  });
+
+  it("tops up the shared kit without forking an inheriting bubble", () => {
+    const { state } = staleState();
+    const s = studioReducer(state, { type: "library/topUp" });
+    expect(s.doc.bubbles.every((b) => b.ownKit === null)).toBe(true);
+  });
+});

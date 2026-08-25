@@ -5,8 +5,9 @@
 // the stage every change and reaches the document only on Save. The modal is
 // scoped to the inspector column, so the stage stays visible behind it — which
 // is the whole point of previewing while you drag a slider.
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { libraryGap } from "../../../domain/document/library";
 import { moodScene } from "../../../render/scene";
 import { sceneToSvg } from "../../../render/svg";
 import type {
@@ -153,6 +154,21 @@ export function MoodsPanel({
     reorder,
   );
 
+  /**
+   * FR-4.7/FR-5.7: a project saved before the library grew keeps the kit it
+   * was saved with (see domain/document/library.ts), so the row below offers
+   * the difference — and disappears the moment there is none left to offer.
+   * Recomputed only when the kit changes; the gap is measured against a fresh
+   * `starterKit()`, which is not free.
+   */
+  const gap = useMemo(() => libraryGap(kit), [kit]);
+  const gapLabel = [
+    gap.moods > 0 ? `+${String(gap.moods)} ${t("moods.title")}` : null,
+    gap.loops > 0 ? `+${String(gap.loops)} ${t("loops.title")}` : null,
+  ]
+    .filter((p) => p !== null)
+    .join(" · ");
+
   const move = (index: number, to: number) => {
     const ids = kit.moods.map((m) => m.id);
     if (to < 0 || to >= ids.length) return;
@@ -275,6 +291,28 @@ export function MoodsPanel({
           </button>
         </li>
       </ul>
+
+      {gap.moods + gap.loops > 0 && (
+        <div className="rounded-card border border-dashed border-line bg-panel-2 p-3">
+          <p className="text-[11px] leading-snug text-ink-dim">
+            {t("moods.topUpHint")}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-xs tabular-nums text-ink">
+              {gapLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                dispatch({ type: "library/topUp" });
+              }}
+              className="shrink-0 rounded-field bg-primary px-3 py-1.5 text-xs text-white transition-colors duration-150 ease-out hover:bg-primary-hi"
+            >
+              {t("moods.topUp")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {draft &&
         (() => {

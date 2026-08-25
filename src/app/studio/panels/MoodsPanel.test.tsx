@@ -301,3 +301,52 @@ describe("mood reorder by drag (docs/05 §2)", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 });
+
+describe("the starter-library row (FR-4.7, FR-5.7)", () => {
+  /** A kit saved before the library grew, so it is short of both. */
+  function setupStale() {
+    const doc = createDefaultDocument();
+    const bubble = doc.bubbles[0];
+    if (!bubble) throw new Error("fixture missing bubble");
+    const full = effectiveKit(bubble, doc);
+    const kit = { moods: full.moods.slice(0, 2), loops: [] };
+    const dispatch = vi.fn();
+    render(
+      <MoodsPanel
+        kit={kit}
+        bubble={bubble}
+        dispatch={dispatch}
+        t={translator("es")}
+        onPreview={vi.fn()}
+      />,
+    );
+    return { dispatch, full };
+  }
+
+  const topUpButton = () =>
+    screen.queryByRole("button", { name: "Añadir lo que falta" });
+
+  it("stays hidden while the kit already holds the whole library", () => {
+    setup();
+    expect(topUpButton()).toBeNull();
+  });
+
+  it("appears with what is missing when the kit is short", () => {
+    const { full } = setupStale();
+    expect(topUpButton()).not.toBeNull();
+    expect(
+      screen.getByText(
+        `+${String(full.moods.length - 2)} Ánimos · +${String(full.loops.length)} Ciclos`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("tops the kit up when pressed", async () => {
+    const user = userEvent.setup();
+    const { dispatch } = setupStale();
+    const button = topUpButton();
+    if (!button) throw new Error("no top-up button");
+    await user.click(button);
+    expect(dispatch).toHaveBeenCalledWith({ type: "library/topUp" });
+  });
+});

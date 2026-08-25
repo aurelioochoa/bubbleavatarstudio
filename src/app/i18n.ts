@@ -70,6 +70,8 @@ export type MessageKey =
   | "moods.moveUp"
   | "moods.moveDown"
   | "moods.mirror"
+  | "moods.topUp"
+  | "moods.topUpHint"
   | "moods.overrideBodyColor"
   | "moods.overrideEyesColor"
   | "common.save"
@@ -209,6 +211,9 @@ const es: Record<MessageKey, string> = {
   "moods.moveUp": "Subir",
   "moods.moveDown": "Bajar",
   "moods.mirror": "Reflejar izquierdo → derecho",
+  "moods.topUp": "Añadir lo que falta",
+  "moods.topUpHint":
+    "La biblioteca creció desde que guardaste este proyecto. Añadir no cambia nada de lo que ya tienes.",
   "moods.overrideBodyColor": "Color del cuerpo",
   "moods.overrideEyesColor": "Color de los ojos",
   "common.save": "Guardar",
@@ -349,6 +354,9 @@ const en: Record<MessageKey, string> = {
   "moods.moveUp": "Move up",
   "moods.moveDown": "Move down",
   "moods.mirror": "Mirror left → right",
+  "moods.topUp": "Add what's missing",
+  "moods.topUpHint":
+    "The library has grown since this project was saved. Adding never changes what you already have.",
   "moods.overrideBodyColor": "Body color",
   "moods.overrideEyesColor": "Eye color",
   "common.save": "Save",
