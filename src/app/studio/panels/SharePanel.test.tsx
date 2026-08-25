@@ -125,7 +125,7 @@ describe("SharePanel snapshot (FR-10.1)", () => {
     // The body's own shading is a radial gradient too, so the assertion names
     // the background's id rather than the element type.
     expect(preview().innerHTML).not.toContain('id="bg-gradient"');
-    await user.click(screen.getByRole("radio", { name: "Degradado" }));
+    await user.click(screen.getByRole("radio", { name: "Lineal" }));
     expect(preview().innerHTML).toContain('<linearGradient id="bg-gradient"');
     await user.click(screen.getByRole("radio", { name: "Radial" }));
     expect(preview().innerHTML).toContain('<radialGradient id="bg-gradient"');

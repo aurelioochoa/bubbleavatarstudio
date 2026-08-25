@@ -12,6 +12,20 @@
 > `w-14` / `w-90`); an earlier note here recorded them as 176px and 288px,
 > which the P4 UI pass closed.
 >
+> **The F5 visual pass has been read** against a fresh `pnpm e2e` archive
+> (eleven frames under `docs/screenshots/`). §1–§4 hold as described, with one
+> defect found and fixed in the same pass: the background segmented control
+> clipped "Degradado" to "Degrada…" at the inspector's 360px, and now reads
+> "Lineal" / "Linear" — the pair the Share bullets below already name.
+>
+> Two things the frames show that are _not_ defects, recorded so the next read
+> does not re-litigate them. The Photo Mode preview sits small in its
+> checkerboard: it renders `restingScene()` through the same serializer as the
+> download, at the scene's own viewBox, so a tighter preview would be a
+> preview that lies. And the starter moods and loops carry English names under
+> a Spanish UI: those are document data, matched by name by `topUpKit()`, so
+> translating them would strand every saved project's kit.
+>
 > As of the P4 completion pass there are no **[target]** items left in §1–§4:
 > every one has been built and is covered by a test that names its FR. What is
 > still unverified is not the behaviour but the _look_ — the visual pass

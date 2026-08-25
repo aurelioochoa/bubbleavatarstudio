@@ -258,7 +258,9 @@ const es: Record<MessageKey, string> = {
   "share.background": "Fondo",
   "share.bgTransparent": "Sin fondo",
   "share.bgSolid": "Sólido",
-  "share.bgGradient": "Degradado",
+  // "Degradado" clipped to "Degrada…" in the four-way segmented control at the
+  // inspector's 360px; docs/05 names the pair linear/radial anyway.
+  "share.bgGradient": "Lineal",
   "share.bgRadial": "Radial",
   "share.bgFrom": "Color inicial",
   "share.bgTo": "Color final",
@@ -401,7 +403,7 @@ const en: Record<MessageKey, string> = {
   "share.background": "Background",
   "share.bgTransparent": "Transparent",
   "share.bgSolid": "Solid",
-  "share.bgGradient": "Gradient",
+  "share.bgGradient": "Linear",
   "share.bgRadial": "Radial",
   "share.bgFrom": "From color",
   "share.bgTo": "To color",
