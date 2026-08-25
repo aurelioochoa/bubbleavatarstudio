@@ -42,7 +42,7 @@ export interface SurfaceShapeOptions {
 }
 
 /** How far full wobble may push the outline past its box. */
-const WOBBLE_REACH = 0.35;
+export const WOBBLE_REACH = 0.35;
 /** How much a drop narrows toward its top. */
 const DROP_TAPER = 0.55;
 /** Half-width left at a cone's apex, as a fraction of the base. */
@@ -74,8 +74,12 @@ function hash01(n: number): number {
 /**
  * Two out-of-phase harmonics give a lopsided, hand-made outline; one alone
  * reads as a regular flower.
+ *
+ * Exported because `solid.ts` lifts this same field onto the solid: the lumps
+ * a turned character shows have to be the lumps its flat outline shows, or the
+ * two disagree the moment the head moves.
  */
-function wobbleAt(theta: number, lobes: number, seed: number): number {
+export function wobbleAt(theta: number, lobes: number, seed: number): number {
   const phase1 = hash01(seed) * Math.PI * 2;
   const phase2 = hash01(seed + 977) * Math.PI * 2;
   const weight = 0.35 + hash01(seed + 31) * 0.3;
@@ -115,7 +119,9 @@ function barrelPoints(
     // cap closes as a quarter-ellipse.
     const into = Math.max(0, Math.abs(along) - flat);
     const across =
-      a * Math.sign(Math.cos(t)) * Math.sqrt(Math.max(0, 1 - (into / cap) ** 2));
+      a *
+      Math.sign(Math.cos(t)) *
+      Math.sqrt(Math.max(0, 1 - (into / cap) ** 2));
     pts.push(upright ? { x: across, y: along } : { x: along, y: across });
   }
   return pts;
@@ -142,7 +148,13 @@ function diamondPoints(
   );
 }
 
-export function surfacePath({
+/**
+ * The family's outline as points, before it is turned into a path. This is
+ * what `surfacePath` draws and what `solid.ts` sweeps into three dimensions —
+ * one generatrix, so a solid can never disagree with the flat outline it came
+ * from.
+ */
+export function surfacePoints({
   shape,
   width,
   height,
@@ -151,17 +163,20 @@ export function surfacePath({
   wobble = 0,
   seed = 0,
   samples = 48,
-}: SurfaceShapeOptions): string {
+}: SurfaceShapeOptions): Point[] {
   if (shape === "capsule" || shape === "cylinder") {
     const range = shape === "capsule" ? CAPSULE_CAP : CYLINDER_CAP;
     const cap = lerp(range.min, range.max, clamp(roundness, 0, 1));
-    return smoothClosedPath(barrelPoints(width, height, cap, samples));
+    return barrelPoints(width, height, cap, samples);
   }
 
   if (shape === "diamond") {
     const { sharp, soft } = DIAMOND_EXPONENT;
-    return smoothClosedPath(
-      diamondPoints(width, height, lerp(sharp, soft, clamp(roundness, 0, 1)), samples),
+    return diamondPoints(
+      width,
+      height,
+      lerp(sharp, soft, clamp(roundness, 0, 1)),
+      samples,
     );
   }
 
@@ -173,7 +188,7 @@ export function surfacePath({
   });
 
   if (shape === "round" || (shape === "organic" && wobble === 0)) {
-    return smoothClosedPath(base);
+    return base;
   }
 
   const halfHeight = Math.max(height, 1) / 2;
@@ -191,9 +206,19 @@ export function surfacePath({
       const rise = Math.max(0, -Math.sin(theta));
       return { x: p.x * (1 - DROP_TAPER * rise), y: p.y };
     }
-    const r = 1 + wobbleAt(theta, lobes, seed) * wobble * WOBBLE_REACH;
+    // Keyed on the angle the bump is seen at, not on `theta` — the two only
+    // agree for a true ellipse, and a parameter-keyed wobble is constant
+    // around each ring `solid.ts` revolves, which would leave the lumps
+    // pinned in screen space however far the head turned.
+    const r =
+      1 + wobbleAt(Math.atan2(p.y, p.x), lobes, seed) * wobble * WOBBLE_REACH;
     return { x: p.x * r, y: p.y * r };
   });
 
-  return smoothClosedPath(shaped);
+  return shaped;
+}
+
+/** The family's outline as an SVG path. Unchanged by the move to solids. */
+export function surfacePath(opts: SurfaceShapeOptions): string {
+  return smoothClosedPath(surfacePoints(opts));
 }

@@ -2,7 +2,13 @@
 // its parameters — the renderer, the goldens and the exported files all depend
 // on identical input producing identical bytes.
 import { describe, expect, it } from "vitest";
-import { SHAPE_FAMILIES, surfacePath } from "./shapes";
+import {
+  SHAPE_FAMILIES,
+  surfacePath,
+  surfacePoints,
+  wobbleAt,
+  WOBBLE_REACH,
+} from "./shapes";
 import { blobPath } from "./primitives";
 
 const SIZE = { width: 220, height: 200, roundness: 0.9 };
@@ -32,10 +38,19 @@ describe("surfacePath · round", () => {
 
 describe("surfacePath · organic", () => {
   const organic = (over: Record<string, number> = {}) =>
-    surfacePath({ ...SIZE, shape: "organic", lobes: 5, wobble: 0.2, seed: 1, ...over });
+    surfacePath({
+      ...SIZE,
+      shape: "organic",
+      lobes: 5,
+      wobble: 0.2,
+      seed: 1,
+      ...over,
+    });
 
   it("no wobble collapses back to the round family", () => {
-    expect(organic({ wobble: 0 })).toBe(surfacePath({ ...SIZE, shape: "round" }));
+    expect(organic({ wobble: 0 })).toBe(
+      surfacePath({ ...SIZE, shape: "round" }),
+    );
   });
 
   it("wobble pushes the outline off the round silhouette", () => {
@@ -180,7 +195,11 @@ describe("surfacePath · cone", () => {
     const drop = surfacePath({ ...SIZE, shape: "drop" });
     const band = 0.6 * (SIZE.height / 2);
     const widest = (path: string, keep: (y: number) => boolean) =>
-      Math.max(...knots(path).filter((p) => keep(p.y)).map((p) => Math.abs(p.x)));
+      Math.max(
+        ...knots(path)
+          .filter((p) => keep(p.y))
+          .map((p) => Math.abs(p.x)),
+      );
     const top = (path: string) => widest(path, (y) => y < -band);
     const base = (path: string) => widest(path, (y) => y > band);
     // A cone's apex is a point, not a shoulder.
@@ -194,7 +213,9 @@ describe("surfacePath · cone", () => {
     const cone = surfacePath({ ...SIZE, shape: "cone" });
     const floor = SIZE.height / 2;
     const nearFloor = Math.max(
-      ...knots(cone).filter((p) => p.y > floor * 0.9).map((p) => Math.abs(p.x)),
+      ...knots(cone)
+        .filter((p) => p.y > floor * 0.9)
+        .map((p) => Math.abs(p.x)),
     );
     expect(nearFloor).toBeGreaterThan(0.5 * (SIZE.width / 2));
   });
@@ -221,7 +242,9 @@ describe("surfacePath · diamond", () => {
     const cut = (roundness: number) =>
       Math.max(
         ...knots(surfacePath({ ...SIZE, roundness, shape: "diamond" }))
-          .filter((p) => Math.abs(Math.abs(p.x / 110) - Math.abs(p.y / 100)) < 0.12)
+          .filter(
+            (p) => Math.abs(Math.abs(p.x / 110) - Math.abs(p.y / 100)) < 0.12,
+          )
           .map((p) => Math.hypot(p.x / 110, p.y / 100)),
       );
     expect(cut(1)).toBeGreaterThan(cut(0));
@@ -249,5 +272,48 @@ describe("the family list is the whole story", () => {
       drawn.set(path, shape);
     }
     expect(drawn.size).toBe(SHAPE_FAMILIES.length);
+  });
+});
+
+// FR-2.7. The wobble has to be keyed on the angle a bump is *seen* at, not on
+// the superellipse sampling parameter. The two are only the same for a true
+// ellipse: at the shipped roundness the exponent is 2.56 and they disagree by
+// about 6%.
+//
+// This is not cosmetic. `solid.ts` revolves this outline about the vertical
+// axis, and a modulation keyed on the parameter is constant around each
+// revolved ring — which would make the organic solid a surface of revolution,
+// and a surface of revolution's silhouette under yaw is provably just its flat
+// outline scaled. Keyed on the parameter, the lumps could never travel.
+describe("organic wobble is radial (FR-2.7)", () => {
+  const ORG = {
+    ...SIZE,
+    shape: "organic" as const,
+    lobes: 5,
+    wobble: 0.4,
+    seed: 1,
+  };
+
+  it("modulates by the angle the bump is seen at, not the sampling parameter", () => {
+    const base = surfacePoints({ ...SIZE, shape: "round" });
+    const org = surfacePoints(ORG);
+    expect(org).toHaveLength(base.length);
+
+    for (const [i, b] of base.entries()) {
+      const o = org[i];
+      if (!o) throw new Error("length mismatch");
+      const angle = Math.atan2(b.y, b.x);
+      const expected = 1 + wobbleAt(angle, 5, 1) * 0.4 * WOBBLE_REACH;
+      expect(Math.hypot(o.x, o.y) / Math.hypot(b.x, b.y)).toBeCloseTo(
+        expected,
+        10,
+      );
+    }
+  });
+
+  it("still leaves the outline where wobble is zero", () => {
+    expect(surfacePath({ ...ORG, wobble: 0 })).toBe(
+      surfacePath({ ...SIZE, shape: "round" }),
+    );
   });
 });
