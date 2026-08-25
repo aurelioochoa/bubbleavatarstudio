@@ -125,12 +125,16 @@ is the thing a mood edit is meant to be judged against (FR-4.4). A panel
 rendered without a host falls back to rendering in place, which is how the
 panel tests drive it.
 
-**The projection guide is opt-in at every layer.** `Scene.guide` is absent
-unless a caller asks; `restingScene`/`moodScene`/`liveFrame` default it off and
-only the stage passes true. That is what keeps snapshots, the ZIP, the runtime
-and all three goldens byte-unchanged by it (FR-8.4). Its stroke is
+**Stage chrome is opt-in at every layer.** `Scene.guide` and `Scene.shadow` are
+absent unless a caller asks: `restingScene`/`moodScene`/`liveFrame` take a
+`SceneChrome` bag that defaults to `{}`, and the studio stage is the only
+caller that fills it (the guide when the user toggles it, the contact shadow
+always). That is what keeps snapshots, the ZIP, the runtime and all three
+goldens byte-unchanged by either (FR-8.4). The guide's stroke is
 `currentColor`, taken from the accent the stage host sets, so stage-only chrome
-never hard-codes a palette value into the pure render layer.
+never hard-codes a palette value into the pure render layer. The shadow is
+drawn _before_ the head group — inside it, it would inherit the roll and the
+bob, and a shadow that tilts with the character is not a shadow.
 
 **Three-state transport.** `playing | paused | stopped` (FR-6.2), owned by
 `StudioView` and rendered by the stage dock. `stopped` rewinds the loop clock

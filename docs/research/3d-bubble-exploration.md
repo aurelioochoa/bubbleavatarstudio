@@ -72,6 +72,8 @@ move, the wire-up is wrong. Stop and look.
 ## Defects found while probing 360°
 
 These are real and worth fixing regardless of which direction we take.
+**Three of the four are fixed** — see the commits following v0.1.0. What each
+one needed is recorded under it.
 
 **1. The light walks off the character past ~140°.** `shadingFor` positions the
 gradient with `0.5 - 0.15 - (head.y / 90) * 0.22` — linear and unbounded, where
@@ -86,6 +88,11 @@ yaw=120  shadingCx= 0.057      yaw=270  shadingCx=-0.310
 Past 150° the lit crown is outside the shape entirely, so the body flattens into
 a dead silhouette at exactly the angles a 360° turn has to survive.
 
+**Fixed.** The travel is a rotation, not a ramp: a sine, bounded to ±0.14 and
+closing the loop at 360°, with its amplitude picked to match the old slope at
+zero. A small turn therefore looks exactly as it did, cx at rest is still 0.35
+to the last bit, and the goldens did not move.
+
 **2. Extras do not participate in the projection at all.** `buildScene` gives
 each extra `translate(x y) rotate(deg)` — no foreshortening, no depth, and their
 z-sort is the static authored value rather than their rotated depth. On a
@@ -99,6 +106,14 @@ petal-ringed character in the parity inventory is the case that breaks hardest.
 nothing else. A ground shadow is the cheapest and strongest volume cue there is,
 and its absence is a large part of why the character reads as floating art
 rather than a solid sitting in a space.
+
+**Fixed, stage-only** — which answers open question 3 below. An avatar
+composited into someone else's page has no ground to cast onto, so a baked
+shadow would follow it into every PNG, every ZIP, the runtime and all 24 mood
+thumbnails. `Scene.shadow` is opt-in the way `Scene.guide` is; the studio stage
+is the only caller that asks. The shadow takes the body's resting position and
+never the ambient bob, so a breathing character rises off a shadow that stays
+put, and its width follows the silhouette's own foreshortening.
 
 ## Options
 
@@ -118,6 +133,10 @@ perceived-realism gain per line of code.
 
 **D — 360° correctness.** Defects 1–3 above.
 
+_Where this stands:_ D is done and the cheap half of C (the contact shadow) with
+it; the rim/fresnel and tracking specular are not. B is untouched and still
+wants the conversation below.
+
 The honest sequencing is **C → D → B**: C and D are small, self-contained, and
 would make the current model noticeably more solid on their own, which also
 gives us a fair baseline to judge whether B's silhouette work is worth its
@@ -132,5 +151,7 @@ authored and stored, since `Surface` currently persists a 2D vocabulary.
    become an authored 3D field (richer, but a v3 migration and new UI)?
 2. Should 360° show a distinct back of the head, or is a featureless turned-away
    solid the right read for these characters?
-3. How far does the "Blender" cue go — is a contact shadow in scope for the
-   exported snapshot and the runtime, or studio-stage only?
+3. ~~How far does the "Blender" cue go — is a contact shadow in scope for the
+   exported snapshot and the runtime, or studio-stage only?~~ **Answered:
+   studio-stage only.** If a shadow ever belongs in an export it wants to be an
+   authored property of the character, not a render-time default.

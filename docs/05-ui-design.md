@@ -70,9 +70,11 @@
   has no loops (FR-5.2). Top-right, the gizmo button opens a rotation pad
   covering X, Y and Z across ±180° — a drag reaches only X and Y and clamps to
   ±60, so roll and a full turn are reachable only here — and the guide toggle
-  draws the projection surface (FR-8.4). Every overlay is a sibling of the
-  engine's host element, never a child, or the next frame's `innerHTML` write
-  erases it.
+  draws the projection surface (FR-8.4). The character casts a contact shadow
+  here too — stage chrome like the guide, never baked into an export, since an
+  avatar dropped into someone else's page has no ground to cast onto. Every
+  overlay is a sibling of the engine's host element, never a child, or the next
+  frame's `innerHTML` write erases it.
 - **Inspector (360px):** tab strip + scrollable panel.
 
 ## 2. Panels
