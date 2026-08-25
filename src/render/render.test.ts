@@ -627,3 +627,59 @@ describe("contact shadow (stage chrome)", () => {
     );
   });
 });
+
+// The body is a solid, not a sticker (FR-2.6, FR-8.2). Before this, the outline
+// was computed once from static parameters and given a uniform scale, so an
+// organic character's path bytes were identical at every head rotation and its
+// lumps stayed pinned in screen space however far it turned. That was the
+// strongest "flat sticker" tell the render had.
+describe("volume: a lumpy body turns instead of squashing", () => {
+  const lumpy = (): Bubble => {
+    const b = structuredClone(doc.bubbles[0]);
+    b.body.surface.shape = "organic";
+    b.body.surface.wobble = 0.6;
+    b.body.surface.lobes = 5;
+    b.body.surface.seed = 3;
+    b.body.surface.perspective = 1;
+    return b;
+  };
+
+  const radii = (path: string): number[] =>
+    [...path.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((m) =>
+      Math.hypot(Number(m[1]), Number(m[2])),
+    );
+
+  it("shows different lumps once it has turned", () => {
+    const b = lumpy();
+    const rest = restingScene(b, 0, { x: 0, y: 0, z: 0 }).body;
+    const turned = restingScene(b, 0, { x: 0, y: 70, z: 0 }).body;
+
+    // Not merely a different transform on the same outline: the outline itself
+    // has to have changed shape.
+    expect(turned.path).not.toBe(rest.path);
+
+    const a = radii(rest.path);
+    const c = radii(turned.path);
+    expect(a).toHaveLength(c.length);
+    // And not a uniform scaling of it either, which is all the old code could
+    // ever produce. Compare the ratio at each knot: a scaling has one ratio.
+    const ratios = a.map((r, i) => (c[i] ?? 0) / r);
+    const spread = Math.max(...ratios) - Math.min(...ratios);
+    expect(spread).toBeGreaterThan(0.15);
+  });
+
+  it("bakes the foreshortening into the outline, not the transform", () => {
+    const turned = restingScene(lumpy(), 0, { x: 0, y: 70, z: 0 }).body;
+    // Breathing is 1 at t=0, so nothing is left for the transform to say.
+    expect(turned.transform).toBe("scale(1 1)");
+  });
+
+  it("leaves a round body on its analytic path, which is why goldens hold", () => {
+    const b = structuredClone(doc.bubbles[0]);
+    b.body.surface.shape = "round";
+    const rest = restingScene(b, 0, { x: 0, y: 0, z: 0 }).body;
+    const turned = restingScene(b, 0, { x: 0, y: 70, z: 0 }).body;
+    expect(turned.path).toBe(rest.path);
+    expect(turned.transform).not.toBe(rest.transform);
+  });
+});

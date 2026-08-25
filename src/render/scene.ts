@@ -9,6 +9,7 @@ import {
   fmtScale,
 } from "../domain/geometry/primitives";
 import { surfacePath } from "../domain/geometry/shapes";
+import { isAnalyticSolid, solidOutline } from "../domain/geometry/solid";
 import {
   projectFace,
   type FaceProjection,
@@ -370,6 +371,44 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   const moodColors = live.mood.colorOverride;
   const bodyFill = moodColors?.body ?? bubble.colors.body;
 
+  const shapeOf = {
+    shape: surface.shape,
+    lobes: surface.lobes,
+    wobble: surface.wobble,
+    seed: surface.seed,
+    width: surface.width,
+    height: surface.height,
+    roundness: surface.roundness,
+  };
+  // The round family revolved *is* the ellipsoid the projection already models,
+  // and an ellipsoid's orthographic silhouette really is its outline scaled.
+  // So the analytic branch is not a shortcut around the solid, it is the solid's
+  // own closed form — which is why the goldens never go through the sampler.
+  //
+  // For every other family the turn is baked into the outline itself, and the
+  // transform is left holding only the breathing swell. The contract either way
+  // is that the drawn silhouette is `transform` applied to `path`.
+  //
+  // fmtScale, not fmt: breathing spans under a hundredth, so two decimals would
+  // quantise the swell into visible steps.
+  const bodyScale = live.ambient.bodyScale;
+  const bodyShape = isAnalyticSolid(surface.shape, surface.wobble)
+    ? {
+        path: surfacePath(shapeOf),
+        transform: `scale(${fmtScale(projection.scaleX * bodyScale)} ${fmtScale(
+          projection.scaleY * bodyScale,
+        )})`,
+      }
+    : {
+        path: solidOutline({
+          ...shapeOf,
+          depth: surface.depth,
+          rotation: live.headRotation,
+          perspective: surface.perspective,
+        }),
+        transform: `scale(${fmtScale(bodyScale)} ${fmtScale(bodyScale)})`,
+      };
+
   // Extras are anchored on the same ellipsoid the eyes are, so a turn carries
   // them around it, foreshortens them locally and eventually takes them behind
   // the silhouette. Drawn from their authored x/y alone they slid across a
@@ -438,24 +477,10 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
       transform: `translate(${fmt(surface.x)} ${fmt(bodyY)}) rotate(${fmt(bodyRot)})`,
     },
     body: {
-      path: surfacePath({
-        shape: surface.shape,
-        lobes: surface.lobes,
-        wobble: surface.wobble,
-        seed: surface.seed,
-        width: surface.width,
-        height: surface.height,
-        roundness: surface.roundness,
-      }),
+      ...bodyShape,
       fill: bodyFill,
       opacity: 1,
       shading: shadingFor(bodyFill, live.headRotation),
-      // Turning the head foreshortens the silhouette; breathing swells it.
-      // fmtScale, not fmt: breathing spans under a hundredth, so two decimals
-      // would quantise the swell into visible steps.
-      transform: `scale(${fmtScale(
-        projection.scaleX * live.ambient.bodyScale,
-      )} ${fmtScale(projection.scaleY * live.ambient.bodyScale)})`,
     },
     extras,
     eyes: { left, right },
