@@ -1,0 +1,112 @@
+{
+  "version": 2,
+  "kind": "bubble-studio-project",
+  "activeBubbleId": "bbl_min",
+  "locale": "es",
+  "bubbles": [
+    {
+      "id": "bbl_min",
+      "name": "Min",
+      "body": {
+        "surface": {
+          "kind": "blob",
+          "shape": "round",
+          "width": 200,
+          "height": 180,
+          "roundness": 0.8,
+          "x": 0,
+          "y": 0,
+          "rotationDeg": 0,
+          "perspective": 0.2
+        },
+        "extras": []
+      },
+      "colors": {
+        "body": "red",
+        "accent": "#ffffff",
+        "eyes": "#1c2033"
+      },
+      "restingFace": {
+        "eye": {
+          "width": 30,
+          "height": 46,
+          "roundness": 1
+        },
+        "left": {
+          "offsetX": -5,
+          "offsetY": 0,
+          "rotationDeg": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "right": {
+          "offsetX": 5,
+          "offsetY": 0,
+          "rotationDeg": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "spacing": 60,
+        "linked": true
+      },
+      "ambient": {
+        "enabled": true,
+        "bodyAmplitude": 3,
+        "bodyPeriodMs": 5200,
+        "eyeAmplitude": 1.2,
+        "eyePeriodMs": 3400
+      },
+      "ownKit": null
+    }
+  ],
+  "starterKit": {
+    "moods": [
+      {
+        "id": "mood_min_happy",
+        "name": "happy",
+        "left": {
+          "rotationXDeg": 0,
+          "rotationYDeg": 0,
+          "rotationZDeg": -8,
+          "scaleX": 1.1,
+          "scaleY": 0.85,
+          "offsetX": 0,
+          "offsetY": 4
+        },
+        "right": {
+          "rotationXDeg": 0,
+          "rotationYDeg": 0,
+          "rotationZDeg": -8,
+          "scaleX": 1.1,
+          "scaleY": 0.85,
+          "offsetX": 0,
+          "offsetY": 4
+        },
+        "colorOverride": null
+      }
+    ],
+    "loops": [
+      {
+        "id": "loop_min_idle",
+        "name": "idle",
+        "group": "life",
+        "steps": [
+          {
+            "id": "stp_min_1",
+            "moodId": "mood_min_happy",
+            "holdMs": 1000,
+            "transition": "ease"
+          }
+        ],
+        "mode": "loop",
+        "springSpeed": 1,
+        "blink": {
+          "enabled": true,
+          "minIntervalMs": 2400,
+          "maxIntervalMs": 6000,
+          "durationMs": 140
+        }
+      }
+    ]
+  }
+}

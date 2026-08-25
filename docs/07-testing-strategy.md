@@ -50,17 +50,37 @@ These stay hand-written and deliberately small — they are _not_ built from
 starter library grows, and it was re-verified when P3 took the kit to 24 moods
 and 20 loops.
 
-**Not built yet:** the `invalid/` cases per validation rule (E_VERSION, broken
-ref, bad colour). `validate.test.ts` covers those error codes with documents
-built inline instead. Extracting them into fixtures is F5 work — this section
-described them as existing before they were written.
+`src/test/fixtures/invalid/` — one document per validation rule, each derived
+from `minimal.json` and broken in exactly one place. The filename carries the
+code it must fail with (`E_REF.step-names-a-missing-mood.json`), and
+`validate.test.ts` globs the directory: a new case needs no test edit, a
+fixture that fails with the wrong code fails by name, and one that trips a
+second rule as well fails the "exactly one rule each" case. A roster in that
+test mirrors the `ErrorCode` union, so a code shipped without a fixture breaks
+the suite.
+
+Writing them found dead weight: `E_ID` was declared in the union and emitted
+nowhere — docs/03 §7 rule 2 asks for unique ids, not for an id _format_ — so
+it is gone rather than given a fixture that could not be written.
+
+The inline cases in `validate.test.ts` stay. They cover the same codes reached
+from other places in the tree (a broken ref inside an `ownKit`, a bad
+transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of the P4 completion pass: **31 Vitest files, 343 tests**, plus **1
-Playwright spec** of **4 scenarios** covering boot, panels, a playing loop and
-the rail context menu. Production bundle 292.47 kB JS / 28.59 kB CSS (88.81 /
-6.08 gzipped).
+As of F5: **31 Vitest files, 360 tests**, plus **1 Playwright spec** of **10
+scenarios** — boot, panels, a playing loop and the rail menu, joined by the
+mood editor's focus behaviour, the gizmo, the guide, the Share preview,
+drag-to-scrub and drag-to-reorder. Production bundle 294.59 kB JS / 28.76 kB
+CSS (89.47 / 6.11 gzipped).
+
+The 17 tests over P4's 343 are F5's own: the library top-up through the store
+and its Moods-panel row, and the nine `invalid/` fixtures with the three cases
+that police them. The bundle moved 2.1 kB for the top-up row.
+
+Earlier in the P4 completion pass the reading was 292.47 / 28.59 kB across 343
+tests and 4 e2e scenarios.
 
 The JS grew 17.9 kB over P3 (274.55 kB) and the CSS 2.4 kB (26.20 kB). That is
 the whole of P4's remaining surface arriving at once: the modal and menu

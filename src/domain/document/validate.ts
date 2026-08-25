@@ -5,7 +5,6 @@ export type ErrorCode =
   | "E_VERSION"
   | "E_KIND"
   | "E_SHAPE"
-  | "E_ID"
   | "E_ID_DUP"
   | "E_REF"
   | "E_RANGE"

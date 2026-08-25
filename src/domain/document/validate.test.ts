@@ -172,3 +172,53 @@ describe("validateDocument — eye mirroring (FR-3)", () => {
     expect(validateDocument(doc)).toEqual({ ok: true });
   });
 });
+
+/**
+ * docs/07 §4: one on-disk document per validation rule, kept beside the two
+ * valid fixtures. The filename carries the code the document must fail with —
+ * `E_REF.step-mood-missing.json` — so a new case needs no edit here, and the
+ * roster below fails loudly if a code ever ships without one.
+ */
+describe("invalid fixtures (docs/07 §4)", () => {
+  const files = import.meta.glob<{ default: unknown }>(
+    "../../test/fixtures/invalid/*.json",
+    { eager: true },
+  );
+
+  const cases = Object.entries(files).map(([path, mod]) => {
+    const file = path.split("/").pop() ?? path;
+    return { file, code: file.split(".")[0] ?? "", doc: mod.default };
+  });
+
+  /** Mirrors the ErrorCode union in validate.ts. */
+  const CODES = [
+    "E_VERSION",
+    "E_KIND",
+    "E_SHAPE",
+    "E_ID_DUP",
+    "E_REF",
+    "E_RANGE",
+    "E_NAME",
+    "E_COLOR",
+    "E_MIRROR",
+  ];
+
+  it("covers every error code the validator can emit", () => {
+    expect([...new Set(cases.map((c) => c.code))].sort()).toEqual(
+      [...CODES].sort(),
+    );
+  });
+
+  it.each(cases)("$file fails with $code", ({ code, doc }) => {
+    expect(codes(doc)).toContain(code);
+  });
+
+  it("breaks exactly one rule each, so the code named is the whole story", () => {
+    for (const c of cases) {
+      const r = validateDocument(c.doc);
+      expect(r.ok).toBe(false);
+      if (r.ok) continue;
+      expect([...new Set(r.issues.map((i) => i.code))]).toEqual([c.code]);
+    }
+  });
+});
