@@ -200,3 +200,51 @@ exposes the same underlying values as raw inputs but never summarises them.
 4. A projection guide overlay.
 5. Drag-to-scrub numeric labels.
 6. A summary of an animation's timing and blink behaviour.
+
+## Session 2026-08-25 — body construction and a full-range turn
+
+> Method unchanged: the deployed app driven as a plain user, screenshots only.
+> No source code read, nothing saved back to their app. Wording is ours.
+
+### Half a turn shows the back of the head
+
+Setting Rotation Y to 180 on their stage hides both eyes and leaves the
+silhouette at its **full width** — the body is not foreshortened at all, it is
+simply turned around. That is the reading a real rotation gives (a half turn
+maps the silhouette onto itself), and it is what our projection now produces;
+before this session ours collapsed the face frame to a fifth of its size at the
+same angle. Their gizmo rings flip with the pose, so the widget doubles as the
+readout for which way round the head is.
+
+### Body construction: a primary shape plus assembled primitives
+
+Double-clicking a character opens a panel headed *body construction*, described
+as choosing the primary shape and then assembling primitives around it. The
+primary is flagged as the one that **carries the eyes** — the face anchors ride
+it, exactly the relationship our `restingFace` has with `body.surface`.
+
+Six primary families are offered, each with an icon: **sphere, cube, capsule,
+cylinder, cone, diamond**. Ours has three (round, organic, drop), so this is the
+concrete list behind parity gap 1.
+
+The primary's numeric fields are scale, width, height, **depth** and roundness.
+Depth being authored is the notable one: we derive our ellipsoid's depth radius
+from the in-plane radii (`DEPTH_RATIO * min(rx, ry)`), so a character cannot be
+made shallow or deep. It is the same field the projection question left parked.
+
+Up to 16 further shapes can be added around the primary ("add a shape", 0/16),
+which is a richer relationship than our flat `body.extras` list — theirs are
+part of the body's construction rather than decals over it.
+
+### Editing shows a silhouette highlight
+
+While a body is being edited the stage draws a bright outline tight around the
+character's own outline (not an ellipse), which reads as "this is the shape you
+are editing". Separate from the projection guide, which draws the surface.
+
+### Parity gaps, updated
+
+7. Six primary shape families rather than three.
+8. An authored depth for the body, rather than a derived one.
+9. Assembled primitives as part of body construction, capped at 16.
+10. A silhouette highlight while a body is being edited.
