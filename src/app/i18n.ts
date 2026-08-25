@@ -251,7 +251,10 @@ const es: Record<MessageKey, string> = {
   "rail.moveUp": "Subir burbuja",
   "rail.moveDown": "Bajar burbuja",
   "empty.title": "Crea tu primera bubble",
-  "share.photo": "Photo Mode",
+  // Not "Photo Mode": that is upstream's own name for this card, recorded
+  // verbatim in docs/research/blackbox-notes.md. docs/05 calls ours the
+  // snapshot card (CLEANROOM §3, §6).
+  "share.photo": "Instantánea",
   "share.runtime": "Runtime",
   "share.project": "Proyecto",
   "share.resolution": "Resolución",
@@ -396,7 +399,7 @@ const en: Record<MessageKey, string> = {
   "rail.moveUp": "Move bubble up",
   "rail.moveDown": "Move bubble down",
   "empty.title": "Create your first bubble",
-  "share.photo": "Photo Mode",
+  "share.photo": "Snapshot",
   "share.runtime": "Runtime",
   "share.project": "Project",
   "share.resolution": "Resolution",

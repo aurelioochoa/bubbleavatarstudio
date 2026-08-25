@@ -19,7 +19,7 @@
 > "Lineal" / "Linear" — the pair the Share bullets below already name.
 >
 > Two things the frames show that are _not_ defects, recorded so the next read
-> does not re-litigate them. The Photo Mode preview sits small in its
+> does not re-litigate them. The snapshot preview sits small in its
 > checkerboard: it renders `restingScene()` through the same serializer as the
 > download, at the scene's own viewBox, so a tighter preview would be a
 > preview that lies. And the starter moods and loops carry English names under

@@ -49,7 +49,7 @@ test("panels: look, moods, loops and share tabs expose their controls", async ({
   await shoot(page, "panel-loops");
 
   await page.getByRole("tab", { name: "Compartir" }).click();
-  await expect(page.getByRole("button", { name: /Photo Mode/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Instantánea/ })).toBeVisible();
   await expect(
     page.getByRole("button", { name: ".bubble-avatar.json" }),
   ).toBeVisible();
