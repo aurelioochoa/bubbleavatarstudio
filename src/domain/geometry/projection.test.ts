@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import { projectFace } from "./projection";
 
 const FLAT = { x: 0, y: 0, z: 0 };
-const SIZE = { width: 220, height: 200 };
+// Depth is authored (FR-2.2). 170 is what the pre-v3 derived rule produced for
+// this box — min(220, 200) * 0.85 — so every case below keeps its old numbers.
+const SIZE = { width: 220, height: 200, depth: 170 };
 
 describe("projectFace", () => {
   it("is the identity when the head faces the viewer", () => {
@@ -147,5 +149,54 @@ describe("projectFace", () => {
       expect(Number.isFinite(a.depth)).toBe(true);
     }
     expect(p.project(30, 10)).toEqual(p.project(30, 10));
+  });
+  // FR-2.2: depth is authored, not derived. Before v3 the depth radius was
+  // always `min(rx, ry) * 0.85`, so a character could not be made shallow or
+  // deep — every solid was as thick as its own narrow axis allowed.
+  it("takes an authored depth rather than deriving one from the box", () => {
+    const rotation = { x: 0, y: 90, z: 0 };
+    const shallow = projectFace({
+      width: 220,
+      height: 200,
+      depth: 40,
+      perspective: 1,
+      rotation,
+    });
+    const deep = projectFace({
+      width: 220,
+      height: 200,
+      depth: 300,
+      perspective: 1,
+      rotation,
+    });
+
+    // Turned side-on, what the viewer sees across is the depth: a deep solid
+    // stays wide, a shallow one narrows toward a card seen edge-on.
+    expect(deep.scaleX).toBeGreaterThan(shallow.scaleX);
+    expect(shallow.scaleX).toBeLessThan(0.25);
+
+    // Depth also carries anchors further out of the face plane.
+    expect(deep.project(0, 0).x).toBeGreaterThan(shallow.project(0, 0).x);
+  });
+
+  // The v2 -> v3 migration writes `min(width, height) * 0.85` so that no saved
+  // document changes appearance. This pins that number to the behaviour it is
+  // meant to reproduce.
+  it("reproduces the pre-v3 derived depth when given min(w, h) * 0.85", () => {
+    const rotation = { x: 10, y: 55, z: 0 };
+    const derived = Math.min(220, 200) * 0.85;
+    const p = projectFace({
+      width: 220,
+      height: 200,
+      depth: derived,
+      perspective: 0.6,
+      rotation,
+    });
+    // Values measured off the derived implementation before it was replaced.
+    // They must not move: if they do, the migration default is not
+    // behaviour-preserving and every saved character just changed shape.
+    expect(p.scaleX).toBeCloseTo(0.938344, 6);
+    expect(p.scaleY).toBeCloseTo(0.998483, 6);
+    expect(p.project(40, -20).x).toBeCloseTo(75.666221, 6);
   });
 });

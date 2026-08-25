@@ -60,6 +60,15 @@ describe("Look panel · surface (FR-2.2)", () => {
     setNumber(t("look.y"), "-25");
     expect(lastOf(dispatch, "surface/patch")?.patch).toEqual({ y: -25 });
   });
+
+  // FR-2.2: depth is authored alongside width and height. Before v3 it was
+  // derived from the box, so a character could not be made a flat disc or a
+  // deep barrel — there was nothing to type into.
+  it("edits the surface depth", () => {
+    const { dispatch } = setup();
+    setNumber(t("look.depth"), "90");
+    expect(lastOf(dispatch, "surface/patch")?.patch).toEqual({ depth: 90 });
+  });
 });
 
 describe("Look panel · shape family (FR-2.6, FR-2.7)", () => {

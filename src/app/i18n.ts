@@ -17,6 +17,7 @@ export type MessageKey =
   | "look.surface"
   | "look.width"
   | "look.height"
+  | "look.depth"
   | "look.roundness"
   | "look.shape"
   | "look.shapeRound"
@@ -162,6 +163,7 @@ const es: Record<MessageKey, string> = {
   "look.surface": "Cuerpo",
   "look.width": "Ancho",
   "look.height": "Alto",
+  "look.depth": "Profundidad",
   "look.roundness": "Redondez",
   "look.shape": "Familia de forma",
   "look.shapeRound": "Redonda",
@@ -314,6 +316,7 @@ const en: Record<MessageKey, string> = {
   "look.surface": "Body",
   "look.width": "Width",
   "look.height": "Height",
+  "look.depth": "Depth",
   "look.roundness": "Roundness",
   "look.shape": "Shape family",
   "look.shapeRound": "Round",

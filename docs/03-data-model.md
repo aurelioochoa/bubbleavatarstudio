@@ -1,4 +1,4 @@
-# 03 · Data Model — Bubble Avatar v2
+# 03 · Data Model — Bubble Avatar v3
 
 > Original schema designed for this project. No compatibility with any external
 > format is intended. IDs are opaque strings with prefixes: `bbl_`, `mood_`,
@@ -43,6 +43,7 @@
       "x": 0,
       "y": 0,
       "rotationDeg": 0,
+      "depth": 170,
       "perspective": 0.6,
     },
     "extras": [
@@ -223,7 +224,7 @@ integrity (every step's `moodId` exists in the inlined kit).
    ever collapsing into a neighbour.
    `lobes` 3–10 and `wobble` 0–1 only bite on `organic`; `seed` is any integer
    and picks which arrangement of bumps you get. Every family is deterministic.
-4. Numeric ranges: roundness 0–1, perspective 0–1, springSpeed 0.1–3,
+4. Numeric ranges: width/height/depth > 0, roundness 0–1, perspective 0–1, springSpeed 0.1–3,
    scale 0.1–3, holdMs ≥ 0, blink intervals > 0, colors match `#rrggbb`.
 5. Non-empty `name` after trim (moods, loops, bubbles).
 6. `linked: true` ⇒ left/right placements must be mirror-consistent (enforced
@@ -252,3 +253,19 @@ The portable `*.bubble-avatar.json` bumps to 2 on the same rule. It is a public
 embed surface, so `readPortableAvatar()` in `export/avatar.ts` still accepts a
 v1 file and upgrades it the same way; the runtime reads every definition
 through it.
+
+### v2 → v3 (authored depth, FR-2.2) — **landed**
+
+v3 adds `depth` to the surface. A v2 document predates it, so the migration
+writes `min(width, height) * 0.85` — the exact depth radius `projectFace`
+derived for itself before v3 — and every saved character therefore loads
+looking identical.
+
+Measured the same way as v1 → v2: `projection.test.ts` pins the three values
+the derived implementation produced for a known box and rotation, and the three
+render goldens did not move in the commit that made depth authored. If they had,
+the default would not be behaviour-preserving.
+
+Migrations chain, so a v1 document runs `v1ToV2` then `v2ToV3` and lands on v3.
+The portable `*.bubble-avatar.json` bumps to 3 on the same rule, and
+`readPortableAvatar()` accepts v1 and v2 files.

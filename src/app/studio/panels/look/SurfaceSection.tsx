@@ -89,6 +89,15 @@ export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
         }}
       />
       <NumberField
+        label={t("look.depth")}
+        value={surface.depth}
+        min={1}
+        unit="u"
+        onChange={(v) => {
+          dispatch({ type: "surface/patch", patch: { depth: v } });
+        }}
+      />
+      <NumberField
         label={t("look.roundness")}
         value={surface.roundness}
         min={0}

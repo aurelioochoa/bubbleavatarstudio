@@ -8,8 +8,12 @@
 // Convention: a positive yaw turns the character toward the viewer's right, so
 // its right side rotates away and its left side comes into view.
 
-/** Depth radius as a fraction of the smaller in-plane radius. */
-const DEPTH_RATIO = 0.85;
+/**
+ * How deep a pre-v3 surface was, as a fraction of its smaller in-plane radius.
+ * Depth is authored now (FR-2.2); this survives only as the value the v2 -> v3
+ * migration writes, so that no saved character changes shape on upgrade.
+ */
+export const LEGACY_DEPTH_RATIO = 0.85;
 const DEG = Math.PI / 180;
 
 export interface FaceProjection {
@@ -27,6 +31,12 @@ export interface FaceProjection {
 export interface ProjectionInput {
   width: number;
   height: number;
+  /**
+   * Front-to-back size of the solid, in the same units as width and height.
+   * Authored rather than derived, so a character can be a flat disc or a
+   * deep barrel instead of always being as thick as its narrow axis allows.
+   */
+  depth: number;
   /**
    * How much of the commanded rotation the face actually takes: 0 keeps it
    * flat (a sticker the turn never reaches), 1 applies the full turn.
@@ -49,12 +59,13 @@ export interface ProjectionInput {
 export function projectFace({
   width,
   height,
+  depth,
   perspective,
   rotation,
 }: ProjectionInput): FaceProjection {
   const rx = Math.max(width, 1) / 2;
   const ry = Math.max(height, 1) / 2;
-  const rz = Math.min(rx, ry) * DEPTH_RATIO;
+  const rz = Math.max(depth, 1) / 2;
 
   const yaw = rotation.y * perspective * DEG;
   const pitch = rotation.x * perspective * DEG;

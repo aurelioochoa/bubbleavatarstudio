@@ -16,8 +16,8 @@ import type { StudioDocument } from "../domain/document/types";
 
 const doc = full as unknown as StudioDocument;
 
-// FR-2.6 reached the portable format in v2. A v1 file predates the shape
-// family, and the embed surface is public, so the runtime keeps reading it.
+// FR-2.6 reached the portable format in v2 and FR-2.2's authored depth in v3.
+// The embed surface is public, so the runtime keeps reading every older file.
 describe("readPortableAvatar", () => {
   it("builds at the current version", () => {
     const d = createDefaultDocument();
@@ -35,6 +35,22 @@ describe("readPortableAvatar", () => {
     const read = readPortableAvatar(v1 as never);
     expect(read.version).toBe(AVATAR_VERSION);
     expect(read.bubble.body.surface.shape).toBe("round");
+  });
+
+  it("upgrades a v2 file by writing the depth it used to derive", () => {
+    const d = createDefaultDocument();
+    const current = buildPortableAvatar(d.bubbles[0], d);
+    const v2 = structuredClone(current) as unknown as Record<string, unknown>;
+    v2.version = 2;
+    const surface = (
+      v2.bubble as { body: { surface: Record<string, unknown> } }
+    ).body.surface;
+    delete surface.depth;
+
+    const read = readPortableAvatar(v2 as never);
+    expect(read.version).toBe(AVATAR_VERSION);
+    const s = read.bubble.body.surface;
+    expect(s.depth).toBeCloseTo(Math.min(s.width, s.height) * 0.85, 10);
   });
 
   it("leaves a current-version file alone", () => {
@@ -100,7 +116,7 @@ describe("export integrity", () => {
   it("projected document from a portable avatar validates", () => {
     const avatar = buildPortableAvatar(doc.bubbles[0], doc);
     const projected = {
-      version: 2 as const,
+      version: 3 as const,
       kind: "bubble-studio-project" as const,
       activeBubbleId: avatar.bubble.id,
       locale: "es" as const,
@@ -187,8 +203,9 @@ describe("package files (FR-10.5)", () => {
 
   it("omits the loop prop when nothing is embedded to play", () => {
     const d = createDefaultDocument();
-    const example = packageFiles(d.bubbles[0], d, [])
-      .find((f) => f.name === "example.tsx");
+    const example = packageFiles(d.bubbles[0], d, []).find(
+      (f) => f.name === "example.tsx",
+    );
     expect(example?.text).toContain("<BubbleAvatar");
     expect(example?.text).not.toContain("loop=");
   });

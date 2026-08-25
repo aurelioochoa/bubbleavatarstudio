@@ -362,6 +362,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   const projection = projectFace({
     width: surface.width,
     height: surface.height,
+    depth: surface.depth,
     perspective: surface.perspective,
     rotation: live.headRotation,
   });
@@ -376,6 +377,7 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
   const rest = projectFace({
     width: surface.width,
     height: surface.height,
+    depth: surface.depth,
     perspective: surface.perspective,
     rotation: { x: 0, y: 0, z: 0 },
   });

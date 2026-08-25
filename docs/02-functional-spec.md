@@ -18,8 +18,12 @@
 ## FR-2 Body
 
 - **FR-2.1** Body = one primary **surface** + zero or more **extra primitives**.
-- **FR-2.2** Surface params: width, height, roundness (0–1), position (x,y),
-  rotation (deg), perspective (0–1). All editable via numeric inputs.
+- **FR-2.2** Surface params: width, height, **depth**, roundness (0–1), position
+  (x,y), rotation (deg), perspective (0–1). All editable via numeric inputs.
+  Depth is the solid's front-to-back size and is **authored, not derived** — a
+  character can be a flat disc or a deep barrel. Before v3 the projection
+  computed its own depth radius as `min(width, height) * 0.85`, so every solid
+  was as thick as its narrow axis allowed and nothing could be shaped in z.
 - **FR-2.3** Extra primitive kinds: `blob`, `capsule`, `circle`, `ring`; each has
   its own size, roundness, position, rotation, z-order, and color role
   (`body` | `accent` | custom hex).
@@ -34,7 +38,7 @@
   shallow for the cylinder), `cone` (a full-height taper standing on a flat
   base) and `diamond` (a rhombus whose corners soften but never round into an
   ellipse). Every family is a deterministic function of its parameters — same
-  values, same path, byte for byte. `roundness` means corner softening *within*
+  values, same path, byte for byte. `roundness` means corner softening _within_
   a family: no family collapses into another at either end of its range, which
   is why each maps the 0–1 dial onto its own span.
 - **FR-2.7** Organic shapes take `lobes` (how many bumps), `wobble` (how far the

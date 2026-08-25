@@ -20,6 +20,7 @@ export function createBubble(name: string, id = newId("bbl")): Bubble {
         shape: "round",
         width: 220,
         height: 200,
+        depth: 170,
         roundness: 0.96,
         x: 0,
         y: 0,
@@ -116,7 +117,7 @@ export function createDefaultDocument(): StudioDocument {
   const kit = starterKit();
   const bubble = createBubble("Bubble");
   return {
-    version: 2,
+    version: 3,
     kind: "bubble-studio-project",
     activeBubbleId: bubble.id,
     locale: "es",

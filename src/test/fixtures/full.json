@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_full_a",
   "locale": "en",
@@ -13,6 +13,7 @@
           "shape": "round",
           "width": 240,
           "height": 220,
+          "depth": 187,
           "roundness": 0.9,
           "x": 10,
           "y": -5,
@@ -164,6 +165,7 @@
           "shape": "round",
           "width": 180,
           "height": 200,
+          "depth": 153,
           "roundness": 0.7,
           "x": 0,
           "y": 0,

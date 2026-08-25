@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_min",
   "locale": "es",
@@ -13,6 +13,7 @@
           "shape": "hexagon",
           "width": 200,
           "height": 180,
+          "depth": 153,
           "roundness": 0.8,
           "x": 0,
           "y": 0,

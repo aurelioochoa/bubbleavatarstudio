@@ -1,4 +1,4 @@
-// Domain types — Bubble Avatar v2 schema (docs/03). Pure TS, no React/DOM.
+// Domain types — Bubble Avatar v3 schema (docs/03). Pure TS, no React/DOM.
 import type { ShapeFamily } from "../geometry/shapes";
 
 export type { ShapeFamily };
@@ -18,6 +18,12 @@ export interface Surface {
   shape: ShapeFamily;
   width: number;
   height: number;
+  /**
+   * FR-2.2. Front-to-back size of the solid, in the same units as width and
+   * height. Authored since v3; before that the projection derived it as
+   * `min(width, height) * 0.85`, so no character could be shallow or deep.
+   */
+  depth: number;
   roundness: number; // 0..1
   x: number;
   y: number;
@@ -152,7 +158,7 @@ export interface Bubble {
 export type Locale = "es" | "en";
 
 export interface StudioDocument {
-  version: 2;
+  version: 3;
   kind: "bubble-studio-project";
   activeBubbleId: string | null;
   locale: Locale;

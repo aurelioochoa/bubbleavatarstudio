@@ -32,7 +32,7 @@ describe("validateDocument — valid documents", () => {
 describe("validateDocument — version and kind", () => {
   it("fails E_VERSION on wrong version", () => {
     const doc = clone();
-    (doc as { version: number }).version = 3;
+    (doc as { version: number }).version = 4;
     expect(codes(doc)).toContain("E_VERSION");
   });
 

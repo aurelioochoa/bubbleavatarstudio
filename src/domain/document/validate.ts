@@ -277,6 +277,7 @@ function validateBubble(
   oneOf(ctx, s.shape, SHAPES, `${path}.body.surface.shape`);
   pos(ctx, s.width, `${path}.body.surface.width`);
   pos(ctx, s.height, `${path}.body.surface.height`);
+  pos(ctx, s.depth, `${path}.body.surface.depth`);
   num(ctx, s.roundness, `${path}.body.surface.roundness`, 0, 1);
   num(ctx, s.perspective, `${path}.body.surface.perspective`, 0, 1);
   num(ctx, s.x, `${path}.body.surface.x`, -2000, 2000);
@@ -408,7 +409,7 @@ export function validateDocument(doc: unknown): ValidateResult {
     return { ok: false, issues: [{ code: "E_SHAPE", path: "$" }] };
   }
   const d = doc as Record<string, unknown>;
-  ctx.check(d.version === 2, "E_VERSION", "$.version");
+  ctx.check(d.version === 3, "E_VERSION", "$.version");
   ctx.check(d.kind === "bubble-studio-project", "E_KIND", "$.kind");
   if (!Array.isArray(d.bubbles)) {
     ctx.fail("E_SHAPE", "$.bubbles");
