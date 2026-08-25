@@ -56,6 +56,54 @@ export interface ProjectionInput {
   rotation: { x: number; y: number; z: number };
 }
 
+/** Cosines and sines of a turn, so nothing has to recompute them per point. */
+export interface Turn {
+  cosYaw: number;
+  sinYaw: number;
+  cosPitch: number;
+  sinPitch: number;
+}
+
+/**
+ * The turn a rotation actually applies. `perspective` scales the *angle* — see
+ * ProjectionInput above for why that is not the same as blending the result.
+ */
+export function turnAngles(
+  perspective: number,
+  rotation: { x: number; y: number },
+): Turn {
+  const yaw = rotation.y * perspective * DEG;
+  const pitch = rotation.x * perspective * DEG;
+  return {
+    cosYaw: Math.cos(yaw),
+    sinYaw: Math.sin(yaw),
+    cosPitch: Math.cos(pitch),
+    sinPitch: Math.sin(pitch),
+  };
+}
+
+/**
+ * Yaw about the vertical axis, then pitch about the horizontal one.
+ *
+ * Exported so the face anchors, the body silhouette and the guide mesh all
+ * turn through the same arithmetic. Three copies of this would be three chances
+ * for the character's outline to disagree with where its own eyes are.
+ */
+export function rotatePoint(
+  x: number,
+  y: number,
+  z: number,
+  t: Turn,
+): { x: number; y: number; z: number } {
+  const xYaw = x * t.cosYaw + z * t.sinYaw;
+  const zYaw = z * t.cosYaw - x * t.sinYaw;
+  return {
+    x: xYaw,
+    y: y * t.cosPitch - zYaw * t.sinPitch,
+    z: y * t.sinPitch + zYaw * t.cosPitch,
+  };
+}
+
 export function projectFace({
   width,
   height,
@@ -67,12 +115,8 @@ export function projectFace({
   const ry = Math.max(height, 1) / 2;
   const rz = Math.max(depth, 1) / 2;
 
-  const yaw = rotation.y * perspective * DEG;
-  const pitch = rotation.x * perspective * DEG;
-  const cosYaw = Math.cos(yaw);
-  const sinYaw = Math.sin(yaw);
-  const cosPitch = Math.cos(pitch);
-  const sinPitch = Math.sin(pitch);
+  const turn = turnAngles(perspective, rotation);
+  const { cosYaw, sinYaw, cosPitch, sinPitch } = turn;
 
   // Apparent half-extent of the ellipsoid once turned: the silhouette of an
   // ellipsoid stays an ellipse, and its radius blends the in-plane radius with
@@ -91,13 +135,8 @@ export function projectFace({
       const v = py / ry;
       const z0 = rz * Math.sqrt(Math.max(0, 1 - u * u - v * v));
 
-      // Yaw about the vertical axis, then pitch about the horizontal one.
-      const xYaw = px * cosYaw + z0 * sinYaw;
-      const zYaw = z0 * cosYaw - px * sinYaw;
-      const yPitch = py * cosPitch - zYaw * sinPitch;
-      const zPitch = py * sinPitch + zYaw * cosPitch;
-
-      return { x: xYaw, y: yPitch, depth: zPitch };
+      const q = rotatePoint(px, py, z0, turn);
+      return { x: q.x, y: q.y, depth: q.z };
     },
   };
 }

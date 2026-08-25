@@ -374,28 +374,73 @@ describe("projection guide (FR-8.4)", () => {
     expect(sceneToSvg(restingScene(bubble, 0))).not.toContain('id="guide"');
   });
 
-  it("draws the silhouette and the two great arcs when requested", () => {
-    const scene = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, { guide: true });
-    expect(scene.guide?.arcs).toHaveLength(2);
-    expect(scene.guide?.outline.path.startsWith("M")).toBe(true);
+  it("draws a lat/long mesh, not a single equator and meridian", () => {
+    const scene = restingScene(
+      bubble,
+      0,
+      { x: 0, y: 0, z: 0 },
+      { guide: true },
+    );
+    // A wireframe is what says "this is a solid". Two arcs said "this is an
+    // ellipse", which is a much weaker claim and the one we used to make.
+    expect(scene.guide?.arcs.length).toBeGreaterThanOrEqual(8);
     const svg = sceneToSvg(scene);
     expect(svg).toContain('id="guide"');
     // Stage chrome, not character colour: it inherits the host's own accent.
     expect(svg).toContain('stroke="currentColor"');
   });
 
+  // Their editing overlay traces the character's own outline; ours traced an
+  // ellipse, which on a lumpy body is visibly not the thing being edited.
+  it("highlights the character's own silhouette, not an ellipse", () => {
+    const lumpy = structuredClone(bubble);
+    lumpy.body.surface.shape = "organic";
+    lumpy.body.surface.wobble = 0.6;
+    lumpy.body.surface.seed = 3;
+    const scene = restingScene(
+      lumpy,
+      0,
+      { x: 0, y: 30, z: 0 },
+      { guide: true },
+    );
+    expect(scene.guide?.outline.path).toBe(scene.body.path);
+    expect(scene.guide?.outline.transform).toBe(scene.body.transform);
+  });
+
+  // Half the mesh is on the far side of the solid. Drawing only the near half
+  // reads as a bowl; drawing both reads as a sphere you can see through.
+  it("carries the far side of the mesh too", () => {
+    const scene = restingScene(
+      bubble,
+      0,
+      { x: 20, y: 35, z: 0 },
+      { guide: true },
+    );
+    const ys = (scene.guide?.arcs ?? []).flatMap((d) =>
+      [...d.matchAll(/-?[\d.]+ (-?[\d.]+)/g)].map((m) => Number(m[1])),
+    );
+    // A front-hemisphere-only mesh cannot reach the full height of the body.
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(150);
+  });
+
   it("bends its arcs as the head turns", () => {
     const face = restingScene(bubble, 0, { x: 0, y: 0, z: 0 }, { guide: true });
-    const turned = restingScene(bubble, 0, { x: 0, y: 40, z: 0 }, { guide: true });
-    expect(turned.guide?.arcs[0]).not.toBe(face.guide?.arcs[0]);
-    expect(turned.guide?.outline.transform).not.toBe(
-      face.guide?.outline.transform,
+    const turned = restingScene(
+      bubble,
+      0,
+      { x: 0, y: 40, z: 0 },
+      { guide: true },
     );
+    expect(turned.guide?.arcs[0]).not.toBe(face.guide?.arcs[0]);
   });
 
   it("stays byte-stable like everything else the renderer emits", () => {
-    const once = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, { guide: true }));
-    const twice = sceneToSvg(restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, { guide: true }));
+    const once = sceneToSvg(
+      restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, { guide: true }),
+    );
+    const twice = sceneToSvg(
+      restingScene(bubble, 0, { x: 5, y: 12, z: 0 }, { guide: true }),
+    );
     expect(once).toBe(twice);
   });
 

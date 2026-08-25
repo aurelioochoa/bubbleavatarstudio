@@ -33,8 +33,7 @@ import {
   type SurfaceShapeOptions,
 } from "./shapes";
 import { smoothClosedPath, type Point } from "./primitives";
-
-const DEG = Math.PI / 180;
+import { rotatePoint, turnAngles } from "./projection";
 
 /**
  * How finely the flat outline is resampled before it is revolved. This is not
@@ -127,12 +126,7 @@ export function solidRadii(o: SolidOutlineOptions): Float64Array {
   const wobble = o.wobble ?? 0;
   const seed = o.seed ?? 0;
 
-  const yaw = rotation.y * perspective * DEG;
-  const pitch = rotation.x * perspective * DEG;
-  const cosYaw = Math.cos(yaw);
-  const sinYaw = Math.sin(yaw);
-  const cosPitch = Math.cos(pitch);
-  const sinPitch = Math.sin(pitch);
+  const turn = turnAngles(perspective, rotation);
 
   const radii = new Float64Array(bins);
   const step = (2 * Math.PI) / bins;
@@ -154,17 +148,14 @@ export function solidRadii(o: SolidOutlineOptions): Float64Array {
         z *= m;
       }
 
-      // Yaw about the vertical axis, then pitch about the horizontal one —
-      // the same order and the same arithmetic `projectFace` uses, so the
-      // silhouette and the face anchors describe one head.
-      const xYaw = x * cosYaw + z * sinYaw;
-      const zYaw = z * cosYaw - x * sinYaw;
-      const yPitch = y * cosPitch - zYaw * sinPitch;
+      // The same arithmetic `projectFace` uses, so the silhouette and the face
+      // anchors describe one head.
+      const q = rotatePoint(x, y, z, turn);
 
       // Orthographic: drop z.
-      const r = Math.hypot(xYaw, yPitch);
+      const r = Math.hypot(q.x, q.y);
       if (r === 0) continue;
-      const alpha = Math.atan2(yPitch, xYaw);
+      const alpha = Math.atan2(q.y, q.x);
       // Bins are centred on the output angles, so the axes are bin centres —
       // which is what keeps a diamond's tips from being rounded away.
       let k = Math.round(alpha / step) % bins;
