@@ -69,15 +69,22 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of F5: **31 Vitest files, 360 tests**, plus **1 Playwright spec** of **10
-scenarios** — boot, panels, a playing loop and the rail menu, joined by the
-mood editor's focus behaviour, the gizmo, the guide, the Share preview,
-drag-to-scrub and drag-to-reorder. Production bundle 294.59 kB JS / 28.76 kB
-CSS (89.47 / 6.11 gzipped).
+As of the solid-body work: **32 Vitest files, 435 tests**, plus **1 Playwright
+spec** of **10 scenarios** — boot, panels, a playing loop and the rail menu,
+joined by the mood editor's focus behaviour, the gizmo, the wireframe, the
+Share preview, drag-to-scrub and drag-to-reorder. Production bundle 301.59 kB
+JS / 30.02 kB CSS (92.03 / 6.29 gzipped).
 
-The 17 tests over P4's 343 are F5's own: the library top-up through the store
-and its Moods-panel row, and the nine `invalid/` fixtures with the three cases
-that police them. The bundle moved 2.1 kB for the top-up row.
+The 75 tests over F5's 360 are the solid body's: `solid.test.ts` is the new
+file (the turned silhouette, its agreement with the analytic ellipsoid, the
+memo, and the assertion that an organic body's lumps travel), and the rest are
+spread across authored depth and its v3 migration, the radial wobble, the
+wireframe mesh, the face clip, the rim light, extras sharing the body's volume,
+and the cube family. The bundle moved 6.9 kB, almost all of it `solid.ts`.
+
+Earlier, the 17 tests over P4's 343 were F5's own: the library top-up through
+the store and its Moods-panel row, and the nine `invalid/` fixtures with the
+three cases that police them.
 
 Earlier in the P4 completion pass the reading was 292.47 / 28.59 kB across 343
 tests and 4 e2e scenarios.
