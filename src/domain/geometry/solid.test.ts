@@ -263,3 +263,38 @@ describe("isAnalyticSolid", () => {
     expect(isAnalyticSolid("cone", undefined)).toBe(false);
   });
 });
+
+describe("solidRadii · a cube is not a solid of revolution", () => {
+  // The whole reason `cube` exists as its own family. Revolving a square
+  // profile about the vertical axis gives a cylinder, and a cylinder's
+  // silhouette under pure yaw is provably just its flat outline scaled in x.
+  // A cube's is not: turn it 45 degrees and its corner comes toward you.
+  it("shows a face turning away, not a profile being squashed", () => {
+    const rest = solidRadii(at({ shape: "cube" }));
+    const yawed = solidRadii(
+      at({ shape: "cube", rotation: { x: 0, y: 45, z: 0 } }),
+    );
+    const p = projectFace({
+      ...SIZE,
+      perspective: 1,
+      rotation: { x: 0, y: 45, z: 0 },
+    });
+
+    let departure = 0;
+    for (let k = 0; k < rest.length; k++) {
+      const angle = (k * 2 * Math.PI) / rest.length;
+      const revolved =
+        (rest[k] ?? 0) *
+        Math.hypot(Math.cos(angle) * p.scaleX, Math.sin(angle));
+      departure = Math.max(departure, Math.abs((yawed[k] ?? 0) - revolved));
+    }
+    expect(departure).toBeGreaterThan(8);
+  });
+
+  it("is still its own flat outline when nothing has turned", () => {
+    const opts = at({ shape: "cube" });
+    const got = solidRadii(opts);
+    const want = flatRadii(opts, got.length);
+    expect(worstRatio(got, want)).toBeLessThan(0.06);
+  });
+});

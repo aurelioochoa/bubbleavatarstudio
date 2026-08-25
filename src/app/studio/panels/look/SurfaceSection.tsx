@@ -14,6 +14,7 @@ const SHAPE_LABELS: Record<ShapeFamily, MessageKey> = {
   round: "look.shapeRound",
   organic: "look.shapeOrganic",
   drop: "look.shapeDrop",
+  cube: "look.shapeCube",
   capsule: "look.shapeCapsule",
   cylinder: "look.shapeCylinder",
   cone: "look.shapeCone",

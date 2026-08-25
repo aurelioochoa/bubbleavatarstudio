@@ -26,6 +26,7 @@
 //     wobble keyed on the sampling parameter would be constant around every
 //     revolved ring, fact 1 would apply, and the lumps would never travel.
 import {
+  cubeExponent,
   surfacePoints,
   wobbleAt,
   WOBBLE_REACH,
@@ -115,6 +116,22 @@ export function solidRadii(o: SolidOutlineOptions): Float64Array {
   // so a shallow character revolves into a disc and a deep one into a barrel.
   const kappa = Math.max(depth, 1) / 2 / rx;
 
+  // How the sweep goes round. Six families are solids of revolution, so their
+  // rings are circles. `cube` is the one that is not: revolve a square profile
+  // and you get a cylinder, which is a different character entirely. Sweeping
+  // it with superelliptic functions instead builds a real superellipsoid — and
+  // because both reduce to (1, 0) at psi = 0, either way the flat outline is
+  // still the solid's own equator.
+  const boxy = o.shape === "cube";
+  // The same exponent the profile was drawn at. Sweep at a different one and
+  // the solid meets itself at a crease, which shows as the silhouette notching
+  // inward once the head turns.
+  const power = boxy ? 2 / cubeExponent(o.roundness) : 1;
+  const across = (psi: number): number =>
+    boxy ? signedPow(Math.cos(psi), power) : Math.cos(psi);
+  const along = (psi: number): number =>
+    boxy ? signedPow(Math.sin(psi), power) : Math.sin(psi);
+
   const organic = o.shape === "organic" && (o.wobble ?? 0) !== 0;
   // For organic the wobble is applied to the *rotated ring*, not carried along
   // it — see fact 2 above. Everything else revolves its own outline directly.
@@ -136,9 +153,9 @@ export function solidRadii(o: SolidOutlineOptions): Float64Array {
       const psi = (2 * Math.PI * j) / azimuths;
       // Revolve about the vertical axis. At psi = 0 this is the outline point
       // itself, which is what makes the flat outline the solid's own equator.
-      let x = p.x * Math.cos(psi);
+      let x = p.x * across(psi);
       let y = p.y;
-      let z = p.x * kappa * Math.sin(psi);
+      let z = p.x * kappa * along(psi);
 
       if (organic) {
         const m =
@@ -165,6 +182,11 @@ export function solidRadii(o: SolidOutlineOptions): Float64Array {
   }
 
   return smoothRadii(fillGaps(radii));
+}
+
+/** |v|^m keeping v's sign, which is what a superellipse needs. */
+function signedPow(v: number, m: number): number {
+  return Math.sign(v) * Math.abs(v) ** m;
 }
 
 /**

@@ -18,6 +18,7 @@ export const SHAPE_FAMILIES = [
   "round",
   "organic",
   "drop",
+  "cube",
   "capsule",
   "cylinder",
   "cone",
@@ -57,6 +58,39 @@ const CONE_BASE_ROUNDNESS = 0.45;
 /** Cap depth as a fraction of the short half-axis, from square to fully round. */
 const CAPSULE_CAP = { min: 0.5, max: 1 };
 const CYLINDER_CAP = { min: 0.15, max: 0.42 };
+/**
+ * Superellipse exponent for the cube family: boxier than `round` at both ends
+ * of the dial, and it stops well short of an ellipse for the same reason the
+ * diamond does — a cube that can be dialled into a sphere is not a family.
+ */
+export const CUBE_EXPONENT = { sharp: 16, soft: 6 };
+
+/**
+ * The superellipse exponent a cube uses at this roundness.
+ *
+ * `solid.ts` sweeps the same exponent round the vertical axis, so this is the
+ * single place that decides how boxy a cube is. The two must agree: a profile
+ * drawn at one exponent and swept at another meets itself at a crease, and the
+ * silhouette notches inward where the mismatch is worst.
+ *
+ * The range stops at 16 because that is the boxiest `superellipsePoints` can
+ * be asked for — beyond it the roundness this inverts to goes negative, gets
+ * clamped, and the profile silently stops matching the sweep.
+ */
+export function cubeExponent(roundness: number): number {
+  const { sharp, soft } = CUBE_EXPONENT;
+  return lerp(sharp, soft, clamp(roundness, 0, 1));
+}
+
+/**
+ * `superellipsePoints` takes a roundness and maps it to an exponent with
+ * `lerp(16, 2, r)`. Families that name an exponent directly invert it here
+ * rather than reaching past the primitive, so there is still one place that
+ * decides what roundness means.
+ */
+function exponentToRoundness(n: number): number {
+  return (16 - n) / 14;
+}
 /**
  * Superellipse exponent for the diamond family: 1 is the bare rhombus, 2 the
  * ellipse. It stops short of 2 on purpose — a diamond that can be dialled all
@@ -168,6 +202,17 @@ export function surfacePoints({
     const range = shape === "capsule" ? CAPSULE_CAP : CYLINDER_CAP;
     const cap = lerp(range.min, range.max, clamp(roundness, 0, 1));
     return barrelPoints(width, height, cap, samples);
+  }
+
+  if (shape === "cube") {
+    return superellipsePoints({
+      width,
+      height,
+      // superellipsePoints takes roundness and maps it to an exponent itself,
+      // so hand it the roundness that lands on the exponent this family wants.
+      roundness: exponentToRoundness(cubeExponent(roundness)),
+      samples,
+    });
   }
 
   if (shape === "diamond") {

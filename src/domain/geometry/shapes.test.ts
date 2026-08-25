@@ -317,3 +317,42 @@ describe("organic wobble is radial (FR-2.7)", () => {
     );
   });
 });
+
+// FR-2.6. A cube is the sixth of the volumetric primaries and the one family
+// whose whole point is that it is *not* a solid of revolution — revolve a
+// square profile and you get a cylinder, which is a different character.
+describe("surfacePath · cube", () => {
+  const cornerReach = (path: string): number => {
+    // How far the outline gets toward the corner of its own box. A circle
+    // reaches 1/sqrt(2) of the way; a square reaches all of it.
+    const pts = points(path);
+    return Math.max(
+      ...pts.map((p) => Math.min(Math.abs(p.x) / 110, Math.abs(p.y) / 100)),
+    );
+  };
+
+  it("squares off harder than round does at the same roundness", () => {
+    const r = cornerReach(surfacePath({ ...SIZE, shape: "round" }));
+    const c = cornerReach(surfacePath({ ...SIZE, shape: "cube" }));
+    expect(c).toBeGreaterThan(r);
+  });
+
+  it("softens with roundness but never rounds into an ellipse", () => {
+    const sharp = cornerReach(
+      surfacePath({ ...SIZE, shape: "cube", roundness: 0 }),
+    );
+    const soft = cornerReach(
+      surfacePath({ ...SIZE, shape: "cube", roundness: 1 }),
+    );
+    expect(sharp).toBeGreaterThan(soft);
+    // A cube that can be dialled into a sphere is not a family, it is the
+    // round one with extra steps — the same rule the diamond follows.
+    expect(soft).toBeGreaterThan(0.78);
+  });
+
+  it("is deterministic", () => {
+    expect(surfacePath({ ...SIZE, shape: "cube" })).toBe(
+      surfacePath({ ...SIZE, shape: "cube" }),
+    );
+  });
+});

@@ -33,7 +33,9 @@
 - **FR-2.6** The surface has a **shape family**, chosen per bubble: `round`
   (superellipse from rectangle to ellipse via roundness), `organic` (an outline
   whose radius varies around the perimeter, giving lumpy and lopsided forms),
-  `drop` (a teardrop taper), `capsule` and `cylinder` (straight sides with a
+  `cube` (a superellipsoid: flat faces whose edges soften with roundness, and the
+  one family that is deliberately _not_ a solid of revolution — revolve a square
+  profile and the result is a cylinder), `drop` (a teardrop taper), `capsule` and `cylinder` (straight sides with a
   cap at each end of the long axis — deep and semicircular for the capsule,
   shallow for the cylinder), `cone` (a full-height taper standing on a flat
   base) and `diamond` (a rhombus whose corners soften but never round into an
