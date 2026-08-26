@@ -68,8 +68,8 @@
   the bottom transport dock with its loop selector. The dock owns playback for
   the whole app and is reachable from every tab; it hides itself when the kit
   has no loops (FR-5.2). Top-right, the gizmo button opens a rotation pad
-  covering X, Y and Z across ±180° — a drag reaches only X and Y and clamps to
-  ±60, so roll and a full turn are reachable only here — and the guide toggle
+  covering X, Y and Z across ±180° — a drag reaches X and Y across that same
+  full turn, so the roll is what remains reachable only here — and the guide toggle
   draws the wireframe: a lat/long mesh over the solid, both hemispheres, with a
   highlight tracing the character's own silhouette rather than an ellipse
   around it (FR-8.4). The same mesh comes up on its own for the length of a

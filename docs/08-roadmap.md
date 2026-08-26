@@ -163,7 +163,8 @@ landed in F5.
     eyes independently, and a per-card menu with edit, duplicate, move up/down
     and delete-with-confirm. `mood/reorder` finally has a call site.
   - **Stage** (FR-8.2, FR-8.4): a rotation gizmo spanning ±180° on all three
-    axes, where a drag reaches only X and Y and clamps to ±60; and the
+    axes, where a drag reaches X and Y across that whole range at 0.3° per
+    pixel and wraps rather than stopping, leaving the roll to the gizmo; and the
     projection guide, whose arcs are sampled through the same `project()` the
     eyes go through, so it shows where an anchor would really land. Both are
     siblings of the engine's host element, asserted directly, because a child

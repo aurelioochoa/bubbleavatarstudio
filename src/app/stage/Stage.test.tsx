@@ -128,25 +128,88 @@ function lastHead(): { x: number; y: number; z: number } {
 }
 
 describe("Stage drag (FR-8.3)", () => {
+  // The pointer axes are not the rotation axes. `rotation.y` is the yaw and
+  // `rotation.x` the pitch (projection.ts), so a horizontal drag must move the
+  // one the pointer is travelling along and leave the other alone. Mapping dx
+  // onto the pitch is what made dragging right tip the character upward.
+  it("yaws on a horizontal drag and pitches on a vertical one", () => {
+    const el = renderStage();
+    drag(el, 100, 0);
+    expect(lastHead().y).not.toBeCloseTo(0); // horizontal -> yaw
+    expect(lastHead().x).toBeCloseTo(0); // and nothing else
+    const yawed = lastHead().y;
+    drag(el, 0, 100);
+    expect(lastHead().x).not.toBeCloseTo(0); // vertical -> pitch
+    expect(lastHead().y).toBeCloseTo(yawed); // each axis seeds from its own
+  });
+
+  // Signs, against the conventions the projection states: a positive yaw turns
+  // the character toward the viewer's right, and a positive pitch lifts the
+  // face (screen y runs downward). So the character follows the pointer.
+  it("turns the character the way the pointer travels", () => {
+    let el = renderStage();
+    drag(el, 100, 0);
+    expect(lastHead().y).toBeGreaterThan(0); // right -> turns right
+    cleanup();
+    el = renderStage();
+    drag(el, -100, 0);
+    expect(lastHead().y).toBeLessThan(0); // left -> turns left
+    cleanup();
+    el = renderStage();
+    drag(el, 0, 100);
+    expect(lastHead().x).toBeLessThan(0); // down -> looks down
+    cleanup();
+    el = renderStage();
+    drag(el, 0, -100);
+    expect(lastHead().x).toBeGreaterThan(0); // up -> looks up
+  });
+
+  it("turns at the observed rate of the reference app", () => {
+    const el = renderStage();
+    drag(el, 100, 0);
+    expect(lastHead().y).toBeCloseTo(30);
+  });
+
+  // The drag used to stop dead at ±60 and leave the rest of the turn to the
+  // gizmo, which is most of why it read as unresponsive: past a 200px gesture
+  // the character simply stopped following the pointer. A drag now reaches the
+  // same full turn the gizmo does.
+  it("keeps turning past the quarter turn the drag used to stop at", () => {
+    const el = renderStage();
+    drag(el, 400, 0);
+    expect(lastHead().y).toBeCloseTo(120);
+    drag(el, 0, -400);
+    expect(lastHead().x).toBeCloseTo(120);
+  });
+
+  // Past half a turn the angle wraps rather than piling up, so the pose stays
+  // in the ±180 the gizmo's own sliders span while the character keeps
+  // spinning under a gesture that never lets go.
+  it("wraps rather than accumulating past half a turn", () => {
+    const el = renderStage();
+    drag(el, 700, 0); // 210 degrees of travel
+    expect(lastHead().y).toBeCloseTo(-150);
+  });
+
   it("seeds each rotation axis from its own start value across drags", () => {
     const el = renderStage();
-    drag(el, 100, 0); // x rotation only
-    expect(lastHead().x).toBeCloseTo(20);
-    expect(lastHead().y).toBeCloseTo(0);
-    drag(el, 0, 100); // y rotation must not clobber/reset x
-    expect(lastHead().x).toBeCloseTo(20);
-    expect(lastHead().y).toBeCloseTo(20);
+    drag(el, 100, 0); // yaw only
+    expect(lastHead().y).toBeCloseTo(30);
+    expect(lastHead().x).toBeCloseTo(0);
+    drag(el, 0, 100); // pitch must not clobber/reset the yaw
+    expect(lastHead().y).toBeCloseTo(30);
+    expect(lastHead().x).toBeCloseTo(-30);
   });
 
   it("Escape restores the rotation held before the last drag", () => {
     const el = renderStage();
-    drag(el, 100, 100); // pose the head, then keep it
-    expect(lastHead()).toEqual({ x: 20, y: 20, z: 0 });
-    drag(el, 100, 100); // a second drag the user wants to back out of
-    expect(lastHead()).toEqual({ x: 40, y: 40, z: 0 });
+    drag(el, 40, 40); // pose the head, then keep it
+    expect(lastHead()).toEqual({ x: -12, y: 12, z: 0 });
+    drag(el, 40, 40); // a second drag the user wants to back out of
+    expect(lastHead()).toEqual({ x: -24, y: 24, z: 0 });
     fireEvent.keyDown(el, { key: "Escape" });
     // FR-8.3: Esc is a single-level undo of the drag, not a reset to resting.
-    expect(lastHead()).toEqual({ x: 20, y: 20, z: 0 });
+    expect(lastHead()).toEqual({ x: -12, y: 12, z: 0 });
   });
 
   it("Escape with no drag yet leaves the resting rotation alone", () => {
@@ -257,7 +320,9 @@ describe("Stage gizmo and guide (FR-8.2, FR-8.4)", () => {
     fireEvent.change(screen.getByLabelText("Rotación Y"), {
       target: { value: "140" },
     });
-    // Past the ±60 a drag clamps to: the gizmo is what reaches a full turn.
+    // The roll is the axis a drag cannot reach at all; the gizmo is the only
+    // way to it, which is the reason the gizmo still exists now that a drag
+    // covers the whole turn on the other two.
     expect(lastHead()).toEqual({ x: 0, y: 140, z: 35 });
   });
 

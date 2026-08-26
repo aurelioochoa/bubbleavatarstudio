@@ -26,6 +26,16 @@ export interface StageProps {
   onSelectLoop: (loopId: string) => void;
 }
 
+/**
+ * Degrees of head rotation per pixel of pointer travel.
+ *
+ * Measured off the reference application by hand, driving it as a user and
+ * reading the rotation its own pose panel reports: 100px of travel moved the
+ * yaw 29 degrees and 200px moved it 58, so the rate is flat at a shade under
+ * 0.3 and this rounds it. See docs/research/blackbox-notes.md.
+ */
+const DRAG_DEG_PER_PX = 0.3;
+
 export function Stage({
   bubble,
   kit,
@@ -95,6 +105,8 @@ export function Stage({
   }, [bubble, kit, loopId, mode, head, preview, showGuide]);
 
   const onPointerDown = (e: React.PointerEvent) => {
+    // sx/sy seed the pitch and the yaw from where this drag starts, so each
+    // axis continues from its own value rather than from the resting pose.
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
     setDragging(true);
     preDragRef.current = head;
@@ -110,10 +122,19 @@ export function Stage({
     if (!d) return;
     const dx = e.clientX - d.px;
     const dy = e.clientY - d.py;
+    // The pointer axes are not the rotation axes: `rotation.y` is the yaw and
+    // `rotation.x` the pitch (projection.ts). So the horizontal travel drives
+    // the yaw, and the vertical drives the pitch — mapping dx onto the pitch
+    // made dragging right tip the character upward instead of turning it.
+    //
+    // Signs follow the projection's own conventions, so the character goes
+    // where the pointer goes: a positive yaw turns it toward the viewer's
+    // right, and a positive pitch lifts the face while screen y runs downward,
+    // which is why the pitch takes the drag with its sign flipped.
     setHead((h) => ({
       ...h,
-      x: clamp(d.sx + dx * 0.2, -60, 60),
-      y: clamp(d.sy + dy * 0.2, -60, 60),
+      x: wrapDeg(d.sx - dy * DRAG_DEG_PER_PX),
+      y: wrapDeg(d.sy + dx * DRAG_DEG_PER_PX),
     }));
   };
 
@@ -453,6 +474,18 @@ function StopIcon() {
   );
 }
 
-function clamp(v: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, v));
+/**
+ * Folds an angle into the ±180 the gizmo's own sliders span.
+ *
+ * A drag used to stop dead at ±60 and hand the rest of the turn to the gizmo,
+ * which is most of what made it feel unresponsive: past a 200px gesture the
+ * character stopped following the pointer while the pointer kept going. It now
+ * reaches the whole turn, and wrapping rather than clamping at the far end is
+ * what keeps a long gesture spinning instead of running into a second wall —
+ * the pose stays inside the range the gizmo can display either way.
+ */
+function wrapDeg(v: number): number {
+  const folded = ((v + 180) % 360 + 360) % 360;
+  return folded - 180;
 }
+
