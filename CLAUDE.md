@@ -117,13 +117,25 @@ wiped on the next frame, and `Stage.test.tsx` asserts that directly. The engine
 also skips the DOM write when the serialized SVG is byte-identical to the last
 frame, which is what makes a paused stage cheap.
 
+**Following the cursor is the same rule again.** A stage toggle aims the head
+at the pointer (FR-8.6), and easing toward it means a new pose every frame —
+which React must not be the one to write. So the aim lives in a ref the
+pointer handler updates without rendering, the engine reads it through a
+_getter_ (`aim`) once per frame, and the eased pose lives in the engine for
+the length of the follow, handed back through `onFollowEnd` when it stops. The
+getter is the load-bearing part: passing the aim as a value through `update()`
+delivers whatever React last rendered, which is `null` for the whole follow —
+the character simply never moves, and only a browser test catches it.
+
 **The same rule reaches the track, through a clock.** The playhead moves every
 frame and must not re-render the tree either, so the engine publishes
 `{ loopId, loopMs }` into `app/stage/clock.ts` and `Track` subscribes and
 writes `style.left` and `textContent` by hand. Nothing in `clock.ts` touches
 React or the DOM, which is what makes the seam testable. It carries traffic
 both ways: `seek` is a scrub moving the loop clock from the UI, so the shell
-never has to hold the engine instance. A subscriber that throws is swallowed —
+never has to hold the engine instance. It carries the head pose too, for the
+same reason the playhead rides here — the stage's orientation readout writes
+its own degrees from a subscription while a follow is running. A subscriber that throws is swallowed —
 `publish` runs inside `requestAnimationFrame`, and an exception there would
 freeze the character because a readout failed to format a number.
 

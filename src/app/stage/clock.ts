@@ -11,6 +11,15 @@ export interface StageFrame {
   loopId: string | null;
   /** Milliseconds since that loop started — the clock LoopPlayer walks. */
   loopMs: number;
+  /**
+   * Where the head is pointing this frame (FR-8.6).
+   *
+   * It rides here for the same reason the elapsed time does. Following the
+   * cursor moves the pose every frame, and the orientation readout states it
+   * in degrees — re-rendering the tree at that rate is exactly what FR-11.2
+   * forbids, so the readout subscribes and writes its own text instead.
+   */
+  head: { x: number; y: number; z: number };
 }
 
 export interface StageClock {

@@ -9,6 +9,7 @@ import { createStageClock, type StageFrame } from "./clock";
 const frame = (over: Partial<StageFrame> = {}): StageFrame => ({
   loopId: "loop_1",
   loopMs: 0,
+  head: { x: 0, y: 0, z: 0 },
   ...over,
 });
 
@@ -137,5 +138,41 @@ describe("createStageClock seeking", () => {
     off();
     clock.seek(7);
     expect(live).toHaveBeenCalledWith(7);
+  });
+});
+
+// FR-8.6: the clock carries the orientation too. The follow moves the head
+// every frame, and the readout that states it in degrees cannot re-render the
+// React tree at that rate (FR-11.2) — same problem the playhead had, same
+// seam. These pin the addition rather than the whole clock, which the cases
+// above already cover.
+describe("head rotation on the frame (FR-8.6)", () => {
+  it("carries the pose alongside the loop time", () => {
+    const clock = createStageClock();
+    clock.publish({ loopId: "l1", loopMs: 40, head: { x: 1, y: 2, z: 3 } });
+    expect(clock.last()?.head).toEqual({ x: 1, y: 2, z: 3 });
+  });
+
+  it("delivers it to a late subscriber, like everything else on the frame", () => {
+    const clock = createStageClock();
+    clock.publish({ loopId: null, loopMs: 0, head: { x: 0, y: 45, z: 0 } });
+    const seen: unknown[] = [];
+    clock.subscribe((f) => seen.push(f.head));
+    expect(seen).toEqual([{ x: 0, y: 45, z: 0 }]);
+  });
+
+  it("survives a subscriber that throws on it", () => {
+    // The engine publishes from inside rAF; a readout that fails to format a
+    // number must not stop the character animating.
+    const clock = createStageClock();
+    clock.subscribe(() => {
+      throw new Error("bad readout");
+    });
+    const seen: number[] = [];
+    clock.subscribe((f) => seen.push(f.head.y));
+    expect(() => {
+      clock.publish({ loopId: null, loopMs: 0, head: { x: 0, y: 9, z: 0 } });
+    }).not.toThrow();
+    expect(seen).toEqual([9]);
   });
 });

@@ -4,6 +4,7 @@
 import { transitionFn } from "./easing";
 import { cycleSteps } from "./summary";
 import type { HeadPose, Kit, Loop, Mood, MoodEye } from "../document/types";
+import { blendPose } from "../geometry/angles";
 
 export interface MoodSample {
   left: MoodEye;
@@ -32,31 +33,6 @@ const KEYS: (keyof MoodEye)[] = [
   "offsetX",
   "offsetY",
 ];
-
-/** Folds an angle into the half turn either side of zero. */
-function wrapDeg(v: number): number {
-  return ((((v + 180) % 360) + 360) % 360) - 180;
-}
-
-/**
- * Interpolate two angles along the shorter arc between them (FR-4.10).
- *
- * Treating a pose axis as a plain number sends a character from 170° to −170°
- * the long way — three hundred and forty degrees across the front, when the
- * two poses are twenty degrees apart across the back. The eye deltas never hit
- * this because they live inside ±30, but a body pose spans the whole turn.
- */
-function blendAngle(a: number, b: number, t: number): number {
-  return wrapDeg(a + wrapDeg(b - a) * t);
-}
-
-function blendPose(a: HeadPose, b: HeadPose, t: number): HeadPose {
-  return {
-    x: blendAngle(a.x, b.x, t),
-    y: blendAngle(a.y, b.y, t),
-    z: blendAngle(a.z, b.z, t),
-  };
-}
 
 export function blendMoods(from: Mood, to: Mood, t: number): MoodSample {
   const blend = (a: MoodEye, b: MoodEye): MoodEye => {

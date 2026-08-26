@@ -244,7 +244,11 @@ describe("Track timeline (FR-6.7)", () => {
     const before = renders;
 
     act(() => {
-      clock.publish({ loopId: "loop_t", loopMs: 500 });
+      clock.publish({
+        loopId: "loop_t",
+        loopMs: 500,
+        head: { x: 0, y: 0, z: 0 },
+      });
     });
 
     // 500ms of a 2000ms strip.
@@ -255,7 +259,11 @@ describe("Track timeline (FR-6.7)", () => {
   it("reads elapsed against the cycle as the clock advances", () => {
     const { clock } = setup({ kit: threeStepKit, mode: "playing" });
     act(() => {
-      clock.publish({ loopId: "loop_t", loopMs: 1620 });
+      clock.publish({
+        loopId: "loop_t",
+        loopMs: 1620,
+        head: { x: 0, y: 0, z: 0 },
+      });
     });
     expect(screen.getByTestId("track-elapsed").textContent).toContain("1.62 s");
   });
@@ -263,7 +271,11 @@ describe("Track timeline (FR-6.7)", () => {
   it("wraps the playhead with the cycle rather than running off the end", () => {
     const { clock } = setup({ kit: threeStepKit, mode: "playing" });
     act(() => {
-      clock.publish({ loopId: "loop_t", loopMs: 2500 });
+      clock.publish({
+        loopId: "loop_t",
+        loopMs: 2500,
+        head: { x: 0, y: 0, z: 0 },
+      });
     });
     expect(playhead().style.left).toBe("25%");
   });
@@ -273,7 +285,11 @@ describe("Track timeline (FR-6.7)", () => {
     // playhead must not read it against this loop's very different strip.
     const { clock } = setup({ kit: threeStepKit, mode: "playing" });
     act(() => {
-      clock.publish({ loopId: "loop_somewhere_else", loopMs: 1800 });
+      clock.publish({
+        loopId: "loop_somewhere_else",
+        loopMs: 1800,
+        head: { x: 0, y: 0, z: 0 },
+      });
     });
     expect(playhead().style.left).toBe("0%");
   });

@@ -355,3 +355,54 @@ test("help sheet: the dim covers the whole window (FR-9.7)", async ({
   expect(corner).toBe("modal-backdrop");
   await shoot(page, "help-sheet");
 });
+
+/**
+ * FR-8.6: the character follows the cursor.
+ *
+ * The arithmetic is tested in node and the wiring in jsdom, but neither can
+ * answer this one: jsdom lays nothing out, so the stage box the cursor is
+ * measured against is 0×0 there and the aim is always dead centre. Whether a
+ * real pointer over a real box turns a real head is a browser question.
+ */
+test("follow: the character turns toward the cursor and stops at its limit", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const yaw = page.getByTestId("readout-y");
+  await expect(yaw).toHaveText("0°");
+
+  await page.getByRole("button", { name: "Seguir el cursor" }).click();
+
+  const stage = await page.getByLabel("bubble stage").boundingBox();
+  if (!stage) throw new Error("stage not laid out");
+  const midY = stage.y + stage.height / 2;
+
+  // Right of centre: the character should turn that way, and settle.
+  await page.mouse.move(stage.x + stage.width - 4, midY);
+  await expect
+    .poll(async () => Number((await yaw.textContent())?.replace("°", "")), {
+      timeout: 4000,
+    })
+    .toBeGreaterThan(10);
+
+  const settledRight = Number((await yaw.textContent())?.replace("°", ""));
+  // It eases toward a bounded aim rather than tracking without limit.
+  expect(settledRight).toBeLessThanOrEqual(32);
+
+  // Left of centre: it comes back the other way.
+  await page.mouse.move(stage.x + 4, midY);
+  await expect
+    .poll(async () => Number((await yaw.textContent())?.replace("°", "")), {
+      timeout: 4000,
+    })
+    .toBeLessThan(-10);
+
+  // And a drag takes it back from the cursor (FR-8.1).
+  await page.mouse.move(stage.x + stage.width / 2, midY);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(
+    page.getByRole("button", { name: "Seguir el cursor" }),
+  ).toHaveAttribute("aria-pressed", "false");
+  await shoot(page, "stage-follow");
+});

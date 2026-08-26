@@ -16,6 +16,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { act } from "@testing-library/react";
+import { createStageClock, type StageClock } from "./clock";
 import { Stage, type StageProps } from "./Stage";
 import { StageEngine } from "./StageEngine";
 import { createDefaultDocument } from "../../domain/document/create";
@@ -56,6 +58,7 @@ interface StageOverrides {
   loopId?: string | null;
   onPause?: () => void;
   onZoom?: (v: number) => void;
+  clock?: StageClock;
 }
 
 /**
@@ -66,12 +69,15 @@ interface StageOverrides {
  */
 function Harness({
   onZoom,
+  onRender,
   ...props
 }: Omit<StageProps, "head" | "onHead" | "zoom" | "onZoom"> & {
   onZoom?: ((v: number) => void) | undefined;
+  onRender?: (() => void) | undefined;
 }) {
   const [head, setHead] = useState({ x: 0, y: 0, z: 0 });
   const [zoom, setZoom] = useState(1);
+  onRender?.();
   return (
     <Stage
       {...props}
@@ -91,8 +97,13 @@ function setupStage(overrides: StageOverrides = {}) {
   const bubble = doc.bubbles[0];
   if (!bubble) throw new Error("fixture missing bubble");
   const kit = effectiveKit(bubble, doc);
+  let renderCount = 0;
   const { container } = render(
     <Harness
+      onRender={() => {
+        renderCount += 1;
+      }}
+      clock={overrides.clock}
       bubble={bubble}
       kit={kit}
       loopId={
@@ -109,7 +120,7 @@ function setupStage(overrides: StageOverrides = {}) {
   );
   const el = container.querySelector('[aria-label="bubble stage"]');
   if (!el) throw new Error("stage element missing");
-  return { el, kit };
+  return { el, kit, renders: () => renderCount };
 }
 
 function renderStage() {
@@ -423,5 +434,100 @@ describe("Stage readout and hint (FR-8.2)", () => {
     expect(screen.getByText(/Arrastra para girar la cabeza/)).toBeTruthy();
     drag(el, 40, 0);
     expect(screen.queryByText(/Arrastra para girar la cabeza/)).toBeNull();
+  });
+});
+
+/**
+ * FR-8.6: the character follows the cursor while the toggle is on.
+ *
+ * Only the wiring is decidable here. The arithmetic lives in
+ * `domain/geometry/follow.ts` and is tested in node; whether the head actually
+ * travels is a browser question, and rides in the e2e smoke — jsdom lays
+ * nothing out, so the stage it would measure the cursor against is 0×0.
+ */
+describe("follow the cursor (FR-8.6)", () => {
+  const toggle = () => screen.getByRole("button", { name: "Seguir el cursor" });
+
+  it("offers the toggle, off to begin with", () => {
+    setupStage();
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("turns on and off again", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(toggle());
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+    await user.click(toggle());
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("tells the engine to follow, and to stop", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(toggle());
+    const on = engineOf().update.mock.calls.at(-1)?.[0] as { follow: boolean };
+    expect(on.follow).toBe(true);
+    await user.click(toggle());
+    const off = engineOf().update.mock.calls.at(-1)?.[0] as { follow: boolean };
+    expect(off.follow).toBe(false);
+  });
+
+  it("a drag switches it off — direct manipulation wins (FR-8.1)", () => {
+    const { el } = setupStage();
+    fireEvent.click(screen.getByRole("button", { name: "Seguir el cursor" }));
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+    fireEvent.pointerDown(el, { clientX: 10, clientY: 10, pointerId: 1 });
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("stops listening to the window once it is switched off", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    const add = vi.spyOn(window, "addEventListener");
+    const remove = vi.spyOn(window, "removeEventListener");
+    await user.click(toggle());
+    expect(add.mock.calls.some(([e]) => e === "pointermove")).toBe(true);
+    await user.click(toggle());
+    expect(remove.mock.calls.some(([e]) => e === "pointermove")).toBe(true);
+    add.mockRestore();
+    remove.mockRestore();
+  });
+});
+
+/**
+ * FR-8.6 / FR-11.2: the readout keeps up with a follow without re-rendering.
+ *
+ * The pose changes every frame while the character follows the cursor, and the
+ * degrees beside it have to change with it. React cannot be the thing that
+ * writes them at that rate, so the readout subscribes to the clock and sets its
+ * own text — the same seam, and the same reason, as the track's playhead.
+ */
+describe("orientation readout during a follow (FR-8.6)", () => {
+  it("takes its degrees from the clock, without a render", () => {
+    const clock = createStageClock();
+    const { renders } = setupStage({ clock });
+    const before = renders();
+
+    act(() => {
+      clock.publish({
+        loopId: null,
+        loopMs: 0,
+        head: { x: -12, y: 27, z: 0 },
+      });
+    });
+
+    expect(screen.getByTestId("readout-y").textContent).toBe("27°");
+    expect(screen.getByTestId("readout-x").textContent).toBe("-12°");
+    expect(renders()).toBe(before);
+  });
+
+  it("rounds the way the pad's own numbers do", () => {
+    const clock = createStageClock();
+    setupStage({ clock });
+    act(() => {
+      clock.publish({ loopId: null, loopMs: 0, head: { x: 0, y: 4.6, z: 0 } });
+    });
+    expect(screen.getByTestId("readout-y").textContent).toBe("5°");
   });
 });

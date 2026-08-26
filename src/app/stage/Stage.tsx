@@ -7,13 +7,15 @@
 // character this much room. The engine writes SVG straight into its own host
 // element, so every overlay is a sibling of that host — never a child, which
 // innerHTML would wipe each frame.
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StageEngine, type StageMode } from "./StageEngine";
 import type { Bubble, Kit } from "../../domain/document/types";
 import type { MoodSample } from "../../domain/playback/LoopPlayer";
 import type { MessageKey } from "../i18n";
 import type { StageClock } from "./clock";
 import { RangeInput } from "../studio/ui";
+import { wrapDeg } from "../../domain/geometry/angles";
+import { followTarget } from "../../domain/geometry/follow";
 
 export interface StageProps {
   bubble: Bubble;
@@ -89,6 +91,25 @@ export function Stage({
   // asked for. Overlays live beside the engine host, never inside it.
   const [gizmo, setGizmo] = useState(false);
   const [guide, setGuide] = useState(false);
+  // FR-8.6: while on, the character turns to face the pointer anywhere in the
+  // window. The aim is a ref rather than state — it changes on every pointer
+  // event and only the engine reads it, so putting it in state would re-render
+  // the tree for a value React does not draw (FR-11.2).
+  const [follow, setFollow] = useState(false);
+  const aimRef = useRef<{ x: number; y: number } | null>(null);
+  // FR-11.2: the pose moves every frame while following, and these three
+  // numbers move with it. React renders them once from the prop; after that
+  // the clock subscription below writes the text by hand, the same way the
+  // track's playhead is driven.
+  // Read by the engine once a frame. Stable, so it never rebuilds the effect,
+  // and a function so the engine sees the ref's current value rather than the
+  // one React last rendered.
+  const readAim = useCallback(() => aimRef.current, []);
+  const readoutRefs = {
+    x: useRef<HTMLSpanElement>(null),
+    y: useRef<HTMLSpanElement>(null),
+    z: useRef<HTMLSpanElement>(null),
+  };
   // The wireframe also comes up for the length of a drag, which is when a
   // character most needs to say it is a solid rather than a picture of one.
   // Kept separate from the toggle so a drag never switches off something the
@@ -120,6 +141,51 @@ export function Stage({
   }, []);
 
   useEffect(() => {
+    if (!clock) return;
+    return clock.subscribe((frame) => {
+      for (const axis of ["x", "y", "z"] as const) {
+        const node = readoutRefs[axis].current;
+        if (!node) continue;
+        const next = `${String(Math.round(frame.head[axis]))}°`;
+        // Compared before writing: an unchanged readout is the common case on
+        // a still stage, and skipping the write keeps it off the paint path.
+        if (node.textContent !== next) node.textContent = next;
+      }
+    });
+    // Only the clock belongs here: the ref objects are recreated each render
+    // but the nodes they point at live as long as the component does, so the
+    // subscription never needs rebuilding on their account.
+  }, [clock]);
+
+  useEffect(() => {
+    if (!follow) {
+      aimRef.current = null;
+      return;
+    }
+    const onMove = (e: PointerEvent) => {
+      const host = hostRef.current;
+      if (!host) return;
+      const box = host.getBoundingClientRect();
+      // Measured against the stage's own centre, but listening on the window:
+      // the character should look at the pointer wherever it is on screen, not
+      // only while it is over the stage.
+      aimRef.current = followTarget({
+        dx: e.clientX - (box.left + box.width / 2),
+        dy: e.clientY - (box.top + box.height / 2),
+        // Half the stage's diagonal: the corners of the stage are where the
+        // turn saturates, which keeps the reach proportional to the room the
+        // character actually has rather than to the size of the monitor.
+        reach: Math.hypot(box.width, box.height) / 2,
+        limits: FOLLOW_LIMITS,
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+    };
+  }, [follow]);
+
+  useEffect(() => {
     engineRef.current?.update({
       bubble,
       kit,
@@ -129,12 +195,29 @@ export function Stage({
       preview,
       guide: showGuide,
       clock,
+      follow,
+      aim: readAim,
+      onFollowEnd: onHead,
     });
-  }, [bubble, kit, loopId, mode, head, preview, showGuide, clock]);
+  }, [
+    bubble,
+    kit,
+    loopId,
+    mode,
+    head,
+    preview,
+    showGuide,
+    clock,
+    follow,
+    onHead,
+  ]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     // sx/sy seed the pitch and the yaw from where this drag starts, so each
     // axis continues from its own value rather than from the resting pose.
+    // Direct manipulation wins (FR-8.1): grabbing the character takes it back
+    // from the cursor rather than fighting the follow for the same pose.
+    setFollow(false);
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
     setDragging(true);
     setEverDragged(true);
@@ -216,7 +299,11 @@ export function Stage({
           {AXES.map((a) => (
             <span key={a.axis}>
               {a.axis.toUpperCase()}{" "}
-              <span data-testid={`readout-${a.axis}`} className="text-ink">
+              <span
+                ref={readoutRefs[a.axis]}
+                data-testid={`readout-${a.axis}`}
+                className="text-ink"
+              >
                 {Math.round(head[a.axis])}°
               </span>
             </span>
@@ -231,6 +318,15 @@ export function Stage({
             }}
           >
             <GuideIcon />
+          </OverlayToggle>
+          <OverlayToggle
+            label={t("stage.follow")}
+            pressed={follow}
+            onClick={() => {
+              setFollow((v) => !v);
+            }}
+          >
+            <FollowIcon />
           </OverlayToggle>
           <OverlayToggle
             label={t("stage.gizmo")}
@@ -507,17 +603,21 @@ function StatusPill({
   );
 }
 
-/**
- * Folds an angle into the ±180 the gizmo's own sliders span.
- *
- * A drag used to stop dead at ±60 and hand the rest of the turn to the gizmo,
- * which is most of what made it feel unresponsive: past a 200px gesture the
- * character stopped following the pointer while the pointer kept going. It now
- * reaches the whole turn, and wrapping rather than clamping at the far end is
- * what keeps a long gesture spinning instead of running into a second wall —
- * the pose stays inside the range the gizmo can display either way.
- */
-function wrapDeg(v: number): number {
-  const folded = (((v + 180) % 360) + 360) % 360;
-  return folded - 180;
+/** FR-8.6: how far the head turns when the cursor is at the far corner. */
+const FOLLOW_LIMITS = { yaw: 32, pitch: 20 };
+
+/** An eye with its pupil off to one side: the character looking at something. */
+function FollowIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
+      <path
+        d="M1.6 8s2.4-4.2 6.4-4.2S14.4 8 14.4 8s-2.4 4.2-6.4 4.2S1.6 8 1.6 8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <circle cx="9.5" cy="8" r="1.9" fill="currentColor" />
+    </svg>
+  );
 }

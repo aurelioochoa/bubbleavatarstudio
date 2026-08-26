@@ -273,6 +273,13 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
   has travelled toward the limb is cut flat along the contour rather than faded
   out. An eye is either on the surface or behind it; there is no partial
   opacity.
+- **FR-8.6** A stage toggle turns the character to face the pointer, anywhere
+  in the window rather than only over the stage. The turn is bounded per axis
+  and eased — a fraction of the remaining angle each frame — so it reads as a
+  head turning to look rather than as a cursor dragging it. Direct
+  manipulation wins: starting a drag switches the follow off (FR-8.1), and the
+  pose the character settled in is handed back rather than snapping away. The
+  roll is left alone; following aims a head, it does not tilt one.
 
 ### FR-9 Studio shell & persistence
 
@@ -1472,20 +1479,22 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ### 4b. Current state (re-derive; do not trust)
 
-As of the help sheet and the mark (F9): **39 Vitest files, 685 tests**, plus
-**1 Playwright spec** of **12 scenarios** — boot, panels, a playing loop and
+As of the help sheet and the mark (F9): **41 Vitest files, 708 tests**, plus
+**1 Playwright spec** of **13 scenarios** — boot, panels, a playing loop and
 the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, a 1024×720
 check that the track's first row and the inspector do not clip, and the help
-sheet's backdrop reaching every window edge. Production bundle 357.41 kB JS /
-38.88 kB CSS (107.09 / 7.73 gzipped).
+sheet's backdrop reaching every window edge. Production bundle 359.27 kB JS /
+38.88 kB CSS (107.77 / 7.73 gzipped).
 
-Three of those scenarios exist because jsdom cannot decide them. The playing
+Four of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not
 that the engine's frames arrive. The narrow-window case is a layout question,
 which jsdom has no answer to at all. So is the help sheet's backdrop: it is
 `absolute inset-0`, so what it actually covers depends on which ancestor is
-positioned, and only a real box model can say.
+positioned, and only a real box model can say. And so is the cursor follow:
+jsdom lays nothing out, so the stage box the pointer is measured against is
+0×0 there and the aim never leaves dead centre.
 
 The nine tests over F7's 637 are F8's: four pin what `springSpeed` does to a
 `spring()` curve and one that the loop's own value reaches `LoopPlayer`
