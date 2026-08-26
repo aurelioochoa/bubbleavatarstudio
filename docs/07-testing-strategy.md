@@ -71,22 +71,24 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of the two-defect pass (F8): **36 Vitest files, 643 tests**, plus **1
+As of the two-defect pass (F8): **36 Vitest files, 646 tests**, plus **1
 Playwright spec** of **11 scenarios** — boot, panels, a playing loop and the
 rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720
 check that the track's first row and the inspector do not clip. Production
-bundle 346.27 kB JS / 37.86 kB CSS (103.65 / 7.47 gzipped).
+bundle 347.13 kB JS / 37.86 kB CSS (103.90 / 7.47 gzipped).
 
 Two of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not
 that the engine's frames arrive. And the narrow-window case is a layout
 question, which jsdom has no answer to at all.
 
-The six tests over F7's 637 are F8's two defects: four pin what `springSpeed`
-does to a `spring()` curve and one that the loop's own value reaches
-`LoopPlayer` (FR-5.4), and one that linked eyes land on the same point rather
-than opposite ones. Two more were rewritten rather than added, since the
+The nine tests over F7's 637 are F8's: four pin what `springSpeed` does to a
+`spring()` curve and one that the loop's own value reaches `LoopPlayer`
+(FR-5.4); one that linked eyes land on the same point rather than opposite
+ones; and three for the separation slider — that it spreads the pair
+symmetrically, that a pad dragged afterwards keeps the gap, and that the row
+is there only while linked. Two more were rewritten rather than added, since the
 mirrored behaviour they asserted is the defect.
 
 The 37 tests over F6's 600 are the mood pose's (F7), and they are spread

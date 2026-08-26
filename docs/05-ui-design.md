@@ -219,7 +219,16 @@ the next edit to touch one. Copies, not mirrors — a mood's deltas aim a gaze,
 and both eyes of a face looking left are turned left. Mirroring linked eyes
 sent the two pad dots to opposite corners, which is a squint, and left no way
 to point a mood anywhere without unlinking first. Independent is the default,
-because two eyes that differ are most of what a mood is. The one-shot mirror
+because two eyes that differ are most of what a mood is.
+
+Linking brings a control of its own with it: **Separación**, a single slider
+that moves the pair apart or together about its own midpoint, so widening the
+gap never also slides the gaze sideways. It shows only while linked — two eyes
+edited apart already sit at whatever distance their pads were left at, and a
+control that re-centred them would fight the side being dragged. The value is
+derived from the two offsets rather than stored beside them, so it cannot
+disagree with the pads it describes, and dragging either pad afterwards keeps
+the separation while the gaze moves. The one-shot mirror
 action remains, and is where FR-3.3's handedness rule still lives — roll and
 yaw flip sign, pitch and the scales do not. Rename, the colour override covering body and
 eyes independently with a clear action (FR-4.3), and Save / Cancel, where

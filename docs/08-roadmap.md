@@ -383,6 +383,15 @@ was a character that squints at itself whenever the two sides are in step.
 Linked now copies. The one-shot `Reflejar izquierdo → derecho` action keeps
 `mirrorEye`, which is the case it was written for.
 
+Copying alone would have left the pair welded together, so linking also brings
+a **Separación** slider: it moves the two eyes apart or together about their
+own midpoint, which is what keeps widening the gap from also sliding the gaze
+sideways. The value is derived (`right.offsetX - left.offsetX`) rather than
+stored, so nothing can drift out of step with the pads, and a pad dragged
+afterwards carries the separation along with it. It appears only while linked;
+that condition earned its test against a build where the row was
+unconditional.
+
 - **AC:** all gates green — **643 tests / 36 files**, 11 e2e scenarios;
   goldens byte-unchanged; the `springSpeed` test confirmed against a
   `LoopPlayer` sabotaged to pass 1, and all three eye-link tests watched red

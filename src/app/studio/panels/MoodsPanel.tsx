@@ -69,6 +69,17 @@ const FIELD_LABELS: Record<keyof MoodEye, MessageKey> = {
 /** docs/05 §2: how far from the resting anchor an eye may be nudged. */
 const OFFSET_RANGE = 40;
 
+const clampOffset = (v: number): number =>
+  Math.max(-OFFSET_RANGE, Math.min(OFFSET_RANGE, Math.round(v)));
+
+/**
+ * How far apart the two eyes sit, as a signed delta on top of the resting
+ * face's own spacing: positive pushes them apart, negative crosses them over.
+ * Derived rather than stored, so it cannot disagree with the two offsets it
+ * describes — which is also what lets the pads keep it while the gaze moves.
+ */
+const spreadOf = (mood: Mood): number => mood.right.offsetX - mood.left.offsetX;
+
 /** FR-4.10: the three axes of a mood's pose, in the gizmo's own order. */
 const POSE_AXES: { axis: "x" | "y" | "z"; label: MessageKey }[] = [
   { axis: "x", label: "common.rotationX" },
@@ -79,6 +90,8 @@ const POSE_AXES: { axis: "x" | "y" | "z"; label: MessageKey }[] = [
 /** Fixed decimals so a row does not reflow as its neighbour is dragged. */
 const scale = (v: number): string => v.toFixed(2);
 const degrees = (v: number): string => `${String(Math.round(v))}°`;
+/** Offsets are whole units, and the pad beside them states the ±40 u. */
+const units = (v: number): string => String(Math.round(v));
 
 /** Fallback swatch when a channel is switched on and has nothing to show yet. */
 const DEFAULT_OVERRIDE = "#6c7bff";
@@ -462,6 +475,20 @@ function MoodEditor({
    * mood whose two eyes differ is most of what makes a mood.
    */
   const [linked, setLinked] = useState(false);
+  /**
+   * Widening the gap keeps the pair's midpoint, so it does not also slide the
+   * gaze sideways: the eyes move out from where they already were, which is
+   * what "separación" reads as on the stage.
+   */
+  const spread = spreadOf(draft);
+  const setSpread = (next: number): void => {
+    const centre = (draft.left.offsetX + draft.right.offsetX) / 2;
+    onChange({
+      ...draft,
+      left: { ...draft.left, offsetX: clampOffset(centre - next / 2) },
+      right: { ...draft.right, offsetX: clampOffset(centre + next / 2) },
+    });
+  };
   const override = draft.colorOverride;
   const setOverride = (next: ColorOverride) => {
     onChange({ ...draft, colorOverride: next });
@@ -581,6 +608,29 @@ function MoodEditor({
         }}
       />
 
+      {/* Only while linked: two eyes edited apart already sit at whatever
+          distance their pads were left at, and a control that re-centres them
+          around a midpoint would fight the side being dragged. */}
+      {linked && (
+        <span className="flex h-4.5 items-center gap-1.5">
+          <span className="text-[9px] font-semibold tracking-[0.08em] text-ink-dim uppercase">
+            {t("moods.eyeSpread")}
+          </span>
+          <RangeInput
+            label={t("moods.eyeSpread")}
+            value={spread}
+            min={-2 * OFFSET_RANGE}
+            max={2 * OFFSET_RANGE}
+            step={2}
+            onChange={setSpread}
+            className="min-w-0 flex-1"
+          />
+          <span className="w-7 text-right text-[9.5px] tabular-nums">
+            {units(spread)}
+          </span>
+        </span>
+      )}
+
       <div className="grid grid-cols-2 gap-2">
         <EyeColumn
           title={t("look.leftEye")}
@@ -590,7 +640,14 @@ function MoodEditor({
             onChange({
               ...draft,
               left,
-              ...(linked ? { right: { ...left } } : {}),
+              ...(linked
+                ? {
+                    right: {
+                      ...left,
+                      offsetX: clampOffset(left.offsetX + spread),
+                    },
+                  }
+                : {}),
             });
           }}
         />
@@ -602,7 +659,14 @@ function MoodEditor({
             onChange({
               ...draft,
               right,
-              ...(linked ? { left: { ...right } } : {}),
+              ...(linked
+                ? {
+                    left: {
+                      ...right,
+                      offsetX: clampOffset(right.offsetX - spread),
+                    },
+                  }
+                : {}),
             });
           }}
         />

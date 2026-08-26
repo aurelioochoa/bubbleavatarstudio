@@ -31,8 +31,8 @@ between runs.
 **v0.2.0, plus F8.** Every roadmap phase is closed — the track redesign, the
 mood pose and a two-defect pass over the v0.1.0 that closed F5. See
 `docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **643 tests across 36 files**, plus
-a Playwright smoke of 11 scenarios, on a 346.27 kB / 37.86 kB production bundle
+requirements each one closes. Current gate: **646 tests across 36 files**, plus
+a Playwright smoke of 11 scenarios, on a 347.13 kB / 37.86 kB production bundle
 — re-derive with `pnpm test` and `pnpm build` rather than trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio
@@ -74,7 +74,9 @@ track's step widths stay out of its reach, and FR-5.4's wording was corrected
 to match. And the mood editor's linked mode mirrored each edit onto the other
 eye, which is the resting face's handedness rule applied to deltas that aim a
 gaze: it put the two pad dots in opposite corners and made a linked mood
-impossible to point. Linked copies now; the one-shot mirror action stays.
+impossible to point. Linked copies now, with a **Separación** slider that moves
+the pair apart or together about its own midpoint; the one-shot mirror action
+stays.
 
 Separately, `docs/research/3d-bubble-exploration.md` records the investigation
 behind the solid, including three rendering defects around a full turn — the

@@ -304,6 +304,57 @@ describe("mood editor linking (FR-4.1)", () => {
     expect(last.right.offsetY).toBe(last.left.offsetY);
   });
 
+  it("offers no separation control while the eyes are independent", async () => {
+    // Separation is a property of a pair moving as one. Two eyes edited apart
+    // already sit at whatever distance their pads were left at.
+    const user = userEvent.setup();
+    const { first } = setup();
+    await openEditor(user, first.name);
+    expect(screen.queryByLabelText("Separación")).toBeNull();
+    await user.click(screen.getByRole("radio", { name: "Vinculados" }));
+    expect(screen.queryByLabelText("Separación")).not.toBeNull();
+  });
+
+  it("moves the two eyes apart symmetrically (FR-4.1)", async () => {
+    const user = userEvent.setup();
+    const { onPreview, first } = setup();
+    await openEditor(user, first.name);
+    await user.click(screen.getByRole("radio", { name: "Vinculados" }));
+    fireEvent.change(screen.getByLabelText("Separación"), {
+      target: { value: "20" },
+    });
+    const last = onPreview.mock.calls.at(-1)?.[0] as {
+      left: { offsetX: number };
+      right: { offsetX: number };
+    };
+    // Symmetric about where the pair was sitting, so widening the gap does not
+    // also slide the face's gaze sideways.
+    expect(last.left.offsetX).toBe(-10);
+    expect(last.right.offsetX).toBe(10);
+  });
+
+  it("keeps the separation while the linked gaze moves", async () => {
+    const user = userEvent.setup();
+    const { onPreview, first } = setup();
+    await openEditor(user, first.name);
+    await user.click(screen.getByRole("radio", { name: "Vinculados" }));
+    fireEvent.change(screen.getByLabelText("Separación"), {
+      target: { value: "20" },
+    });
+    fireEvent.change(
+      screen.getByLabelText("Ojo izquierdo · Desplazamiento X"),
+      {
+        target: { value: "-25" },
+      },
+    );
+    const last = onPreview.mock.calls.at(-1)?.[0] as {
+      left: { offsetX: number };
+      right: { offsetX: number };
+    };
+    expect(last.left.offsetX).toBe(-25);
+    expect(last.right.offsetX).toBe(-5);
+  });
+
   it("leaves the other side alone while independent", async () => {
     const user = userEvent.setup();
     const { onPreview, first } = setup();

@@ -84,6 +84,8 @@ export type MessageKey =
   | "moods.poseHint"
   | "moods.editTitle"
   | "moods.eyeLink"
+  | "moods.eyeSpread"
+  | "moods.eyeSpreadHint"
   | "moods.linkedEyes"
   | "moods.independentEyes"
   | "common.scale"
@@ -300,6 +302,8 @@ const es: Record<MessageKey, string> = {
   "moods.poseHint": "Gira todo el personaje",
   "moods.editTitle": "Editar ánimo",
   "moods.eyeLink": "Vínculo entre ojos",
+  "moods.eyeSpread": "Separación",
+  "moods.eyeSpreadHint": "Aleja o junta los dos ojos",
   "moods.linkedEyes": "Vinculados",
   "moods.independentEyes": "Independientes",
   "common.scale": "Escala",
@@ -522,6 +526,8 @@ const en: Record<MessageKey, string> = {
   "moods.poseHint": "Turns the whole character",
   "moods.editTitle": "Edit mood",
   "moods.eyeLink": "Eye linking",
+  "moods.eyeSpread": "Spread",
+  "moods.eyeSpreadHint": "Moves the two eyes apart or together",
   "moods.linkedEyes": "Linked",
   "moods.independentEyes": "Independent",
   "common.scale": "Scale",
