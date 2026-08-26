@@ -1,0 +1,3 @@
+# pnpm writes this file; Prettier reformatting it only guarantees the next
+# `pnpm install` rewrites it back, so the two tools fight over every line.
+pnpm-lock.yaml

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 pnpm install
 pnpm dev                    # studio at http://localhost:5173
-pnpm check                  # REQUIRED GATE: typecheck + lint + tests + build (same as CI)
+pnpm check                  # REQUIRED GATE: format + typecheck + lint + tests + build (as CI)
 pnpm test                   # vitest run (once)
 pnpm test:watch             # vitest watch
 pnpm e2e                    # build, then Playwright visual smoke against the preview build

@@ -7,8 +7,10 @@
    refactor (stay green).
 2. Every test file references the FR IDs it encodes in its top comment; the
    roadmap task is "done" only when its FR tests pass.
-3. `pnpm check` (typecheck + tests + build) must be green before any commit is
-   considered final. CI runs the same gate.
+3. `pnpm check` (format + typecheck + lint + tests + build, in that order)
+   must be green before any commit is considered final. CI runs the same gate.
+   Prettier is pinned exactly, not caret-ranged: a floating minor reflows files
+   nobody touched, which reads as a change in every diff that follows it.
 
 ## 2. Layers & tools
 

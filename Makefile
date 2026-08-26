@@ -40,7 +40,7 @@ lint: ## Lint with ESLint
 format: ## Format the repo with Prettier (rewrites files)
 	$(PNPM) format
 
-check: ## REQUIRED GATE (FR-11.3): typecheck + lint + tests + build (same as CI)
+check: ## REQUIRED GATE (FR-11.3): format, typecheck, lint, tests, build
 	$(PNPM) check
 
 e2e: ## Build, then run the Playwright visual smoke

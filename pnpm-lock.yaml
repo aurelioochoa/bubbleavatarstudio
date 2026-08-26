@@ -55,7 +55,7 @@ importers:
         specifier: ^26.1.0
         version: 26.1.0(supports-color@7.2.0)
       prettier:
-        specifier: ^3.6.0
+        specifier: 3.9.6
         version: 3.9.6
       tailwindcss:
         specifier: ^4.1.0

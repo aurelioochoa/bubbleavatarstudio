@@ -14,7 +14,7 @@ see `docs/CLEANROOM.md` before contributing.
 ```bash
 pnpm install
 pnpm dev        # studio at http://localhost:5173
-pnpm check      # typecheck + lint + tests + build (required gate, also runs in CI)
+pnpm check      # format + typecheck + lint + tests + build (required gate, also in CI)
 pnpm e2e        # Playwright visual smoke against the preview build
 ```
 
