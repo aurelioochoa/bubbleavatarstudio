@@ -299,3 +299,56 @@ ours had nothing equivalent — one equator and one meridian, behind a toggle.
 11. Eyes clipped by the silhouette rather than faded at the rim.
 12. A wireframe mesh raised for the duration of a pointer press, rather than
     only from a toggle.
+
+## Session: how the drag itself is tuned (2026-08-25)
+
+Driven as a user in a browser — clicks, drags and screenshots only, per
+`docs/CLEANROOM.md` §2/§3. Nothing of theirs was fetched, viewed or read
+beyond the rendered page a visitor sees.
+
+Their pose panel reports the head rotation as three numbers, which makes the
+drag measurable without any guesswork: drag a known number of pixels across the
+stage, then read the number off their own UI. Character used was the plain
+round one, whose symmetry keeps a yaw unambiguous.
+
+### The rate is flat at a shade under 0.3° per pixel
+
+| gesture           | yaw before | yaw after | change |
+| ----------------- | ---------- | --------- | ------ |
+| 100px right       | 148.7      | 177.7     | +29.0  |
+| 200px left        | 177.7      | 119.7     | −58.0  |
+| 100px down (pitch)| 2.3        | −25.8     | −28.1  |
+
+Exactly double the travel gives exactly double the angle, so there is no
+acceleration curve and no dead zone at the start of a press — 100px is 29° from
+anywhere. Both axes move at the same rate.
+
+### Which pointer axis drives which rotation, and with what sign
+
+Horizontal travel drives the yaw and vertical travel the pitch, never crossed.
+Dragging right raises the yaw, so the character turns toward the viewer's
+right and follows the pointer. Dragging down lowers the pitch, so the character
+looks downward — the pitch takes the vertical travel with the sign flipped,
+which is what makes the face go the way the hand goes on a screen whose y runs
+downward.
+
+### A drag is not bounded at a quarter turn
+
+The yaw passed 148, then 177, then 222, and read 334 after further dragging;
+the pitch was observed past −69. So a drag alone reaches the whole turn,
+including the back of the head, and their rotation gizmo is not the only route
+to a large angle. Ours stopped dead at ±60 and left the rest to the gizmo,
+which is most of why a long gesture felt unresponsive: the pointer kept
+travelling while the character had already stopped.
+
+Long drags also nudged the roll a little, and their rate over a 300px gesture
+came out slightly above the 0.29 the short ones agree on — there may be some
+settling or inertia in their drag. Not characterized further; the short-gesture
+number is the one worth matching.
+
+### Parity gaps, updated
+
+13. A drag reached only ±60 of yaw and pitch, where theirs reaches a full turn.
+14. Our drag rate was 0.2° per pixel against their 0.29, and our pointer axes
+    were crossed: horizontal travel drove the pitch, so dragging right tipped
+    the character upward instead of turning it.
