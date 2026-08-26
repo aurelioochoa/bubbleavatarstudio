@@ -58,6 +58,23 @@ describe("the mark reads at 16px", () => {
     }
   });
 
+  it("fills its box, so the glyph is not a dot in a field of nothing", () => {
+    // The scene is 512 wide whatever the character does, and the default
+    // template's 220 fills 43% of it — legible on a stage, a speck in a tab
+    // strip or beside a wordmark. An icon wants most of its own box.
+    const width = markBubble().body.surface.width;
+    expect(width / scene.size).toBeGreaterThan(0.65);
+    // Not so far that the silhouette touches the edge and looks cropped.
+    expect(width / scene.size).toBeLessThan(0.85);
+  });
+
+  it("keeps the face in proportion as the body grows", () => {
+    // Scaling the body alone would leave two pinpricks on a large head.
+    const bubble = markBubble();
+    const eye = bubble.restingFace.eye.width;
+    expect(eye / bubble.body.surface.width).toBeGreaterThan(0.15);
+  });
+
   it("sits the character upright and centred, so no crop is needed", () => {
     expect(scene.head.transform).toContain("rotate(0)");
     expect(left.x).toBeCloseTo(-right.x, 5);

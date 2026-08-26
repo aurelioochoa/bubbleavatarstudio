@@ -1,11 +1,16 @@
 // The help sheet the header opens: shortcuts (FR-9.7) and a guide to the
 // studio (FR-9.9), as two tabs of one dialog.
 //
-// The dialog is given a size by the box around it rather than by its content.
-// `Modal` is `absolute inset-0`, so without a sized positioned ancestor it
-// spans the viewport — which is what left the old shortcut list stranded in a
-// mostly empty sheet — and a fixed height is also what stops the dialog
-// resizing under the pointer when the tabs are switched.
+// The sheet asks `Modal` for its size through the `box` prop rather than
+// wrapping it in a sized div. The backdrop is `absolute inset-0`, so any
+// positioned ancestor becomes the thing it covers: wrapped, the dim reached
+// the dialog's own edges and left the rest of the studio bright and clickable
+// behind a supposedly modal sheet.
+//
+// The height is a cap, not a fixed size. Pinning it stops the sheet resizing
+// when the tabs are switched, but the shortcuts need a third less room than
+// the guide, and a pinned sheet spends that difference on the blank this
+// redesign exists to remove.
 import { useId, useState } from "react";
 import { Modal } from "../ui";
 import { GUIDE_SECTIONS, SHORTCUT_GROUPS } from "./content";
@@ -31,53 +36,49 @@ export function HelpSheet({
   ];
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center p-6">
-      <div className="relative h-[min(32rem,100%)] w-full max-w-3xl">
-        <Modal
-          title={t("help.title")}
-          closeLabel={t("common.close")}
-          onClose={onClose}
+    <div className="fixed inset-0 z-40">
+      <Modal
+        title={t("help.title")}
+        closeLabel={t("common.close")}
+        onClose={onClose}
+        align="items-center"
+        box="max-h-[min(32rem,100%)] w-full max-w-3xl"
+      >
+        <div
+          role="tablist"
+          className="flex shrink-0 gap-0.5 rounded-field bg-panel p-0.5"
         >
-          <div
-            role="tablist"
-            className="flex shrink-0 gap-0.5 rounded-field bg-panel p-0.5"
-          >
-            {tabs.map((x) => (
-              <button
-                key={x.id}
-                id={tabId(x.id)}
-                role="tab"
-                type="button"
-                aria-selected={pane === x.id}
-                aria-controls={panelId}
-                onClick={() => {
-                  setPane(x.id);
-                }}
-                className={`flex-1 rounded-field px-2 py-1.5 text-xs transition-colors duration-150 ease-out ${
-                  pane === x.id
-                    ? "bg-primary text-white"
-                    : "text-ink-dim hover:bg-white/6 hover:text-ink"
-                }`}
-              >
-                {t(x.label)}
-              </button>
-            ))}
-          </div>
+          {tabs.map((x) => (
+            <button
+              key={x.id}
+              id={tabId(x.id)}
+              role="tab"
+              type="button"
+              aria-selected={pane === x.id}
+              aria-controls={panelId}
+              onClick={() => {
+                setPane(x.id);
+              }}
+              className={`flex-1 rounded-field px-2 py-1.5 text-xs transition-colors duration-150 ease-out ${
+                pane === x.id
+                  ? "bg-primary text-white"
+                  : "text-ink-dim hover:bg-white/6 hover:text-ink"
+              }`}
+            >
+              {t(x.label)}
+            </button>
+          ))}
+        </div>
 
-          <div
-            id={panelId}
-            role="tabpanel"
-            aria-labelledby={tabId(pane)}
-            className="pt-1"
-          >
-            {pane === "shortcuts" ? (
-              <ShortcutsPane t={t} />
-            ) : (
-              <GuidePane t={t} />
-            )}
-          </div>
-        </Modal>
-      </div>
+        <div
+          id={panelId}
+          role="tabpanel"
+          aria-labelledby={tabId(pane)}
+          className="pt-1"
+        >
+          {pane === "shortcuts" ? <ShortcutsPane t={t} /> : <GuidePane t={t} />}
+        </div>
+      </Modal>
     </div>
   );
 }

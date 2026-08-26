@@ -244,6 +244,8 @@ export function Modal({
   onClose,
   children,
   footer,
+  box = "w-full",
+  align = "items-start",
 }: {
   title: string;
   /** Accessible name of the ✕ — translated by the caller, which holds `t`. */
@@ -252,6 +254,17 @@ export function Modal({
   children: React.ReactNode;
   /** Trailing action row, pinned below the scrollable body. */
   footer?: React.ReactNode;
+  /**
+   * Size classes for the dialog box itself.
+   *
+   * A caller that wants a particular size must say so here rather than wrap
+   * the modal in a sized box of its own: the backdrop below is
+   * `absolute inset-0`, so a positioned wrapper becomes the thing it covers,
+   * and the dim stops at the dialog instead of reaching the window.
+   */
+  box?: string;
+  /** Cross-axis placement within the host. */
+  align?: "items-start" | "items-center";
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -287,7 +300,7 @@ export function Modal({
   }, [onClose]);
 
   return (
-    <div className="absolute inset-0 z-30 flex items-start justify-center p-3">
+    <div className={`absolute inset-0 z-30 flex ${align} justify-center p-3`}>
       <button
         type="button"
         tabIndex={-1}
@@ -302,7 +315,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="relative flex max-h-full w-full flex-col overflow-hidden rounded-card border border-line bg-panel-2 shadow-panel outline-none"
+        className={`relative flex max-h-full flex-col overflow-hidden rounded-card border border-line bg-panel-2 shadow-panel outline-none ${box}`}
       >
         <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2.5">
           <h2 className="min-w-0 flex-1 truncate text-xs font-semibold tracking-wide text-ink-dim uppercase">

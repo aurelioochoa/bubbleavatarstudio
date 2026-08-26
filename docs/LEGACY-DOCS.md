@@ -1467,17 +1467,20 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ### 4b. Current state (re-derive; do not trust)
 
-As of the help sheet and the mark (F9): **39 Vitest files, 680 tests**, plus
-**1 Playwright spec** of **11 scenarios** — boot, panels, a playing loop and
+As of the help sheet and the mark (F9): **39 Vitest files, 682 tests**, plus
+**1 Playwright spec** of **12 scenarios** — boot, panels, a playing loop and
 the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
-wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720
-check that the track's first row and the inspector do not clip. Production
-bundle 357.09 kB JS / 38.89 kB CSS (106.91 / 7.72 gzipped).
+wireframe, the Share preview, drag-to-scrub, drag-to-reorder, a 1024×720
+check that the track's first row and the inspector do not clip, and the help
+sheet's backdrop reaching every window edge. Production bundle 357.16 kB JS /
+38.86 kB CSS (107.01 / 7.72 gzipped).
 
-Two of those scenarios exist because jsdom cannot decide them. The playing
+Three of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not
-that the engine's frames arrive. And the narrow-window case is a layout
-question, which jsdom has no answer to at all.
+that the engine's frames arrive. The narrow-window case is a layout question,
+which jsdom has no answer to at all. So is the help sheet's backdrop: it is
+`absolute inset-0`, so what it actually covers depends on which ancestor is
+positioned, and only a real box model can say.
 
 The nine tests over F7's 637 are F8's: four pin what `springSpeed` does to a
 `spring()` curve and one that the loop's own value reaches `LoopPlayer`

@@ -318,3 +318,40 @@ test("narrow window: the shell holds together at 1024×720", async ({
   expect(stage?.width ?? 0).toBeGreaterThan(500);
   await shoot(page, "narrow-1024");
 });
+
+/**
+ * A modal dim that stops short of the window edge is a layout question, which
+ * is why it lives here: `Modal` is `absolute inset-0`, so it covers its
+ * nearest *positioned* ancestor rather than the screen (docs/05 §2 — that is
+ * deliberate, so the mood editor dims the inspector and leaves the stage to be
+ * judged against). The help sheet is the one modal that is not anchored to a
+ * panel, and a sizing wrapper around it once made its backdrop cover only the
+ * dialog's own box, leaving the rest of the studio undimmed and clickable.
+ */
+test("help sheet: the dim covers the whole window (FR-9.7)", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Ayuda/ }).click();
+  await expect(page.getByRole("dialog", { name: "Ayuda" })).toBeVisible();
+
+  const viewport = page.viewportSize();
+  const backdrop = await page.getByTestId("modal-backdrop").boundingBox();
+  expect(backdrop).not.toBeNull();
+  if (!backdrop || !viewport) return;
+
+  // Flush to every edge, not merely large.
+  expect(backdrop.x).toBeLessThanOrEqual(0);
+  expect(backdrop.y).toBeLessThanOrEqual(0);
+  expect(backdrop.x + backdrop.width).toBeGreaterThanOrEqual(viewport.width);
+  expect(backdrop.y + backdrop.height).toBeGreaterThanOrEqual(viewport.height);
+
+  // And it is the thing a click lands on out there, so the studio behind the
+  // sheet cannot be operated while the sheet is open.
+  const corner = await page.evaluate(() => {
+    const el = document.elementFromPoint(12, window.innerHeight - 12);
+    return el?.getAttribute("data-testid") ?? el?.tagName ?? null;
+  });
+  expect(corner).toBe("modal-backdrop");
+  await shoot(page, "help-sheet");
+});
