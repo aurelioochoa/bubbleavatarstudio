@@ -33,6 +33,7 @@ export function StudioView() {
   // The inspector column, so the mood editor can mount over all of it rather
   // than inside the scroll box that would clip it (docs/05 §2).
   const [inspector, setInspector] = useState<HTMLElement | null>(null);
+  const [stageHost, setStageHost] = useState<HTMLElement | null>(null);
   // FR-6.6: the Share tab is not editing a sequence, so the track folds to a
   // single row there — kept as state rather than derived from the tab, so a
   // user who opens it back up gets to keep it open.
@@ -182,7 +183,9 @@ export function StudioView() {
           t={t}
         />
 
-        <main className="min-w-0 flex-1">
+        {/* `relative`: the Share panel draws the export frame here, over the
+            stage, as a sibling of the engine's host (docs/05 §1). */}
+        <main ref={setStageHost} className="relative min-w-0 flex-1">
           <Stage
             bubble={bubble}
             kit={kit}
@@ -281,6 +284,7 @@ export function StudioView() {
                   doc={state.doc}
                   dispatch={dispatch}
                   overlayHost={inspector}
+                  stageHost={stageHost}
                   t={t}
                 />
               </PanelScroll>

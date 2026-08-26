@@ -168,6 +168,17 @@ export type MessageKey =
   | "share.importReplace"
   | "share.solidColor"
   | "share.exportProject"
+  | "share.frame"
+  | "share.notExported"
+  | "share.none"
+  | "share.all"
+  | "share.weight"
+  | "share.pruned"
+  | "share.definitionFile"
+  | "share.definitionHint"
+  | "share.packageFile"
+  | "share.packageHint"
+  | "share.downloads"
   | "share.importProject"
   | "common.remove"
   | "common.play"
@@ -357,6 +368,17 @@ const es: Record<MessageKey, string> = {
   "share.importReplace": "Reemplazar",
   "share.solidColor": "Color del fondo",
   "share.exportProject": "Exportar proyecto",
+  "share.frame": "Encuadre de exportación",
+  "share.notExported": "La guía y la sombra de contacto no se exportan",
+  "share.none": "Ninguno",
+  "share.all": "Todos",
+  "share.weight": "aprox.",
+  "share.pruned": "ánimos podados",
+  "share.definitionFile": "Definición portable del personaje",
+  "share.definitionHint": "JSON que lee el runtime",
+  "share.packageFile": "paquete .zip",
+  "share.packageHint": "JSON + SVG + ejemplo",
+  "share.downloads": "Descargas",
   "share.importProject": "Importar proyecto",
   "common.remove": "Eliminar",
   "common.play": "Reproducir",
@@ -542,6 +564,17 @@ const en: Record<MessageKey, string> = {
   "share.importReplace": "Replace",
   "share.solidColor": "Background color",
   "share.exportProject": "Export project",
+  "share.frame": "Export frame",
+  "share.notExported": "The guide and the contact shadow are not exported",
+  "share.none": "None",
+  "share.all": "All",
+  "share.weight": "approx.",
+  "share.pruned": "moods pruned",
+  "share.definitionFile": "Portable character definition",
+  "share.definitionHint": "the JSON the runtime reads",
+  "share.packageFile": ".zip package",
+  "share.packageHint": "JSON + SVG + example",
+  "share.downloads": "Downloads",
   "share.importProject": "Import project",
   "common.remove": "Remove",
   "common.play": "Play",

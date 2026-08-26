@@ -261,6 +261,29 @@ kept selectable so its loops are never stranded without a chip.
 
 ### Share (export)
 
+**The export frame is drawn on the stage** (FR-10.6), not described as a
+number in the panel: framing is a decision made by looking at the character,
+and a crop stated only as `1024` has to be imagined over it. The frame covers
+exactly the box the render occupies — the scene's viewBox is square and the
+stage caps it at the same `min(80%, 32rem)` the frame uses — with corner
+marks, a label naming the size and background it will have, and a line saying
+which stage chrome (the guide, the contact shadow) the export leaves behind.
+Like every stage overlay it is a sibling of the engine's host element, never
+a child; it is portalled onto the stage column from the panel that owns the
+size and background state.
+
+**The loop picker is chips, not twenty checkboxes** (FR-10.3), grouped the way
+the catalogue is, with a per-group clear/restore so "just the reactions" is
+one press rather than ten. Under it, what the package will contain before it
+is built: loops, moods, how many moods the prune drops, and the weight —
+every number read off the avatar `buildPortableAvatar` would actually build,
+so the panel cannot promise a file the button does not write. It is the
+definition that is weighed, not the ZIP: the README and the example are fixed
+overhead that no choice in this panel moves.
+
+Downloads are rows that say what each artifact is and what is inside it.
+
+
 **[built]** all of the above. Resolution choice; transparent, solid, linear and
 radial backgrounds with configurable stops; a live preview of the framed result
 on a checkerboard, rendering the same scene and background as the download so

@@ -108,6 +108,17 @@ async function openShare() {
   return user;
 }
 
+/**
+ * The export frame is portalled onto the stage column, so a case that asserts
+ * it has to look there rather than in the panel — which is the point of it.
+ */
+async function openShareWithStage() {
+  const user = await openShare();
+  const host = screen.getByLabelText("bubble stage").closest("main");
+  if (!host) throw new Error("expected the stage column");
+  return { user, host };
+}
+
 const preview = () => screen.getByTestId("snapshot-preview");
 
 describe("SharePanel snapshot (FR-10.1)", () => {
@@ -143,29 +154,101 @@ describe("SharePanel snapshot (FR-10.1)", () => {
   });
 });
 
-describe("SharePanel loop picker (FR-10.3)", () => {
-  it("starts with every loop checked", async () => {
-    await openShare();
-    const boxes = within(
+describe("SharePanel loop picker (FR-10.3, FR-10.6)", () => {
+  const chips = () =>
+    within(
       screen.getByRole("group", { name: "Ciclos incluidos" }),
-    ).getAllByRole("checkbox");
-    expect(boxes.length).toBeGreaterThan(0);
-    expect(boxes.every((b) => (b as HTMLInputElement).checked)).toBe(true);
+    ).getAllByRole("switch");
+
+  it("starts with every loop travelling", async () => {
+    await openShare();
+    expect(chips().length).toBeGreaterThan(0);
+    expect(
+      chips().every((c) => c.getAttribute("aria-checked") === "true"),
+    ).toBe(true);
   });
 
-  it("unchecking a loop leaves the rest checked", async () => {
+  it("dropping one loop leaves the rest travelling", async () => {
     const user = await openShare();
-    const group = screen.getByRole("group", { name: "Ciclos incluidos" });
-    const boxes = within(group).getAllByRole("checkbox");
-    const first = boxes[0];
-    if (!first) throw new Error("expected a loop checkbox");
+    const first = chips()[0];
+    if (!first) throw new Error("expected a loop chip");
     await user.click(first);
-    expect((first as HTMLInputElement).checked).toBe(false);
+    expect(chips()[0]?.getAttribute("aria-checked")).toBe("false");
     expect(
-      within(group)
-        .getAllByRole("checkbox")
+      chips()
         .slice(1)
-        .every((b) => (b as HTMLInputElement).checked),
+        .every((c) => c.getAttribute("aria-checked") === "true"),
     ).toBe(true);
+  });
+
+  it("clears and restores a whole group in one press", async () => {
+    // Twenty checkboxes is twenty presses to answer "just the reactions".
+    const user = await openShare();
+    const on = () =>
+      chips().filter((c) => c.getAttribute("aria-checked") === "true").length;
+    const before = on();
+    await user.click(screen.getAllByRole("button", { name: "Ninguno" })[0]);
+    expect(on()).toBeLessThan(before);
+    await user.click(screen.getAllByRole("button", { name: "Todos" })[0]);
+    expect(on()).toBe(before);
+  });
+
+  it("says what the package will weigh before it is built (FR-10.6)", async () => {
+    await openShare();
+    const line = screen.getByTestId("export-weight").textContent ?? "";
+    expect(line).toMatch(/\d+ ciclos/);
+    expect(line).toMatch(/aprox\. \d+ KB/);
+  });
+
+  it("gets lighter as loops are dropped", async () => {
+    const user = await openShare();
+    const kb = () =>
+      Number(
+        /aprox\. (\d+) KB/.exec(
+          screen.getByTestId("export-weight").textContent ?? "",
+        )?.[1] ?? "0",
+      );
+    const before = kb();
+    await user.click(screen.getAllByRole("button", { name: "Ninguno" })[0]);
+    expect(kb()).toBeLessThan(before);
+  });
+
+  it("counts the moods the prune drops (FR-10.6)", async () => {
+    const user = await openShare();
+    await user.click(screen.getAllByRole("button", { name: "Ninguno" })[0]);
+    expect(screen.getByTestId("export-weight").textContent).toContain(
+      "ánimos podados",
+    );
+  });
+});
+
+describe("SharePanel export frame (FR-10.6)", () => {
+  it("draws the frame on the stage, not in the panel", async () => {
+    // The framing decision is made by looking at the character; a crop
+    // described only as a number in a panel has to be imagined over it.
+    const { host } = await openShareWithStage();
+    expect(within(host).getByTestId("export-frame")).toBeTruthy();
+  });
+
+  it("names the size and background the snapshot will have", async () => {
+    const { host, user } = await openShareWithStage();
+    expect(within(host).getByTestId("export-frame").textContent).toContain(
+      "1024 × 1024",
+    );
+    await user.click(screen.getByRole("radio", { name: "512" }));
+    expect(within(host).getByTestId("export-frame").textContent).toContain(
+      "512 × 512",
+    );
+    await user.click(screen.getByRole("radio", { name: "Sólido" }));
+    expect(within(host).getByTestId("export-frame").textContent).toContain(
+      "Sólido",
+    );
+  });
+
+  it("says which stage chrome the export leaves behind", async () => {
+    const { host } = await openShareWithStage();
+    expect(
+      within(host).getByText("La guía y la sombra de contacto no se exportan"),
+    ).toBeTruthy();
   });
 });
