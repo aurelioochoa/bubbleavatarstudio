@@ -1,5 +1,7 @@
-// Colour maths used by the body shading. Pure and total: no input should be
-// able to produce an unparseable colour, because it ends up in an SVG fill.
+// Colour maths under the shaded solid (FR-2.8) — no FR of its own, because
+// nothing here is a requirement a user can state, only the arithmetic the
+// visible ones run on. Pure and total: no input should be able to produce an
+// unparseable colour, because it ends up in an SVG fill.
 import { describe, expect, it } from "vitest";
 import { darken, lighten, luminance, mix, parseHex, toHex } from "./color";
 

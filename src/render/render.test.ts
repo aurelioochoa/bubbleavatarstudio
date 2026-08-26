@@ -1,4 +1,7 @@
-// FR-10/F2 render determinism: byte-exact golden SVG snapshots.
+// FR-10/F2 render determinism: byte-exact golden SVG snapshots, plus what the
+// scene composes on the way to them — ambient over playback rather than
+// instead of it (FR-6.5), and a face cut flat at the body's own silhouette
+// (FR-8.5).
 import { describe, expect, it } from "vitest";
 import { createBubble } from "../domain/document/create";
 import { ambientAt } from "../domain/playback/ambient";

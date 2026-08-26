@@ -1,4 +1,8 @@
-// Head projection (FR-8.2): the face frame sits on an ellipsoid, so turning
+// Head projection (FR-8.2), which is also what makes a mood portable
+// (FR-4.6): its deltas are expressed in the face frame, so one mood reads
+// correctly at every head orientation.
+//
+// The face frame sits on an ellipsoid, so turning
 // the head sweeps anchors along a curved surface and foreshortens them, rather
 // than shearing the drawing.
 import { describe, expect, it } from "vitest";

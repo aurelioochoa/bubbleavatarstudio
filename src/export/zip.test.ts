@@ -1,4 +1,6 @@
-// ZIP writer tests: structure + determinism.
+// FR-10.5 export package: the ZIP the definition, README and usage example
+// ship in. Structure + determinism — the same inputs must produce the same
+// archive bytes, or a re-export reads as a change.
 import { describe, expect, it } from "vitest";
 import { createZip, textEntry } from "./zip";
 

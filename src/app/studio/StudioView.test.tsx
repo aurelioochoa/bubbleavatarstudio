@@ -1,4 +1,5 @@
-// FR-9 studio shell smoke test (jsdom). rAF is stubbed; the engine is
+// FR-9 studio shell smoke test (jsdom), the locale switch and the document
+// field that persists it included (FR-9.4). rAF is stubbed; the engine is
 // exercised in unit tests, here we verify the UI tree and interactions.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {

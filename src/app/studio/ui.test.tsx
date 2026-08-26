@@ -1,5 +1,7 @@
 // Shared inspector chrome (docs/05 §2, §3): the modal the mood editor opens in
-// and the menu the rail, moods and loops all hang their per-item actions from.
+// (FR-4.4 — cancelable, and over the stage it is judged against) and the menu
+// the rail, moods and loops hang their per-item actions from (FR-1.2, FR-4.2,
+// FR-5.2).
 // Both were private to one caller before; these cases pin the behaviour that
 // makes them safe to share.
 import { describe, expect, it, vi, beforeEach } from "vitest";

@@ -1,6 +1,7 @@
-// docs/05 §2/§3: lists reorder by dragging, with the ↑ ↓ buttons kept as the
-// accessible fallback. This pins the drag half — the order it produces and
-// the cases that must not produce one at all.
+// Reordering by drag for the three lists that have one — the rail (FR-1.4),
+// the mood grid (FR-4.2) and a loop's steps (FR-5.2) — with the ↑ ↓ buttons
+// kept as the accessible fallback (docs/05 §2/§3). This pins the drag half —
+// the order it produces, and the cases that must not produce one at all.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useDragReorder } from "./dragReorder";

@@ -1,4 +1,7 @@
-// Migration policy (docs/03 §8).
+// Migration policy (docs/03 §8). A version we cannot read is refused rather
+// than guessed at (FR-9.3), and every step is behaviour-preserving: v4 -> v5
+// tops the kit up to the starter library (FR-4.7, FR-5.7), v5 -> v6 gives each
+// mood the pose it was drawing without (FR-4.10).
 import { describe, expect, it } from "vitest";
 import { migrate } from "./migrate";
 import { createDefaultDocument } from "./create";

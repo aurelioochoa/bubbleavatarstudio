@@ -1,5 +1,5 @@
-// Solid silhouettes (FR-2.6, FR-8.2): the body is a solid that turns, not a
-// flat outline that squashes.
+// Solid silhouettes (FR-2.8, with FR-2.6 and FR-8.2 behind it): the body is a
+// solid that turns, not a flat outline that squashes.
 import { describe, expect, it } from "vitest";
 import { isAnalyticSolid, solidOutline, solidRadii } from "./solid";
 import { surfacePoints } from "./shapes";

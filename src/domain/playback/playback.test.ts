@@ -1,4 +1,7 @@
-// FR-5/FR-6 easing and playback behavior, incl. frame-rate independence.
+// FR-5/FR-6 easing and playback behaviour: the three playback modes (FR-5.3),
+// blink superimposed on the mood on show (FR-5.5), the pose travel (FR-4.10),
+// and frame-rate independence (FR-6.3) — a second of wall time lands in the
+// same place however many frames it was cut into.
 import { describe, expect, it } from "vitest";
 import { ease, linear, spring, step, transitionFn } from "./easing";
 import { LoopPlayer, blendMoods } from "./LoopPlayer";

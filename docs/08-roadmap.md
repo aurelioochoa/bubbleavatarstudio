@@ -337,6 +337,46 @@ moods, which needs no frame loop at all.
   goldens byte-unchanged against the branch point; the observation logged and
   committed before the implementation, per docs/CLEANROOM.md.
 
+## Open — FR-5.4 has a control, a value and no effect
+
+Found while giving every test file the FR ids repo law 5 asks for: FR-5.4 was
+the one requirement no test could honestly be pointed at, because there is no
+behaviour under it to assert.
+
+`springSpeed` is authored (the Loops panel's _Velocidad del muelle_ / _Spring
+speed_), range-checked by `validate.ts` at 0.1–3, copied by `create.ts`,
+carried by the portable avatar, and read by `LoopPlayer` — which hands it to
+`spring(speed)` in `easing.ts`, where it cancels out exactly:
+
+```
+k             = t * 0.9 / s
+-6 * s * k    = -5.4 * t          <- s gone
+2π * 1.2s * k = 2π * 1.08 * t     <- s gone
+```
+
+Both places the parameter appears are divided by the duration it also scales,
+so `spring(0.1)` and `spring(3)` return the same value at every `t` — checked
+numerically across the range, agreeing to twelve decimals. The slider moves a
+number that reaches the renderer and changes nothing. The docstring above
+`spring()` claims "higher speed = snappier settle", which is the intent rather
+than what the arithmetic does.
+
+Fixing it needs a decision first, because the spec and the code mean different
+things by the word:
+
+- **FR-5.4 as written** — "scales transition durations globally" — makes it a
+  _timing_ knob: the transition window (today a fixed final 40% of the hold)
+  would widen or narrow with it, which changes what `summarizeLoop()` reports
+  and therefore how wide the track draws a step.
+- **`easing.ts` as built** treats it as a _curve_ knob: the hold is untouched
+  and only the settle is snappier or looser. That is the smaller fix — drop the
+  `/ s` from `durationSec` so the decay and frequency terms survive — and it
+  leaves the track's arithmetic alone.
+
+Either way it visibly changes how every existing loop animates, which is why it
+is written down here rather than fixed in the citation pass. The goldens are
+resting and ambient frames, so neither option moves them.
+
 ## Beyond the roadmap — the 3D question
 
 `docs/research/3d-bubble-exploration.md` is an investigation, not a committed

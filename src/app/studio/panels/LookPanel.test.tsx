@@ -1,7 +1,7 @@
 // Look panel flows: surface geometry, the shape family, colors, eye shape and
 // placement, extra primitives and ambient idle motion (FR-2, FR-2.6, FR-2.7,
-// FR-3, FR-7). The panel is rendered with a spy dispatch so each control is
-// checked against the action it commits.
+// FR-3, FR-3.4, FR-7). The panel is rendered with a spy dispatch so each
+// control is checked against the action it commits.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   cleanup,

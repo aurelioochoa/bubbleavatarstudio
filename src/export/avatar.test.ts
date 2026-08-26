@@ -1,4 +1,6 @@
-// FR-10 export: portable avatar building and snapshot determinism.
+// FR-10 export: a character file is one bubble plus its effective kit
+// (FR-10.2), the loop picker decides what rides along (FR-10.3), and a
+// snapshot is deterministic (FR-10.1).
 import { describe, expect, it } from "vitest";
 import {
   AVATAR_VERSION,

@@ -1,4 +1,6 @@
-// FR-11 validation coverage of all error codes (docs/03 §7).
+// FR-11 validation coverage of all error codes (docs/03 §7), including the
+// invariant no type can hold on its own: the active bubble is one that exists,
+// or none at all (FR-1.6).
 import { describe, expect, it } from "vitest";
 import { validateDocument } from "./validate";
 import { createDefaultDocument } from "./create";

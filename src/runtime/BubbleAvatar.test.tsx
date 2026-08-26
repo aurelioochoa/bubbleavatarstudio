@@ -1,4 +1,6 @@
-// BubbleAvatar runtime tests (jsdom per vite config).
+// FR-10.4 runtime: <BubbleAvatar/> is a pure function of its props with no
+// storage or network access, and renders the SVG the studio stage renders for
+// the same definition and state (jsdom per vite config).
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { BubbleAvatar } from "./BubbleAvatar";

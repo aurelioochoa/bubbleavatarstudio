@@ -1,4 +1,11 @@
-// Visual smoke per docs/08 F5: boot, panels, playing loop.
+// Visual smoke in a real browser, for the questions jsdom cannot decide:
+// the shell boots and lays out (FR-9.1), the four panels expose their controls
+// (FR-2, FR-3, FR-4, FR-5, FR-10), the transport plays and the playhead
+// actually moves (FR-6.2, FR-6.6, FR-6.7), the mood editor traps focus over
+// the stage (FR-4.4), the gizmo poses the head and survives a frame (FR-8.1),
+// the wireframe reaches the SVG (FR-8.4), Share previews the snapshot
+// (FR-10.1), a label scrubs (FR-9.5), a card reorders by drag (FR-4.2), and
+// the shell holds together at 1024x720.
 // Screenshots are archived artifacts under docs/screenshots/ — not goldens;
 // the stage runs ambient idle motion, so pixels differ between runs.
 import { expect, test } from "@playwright/test";
@@ -204,7 +211,7 @@ test("drag-to-scrub: dragging a field label changes its value (FR-9.5)", async (
   expect(Number(await width.inputValue())).toBeGreaterThan(before);
 });
 
-test("drag-to-reorder: a mood card dropped on another moves it (FR-1.4)", async ({
+test("drag-to-reorder: a mood card dropped on another moves it (FR-4.2)", async ({
   page,
 }) => {
   await page.goto("/");
