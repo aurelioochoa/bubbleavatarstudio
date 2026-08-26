@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Tailwind auto-detects sources, and that includes prose. The Apache license
+   text says "contents" often enough that `.contents{display:contents}` landed
+   in the production CSS; no other doc in the repo adds a byte, measured. */
+@source not "../../LICENSE";
+
 /* Design tokens for the studio shell (docs/05 §4). Components reference these
    by utility name (bg-panel, text-ink-dim, rounded-card) rather than repeating
    hex literals, so the palette moves in one place. */

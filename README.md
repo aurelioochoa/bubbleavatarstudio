@@ -16,6 +16,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript 5.8">
   <img src="https://img.shields.io/badge/React-19-61dafb" alt="React 19">
   <img src="https://img.shields.io/badge/runtime%20deps-react%20only-brightgreen" alt="React is the only runtime dependency">
+  <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0 licensed">
 </p>
 
 ## Highlights
@@ -132,3 +133,12 @@ delegates to these scripts, which stay the single source of truth.
 - `docs/screenshots/` — the smoke scenarios `pnpm e2e` archives. They are
   artifacts for a human to read against part 05, not goldens; the stage
   animates, so pixels differ between runs.
+
+## License
+
+[Apache License 2.0](LICENSE) — Copyright 2026 Aurelio Ochoa.
+
+Use it, change it, ship it inside a closed-source product and charge for that
+product. All the license asks is that you keep the notice and say what you
+changed. It also grants you a patent license from every contributor, and does
+**not** grant any right to the Bubble Avatar Studio name.
