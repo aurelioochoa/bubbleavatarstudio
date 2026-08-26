@@ -352,3 +352,66 @@ number is the one worth matching.
 14. Our drag rate was 0.2° per pixel against their 0.29, and our pointer axes
     were crossed: horizontal travel drove the pitch, so dragging right tipped
     the character upward instead of turning it.
+
+## Session 2026-08-26 — an expression carries a body pose
+
+> Same method and limits as every session above: the deployed app driven as a
+> user, screenshots and clicks only. No source, no bundle, no network payloads.
+> Character used was the lumpy orange one, whose asymmetry makes a rotation
+> unmistakable — the round one is a sphere revolved, so a yaw leaves its
+> silhouette unchanged and hides exactly the thing being looked for.
+
+### An expression stores a three-axis rotation, not only eye deltas
+
+Their expression editor has a rotation card under the section about the body,
+with three numbered fields — one per axis, in degrees to one decimal, and both
+signs occur. Two presets read:
+
+| preset | X    | Y     | Z     |
+| ------ | ---- | ----- | ----- |
+| 12     | −8.8 | −8.7  | −10.8 |
+| 17     | −4.4 | +14.1 | −16.1 |
+
+So the value is per-expression, not one global pose. The magnitudes are in the
+low tens rather than anywhere near a half turn.
+
+### It moves the whole character, and the grid says so at a glance
+
+Every one of the 27 preset thumbnails draws the character at a visibly
+different orientation — the silhouette leans, the ears land in different
+places, and the proportions change as the body turns. Clicking two of them in
+turn moved the whole body on the stage, not just the eyes, and their
+three-axis rotation widget re-oriented to match each one. That widget is the
+clearest tell available without measuring pixels: it is a picture of the
+current orientation, and it changes when an expression is applied.
+
+### Playback moves the body continuously, not in steps
+
+Two frames captured seconds apart during one animation showed markedly
+different silhouettes and widget orientations. So a pose is not merely
+snapped to at each keyframe; the engine travels between the poses the way it
+travels between the eye deltas.
+
+### How they describe the travel
+
+Their motion card states that the transition interpolates the stored values
+and that the rotation specifically is interpolated as a rotation — spherically,
+between quaternions — rather than one axis at a time. A single spring-speed
+number governs the whole thing (7 on this character). Worth knowing because
+per-axis interpolation of Euler angles takes the long way round whenever two
+poses straddle the wrap, which is a real defect and not a stylistic one.
+
+### Also seen, not acted on
+
+Their expressions carry a stable public key separate from the display name,
+described as what an application loading the avatar would name it by. Ours
+have such a key in the starter content but not in the document (see
+`domain/content/moods.ts`, where `key` is local and `starterKit()` is the only
+thing that resolves it). Noted for a future parity pass, not this one.
+
+### Parity gaps, updated
+
+15. Their expressions carry a body pose — three rotation axes per expression,
+    interpolated across a loop's steps — and ours carry only per-eye deltas
+    and an optional colour. Our animations move the eyes on a body that never
+    moves.
