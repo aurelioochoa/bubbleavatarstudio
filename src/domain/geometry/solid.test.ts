@@ -253,6 +253,38 @@ describe("solidOutline", () => {
       for (const v of r) expect(v).toBeGreaterThan(0);
     }
   });
+
+  // "Not empty" has to be measured against the widest bin, not against zero.
+  // Pole-on, `cos(90°)` is 6e-17 rather than 0, so the profile's two poles —
+  // single points on the axis of revolution — land in bins as radii of about
+  // 1e-14. Positive, so `fillGaps` read them as samples and left them in, and
+  // `smoothRadii` then averaged each with its two full-width neighbours into a
+  // notch cut halfway to the centre.
+  //
+  // The shipped azimuth count hides this: a real sample lands in those bins
+  // too and overwrites them. Sampled coarsely enough that it does not, the
+  // silhouette must still degrade to a coarse ellipse rather than to a
+  // starburst — which is what a drop, capsule, cylinder, cone or diamond
+  // turned to face the viewer directly used to become.
+  it("counts a bin as reached only if a real sample reached it", () => {
+    for (const shape of ["drop", "capsule", "cylinder", "cone", "diamond"] as const) {
+      const r = solidRadii(
+        at({ shape, azimuths: 48, rotation: { x: 90, y: 0, z: 0 } }),
+      );
+      let lo = Infinity;
+      let hi = 0;
+      for (const v of r) {
+        lo = Math.min(lo, v);
+        hi = Math.max(hi, v);
+      }
+      // The pole-on silhouette is the widest ring: an ellipse whose narrow
+      // axis is the depth-to-width aspect, here 170/220.
+      expect({ shape, spread: lo / hi }).toMatchObject({
+        spread: expect.any(Number),
+      });
+      expect(lo / hi).toBeGreaterThan(0.7);
+    }
+  });
 });
 
 describe("isAnalyticSolid", () => {
@@ -360,6 +392,219 @@ describe("solidRadii · a cube stays a cube from every side", () => {
         jitter: expect.any(Number),
       });
       expect(jitter(r)).toBeLessThan(0.06);
+    }
+  });
+});
+
+describe("solidRadii · a solid of revolution seen pole-on is its widest ring", () => {
+  // Looking straight down the axis a body is revolved about, the silhouette is
+  // the widest ring the profile sweeps and nothing else — a clean ellipse,
+  // whatever lumps or tapers the profile has along its height.
+  //
+  // Two things break there and only there. The profile's own y is multiplied
+  // by cos(pitch), so at the pole it contributes no angular variety at all and
+  // every screen angle has to come from the cross-section; at 48 azimuths that
+  // is half the angular resolution the bins ask for. And cos(pitch) is not
+  // zero but 6e-17, so the profile's poles land in bins as radii of about
+  // 1e-14 — non-zero, which is what `fillGaps` used to read as "this bin has a
+  // sample" before it smoothed each of them into a notch cut to the centre.
+  const FAMILIES = [
+    "drop",
+    "cube",
+    "capsule",
+    "cylinder",
+    "cone",
+    "diamond",
+  ] as const;
+
+  const spread = (r: Float64Array): number => {
+    let lo = Infinity;
+    let hi = 0;
+    for (const v of r) {
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    return lo / hi;
+  };
+
+  /** Worst jump between neighbouring bins, as a fraction of the widest. */
+  const jitter = (r: Float64Array): number => {
+    let hi = 0;
+    for (const v of r) hi = Math.max(hi, v);
+    let worst = 0;
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i] ?? 0;
+      const b = r[(i + 1) % r.length] ?? 0;
+      worst = Math.max(worst, Math.abs(a - b));
+    }
+    return worst / hi;
+  };
+
+  // Swept a degree at a time rather than at a handful of round angles: at 96
+  // azimuths the pole itself came out clean and 89.4 degrees still spiked to
+  // 10%, because the ring's samples are spaced along its perimeter and only
+  // land one per bin when there are comfortably more of them than there are
+  // bins. A test that checked 88, 90 and 92 would have passed that.
+  it("never collapses into notches at or near the pole", () => {
+    for (const shape of FAMILIES) {
+      for (let x = 78; x <= 102; x++) {
+        for (const sign of [1, -1]) {
+          const r = solidRadii(
+            at({ shape, rotation: { x: x * sign, y: 0, z: 0 } }),
+          );
+          expect({ shape, x: x * sign, spread: spread(r) }).toMatchObject({
+            spread: expect.any(Number),
+          });
+          expect(spread(r)).toBeGreaterThan(0.5);
+          expect({ shape, x: x * sign, jitter: jitter(r) }).toMatchObject({
+            jitter: expect.any(Number),
+          });
+          // A cube's cross-section really is a square, so a bin either side of
+          // a corner really does jump; the surfaces of revolution have no such
+          // excuse anywhere near the pole, where their silhouette is a circle.
+          expect(jitter(r)).toBeLessThan(shape === "cube" ? 0.06 : 0.03);
+        }
+      }
+    }
+  });
+
+  it("is the ellipse the widest ring projects to", () => {
+    // Every family here but `cube` is a surface of revolution, so pole-on its
+    // silhouette is exactly the circle of the profile's widest point, squashed
+    // by the depth-to-width aspect.
+    for (const shape of FAMILIES.filter((s) => s !== "cube")) {
+      const opts = at({ shape, rotation: { x: 90, y: 0, z: 0 } });
+      let rmax = 0;
+      for (const p of surfacePoints({ ...opts, samples: 192 })) {
+        rmax = Math.max(rmax, Math.abs(p.x));
+      }
+      const kappa = SIZE.depth / SIZE.width;
+
+      const got = solidRadii(opts);
+      const want = Float64Array.from(got, (_, k) => {
+        const a = (k * 2 * Math.PI) / got.length;
+        return (
+          (rmax * kappa) /
+          Math.hypot(kappa * Math.cos(a), Math.sin(a))
+        );
+      });
+      expect({ shape, off: worstRatio(got, want) }).toMatchObject({
+        off: expect.any(Number),
+      });
+      expect(worstRatio(got, want)).toBeLessThan(0.05);
+    }
+  });
+});
+
+describe("solidRadii · the sampler has converged", () => {
+  // The honest measure of an artifact: compare the shipped sampling against a
+  // heavily oversampled reference of the *same solid*. Real geometry appears
+  // in both and cancels; only under-sampling shows up.
+  //
+  // This is what caught the case the pole test above misses. The cross-section
+  // is sampled round its own perimeter, and on an eccentric one — a shallow
+  // body, where the depth-to-width aspect is small — arc length piles the
+  // samples onto the ends of the wide axis and starves the flattened sides.
+  // Those starved directions are exactly the ones a pole-on silhouette is made
+  // of, so a shallow capsule a degree off the pole came out with a sawtooth
+  // edge: 84% away from its own converged shape at depth 20, against 1.7% at
+  // the default depth of 170.
+  const REFERENCE_AZIMUTHS = 512;
+
+  const convergence = (o: Parameters<typeof solidRadii>[0]): number => {
+    const got = solidRadii(o);
+    const want = solidRadii({ ...o, azimuths: REFERENCE_AZIMUTHS });
+    let worst = 0;
+    for (let i = 0; i < got.length; i++) {
+      const a = got[i] ?? 0;
+      const b = want[i] ?? 0;
+      worst = Math.max(worst, Math.abs(a - b) / Math.max(a, b));
+    }
+    return worst;
+  };
+
+  it("agrees with its own oversampled reference", () => {
+    // Depths where 96 angular bins can represent the shape at all. Shallower
+    // than that the silhouette is a razor sliver whose tip is a near-cusp, and
+    // what limits the reading is the bin count rather than the ring — a
+    // different limit, and the one the sawtooth test below covers instead.
+    for (const depth of [100, 170, 400]) {
+      for (const shape of [
+        "round",
+        "drop",
+        "cube",
+        "capsule",
+        "cylinder",
+        "cone",
+        "diamond",
+      ] as const) {
+        for (const x of [-90.5, -90, 89.5, 90]) {
+          for (const y of [0, 60]) {
+            const off = convergence({
+              ...SIZE,
+              depth,
+              shape,
+              perspective: 1,
+              rotation: { x, y, z: 0 },
+            });
+            expect({ shape, depth, x, y, off }).toMatchObject({
+              off: expect.any(Number),
+            });
+            expect(off).toBeLessThan(0.06);
+          }
+        }
+      }
+    }
+  });
+
+  // Counting local maxima separates the two things the metrics above conflate.
+  // A sliver has two, one at each end, however sharp they are; a sawtooth has
+  // one per starved direction. This holds at every depth, including the ones
+  // the convergence test cannot speak for.
+  const localMaxima = (r: Float64Array): number => {
+    const n = r.length;
+    let count = 0;
+    for (let i = 0; i < n; i++) {
+      const a = r[(i - 1 + n) % n] ?? 0;
+      const b = r[i] ?? 0;
+      const c = r[(i + 1) % n] ?? 0;
+      // The margin ignores ripples too small to see: a flat face resolved to
+      // within a twentieth of a percent is flat, not a row of teeth.
+      if (b > a * 1.0005 && b >= c * 1.0005) count++;
+    }
+    return count;
+  };
+
+  it("draws a shallow body as a sliver, not as a row of teeth", () => {
+    for (const depth of [10, 20, 50, 170]) {
+      for (const shape of [
+        "drop",
+        "cube",
+        "capsule",
+        "cylinder",
+        "cone",
+        "diamond",
+      ] as const) {
+        for (let x = -94; x <= -86; x += 0.5) {
+          for (const y of [0, 45, 90]) {
+            const r = solidRadii({
+              ...SIZE,
+              depth,
+              shape,
+              perspective: 1,
+              rotation: { x, y, z: 0 },
+            });
+            const peaks = localMaxima(r);
+            // A cube's cross-section has four corners of its own; everything
+            // else here is a surface of revolution and pole-on has none.
+            const cap = shape === "cube" ? 8 : 4;
+            expect({ shape, depth, x, y, peaks }).toMatchObject({
+              peaks: expect.any(Number),
+            });
+            expect(peaks).toBeLessThanOrEqual(cap);
+          }
+        }
+      }
     }
   });
 });

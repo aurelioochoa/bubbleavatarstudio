@@ -45,27 +45,41 @@ import { rotatePoint, turnAngles } from "./projection";
  */
 const PROFILE_SAMPLES = 192;
 /**
- * Azimuths each profile point is revolved through. Measured: at rest the count
- * makes no difference at all (the widest sample is always the one that has not
- * been swept yet), and under a turn the residual against the analytic
- * ellipsoid stops improving past about 48. Below that a pitched round body
- * starts to disagree with its own closed form. 48 costs roughly a tenth of a
- * frame for the whole silhouette, and a memo makes even that free unless the
- * head is actually moving.
- */
-const AZIMUTHS = 48;
-/**
- * Azimuths a boxy cross-section needs.
+ * Azimuths each profile point is revolved through.
  *
- * A superellipse spends almost all of its parameter on the corners and crosses
- * each flat face in a sliver of it, so the face centres — the samples that
- * decide how wide a nearly edge-on box looks — are the first thing lost. At 48
- * a cube pitched past about 80 degrees ran 36, 48, 36 across neighbouring bins
- * along its top edge, where the truth is a flat 88, and it read as a pair of
- * notches bitten out of the silhouette. At 128 that edge is flat, and 512 is
+ * Two samplings feed the same angular bins, and which one carries them depends
+ * on the turn. Face-on, a screen angle is decided by where the point sits on
+ * the profile, and the cross-section only scales it in x. Pole-on, the turn
+ * multiplies the profile's own y by `cos(pitch)` and annihilates it: the
+ * cross-section then decides every screen angle by itself and the profile
+ * contributes none. So the count has to clear `KNOTS` with room to spare —
+ * these azimuths are spaced evenly along the ring's perimeter, not evenly in
+ * angle, so a count merely equal to the bins still collides in places and
+ * leaves holes elsewhere.
+ *
+ * That is why 48 was enough for years of face-on and yawed poses and then fell
+ * apart the first time a character was turned to look straight up. At 48
+ * azimuths feeding 96 bins a pole-on body had every other bin guessed at by
+ * `fillGaps`, and a drop, capsule, cylinder, cone or diamond ran visibly
+ * polygonal — worst jump between neighbouring bins 8-14% of the radius. 96
+ * fixes the pole itself but still spikes to 10% a degree short of it; 128
+ * holds every family under 2% across the whole approach, and 160 and 192 are
  * indistinguishable from it.
+ *
+ * A boxy cross-section wanted 128 already, for its own reason: a superellipse
+ * spends almost all of its parameter on the corners and crosses each flat face
+ * in a sliver of it, so the face centres — the samples that decide how wide a
+ * nearly edge-on box looks — are the first thing lost. At 48 a cube pitched
+ * past about 80 degrees ran 36, 48, 36 across neighbouring bins along its top
+ * edge, where the truth is a flat 88.
+ *
+ * Two reasons, one number, so there is one constant. The residual against the
+ * analytic ellipsoid stopped improving past about 48, so nothing else in the
+ * silhouette asks for any of this. Measured cost for the whole silhouette is
+ * around a tenth of a frame, and a memo makes even that free unless the head
+ * is actually moving.
  */
-const BOXY_AZIMUTHS = 128;
+const AZIMUTHS = 128;
 /**
  * Output knots, and the number of angular bins.
  *
@@ -153,26 +167,34 @@ function buildSweep(
   // superellipsoid — and because both start at (1, 0), either way the flat
   // outline is still the solid's own equator.
   const boxy = o.shape === "cube";
-  const azimuths = Math.max(
-    3,
-    requestedAzimuths ?? (boxy ? BOXY_AZIMUTHS : AZIMUTHS),
-  );
+  const azimuths = Math.max(3, requestedAzimuths ?? AZIMUTHS);
   // The same exponent the profile was drawn at. Sweep at a different one and
   // the solid meets itself at a crease, which shows as the silhouette notching
   // inward once the head turns.
   const power = boxy ? 2 / cubeExponent(o.roundness) : 1;
 
-  // The cross-section, sampled evenly along its own perimeter rather than
+  // The cross-section, sampled evenly in its own polar angle rather than
   // evenly in the parameter that draws it.
   //
-  // This matters only for `cube`, and it matters enormously. A superellipse is
-  // parameterised by angle, but at a boxy exponent almost every parameter
-  // value lands on a corner — |cos psi|^0.15 sits within a hair of 1 across
-  // most of its range and then falls off a cliff. Sampling psi evenly samples
-  // the corners densely and the flat faces barely at all, so the ring is four
-  // points pretending to be a square. Face-on that hid, because the corners
-  // still bound the silhouette; pitched, the solid came apart into a pinwheel.
-  const ring = evenlySpaced(
+  // Neither of the obvious spacings works. Evenly in the parameter fails for
+  // `cube`: a superellipse is parameterised by angle, but at a boxy exponent
+  // almost every parameter value lands on a corner — |cos psi|^0.15 sits
+  // within a hair of 1 across most of its range and then falls off a cliff —
+  // so the corners are sampled densely and the flat faces barely at all, and
+  // the ring is four points pretending to be a square.
+  //
+  // Evenly along the perimeter fixes that and fails for a shallow body. Arc
+  // length piles samples onto the ends of the wide axis of an eccentric
+  // cross-section and starves its flattened sides, and pole-on those starved
+  // directions are the whole silhouette — see `AZIMUTHS` for why the ring
+  // carries every screen angle there. A capsule of depth 20 in a 220 box came
+  // out with a sawtooth edge, 84% away from its own converged shape.
+  //
+  // Polar angle is the spacing the bins actually ask for: pole-on a ring
+  // sample's screen angle *is* its polar angle, so one sample per direction is
+  // one sample per bin whatever the aspect, and a boxy face centre is a
+  // direction like any other.
+  const ring = byPolarAngle(
     Array.from({ length: azimuths * 4 }, (_, j) => {
       const psi = (2 * Math.PI * j) / (azimuths * 4);
       return boxy
@@ -317,6 +339,49 @@ function signedPow(v: number, m: number): number {
 }
 
 /**
+ * Resamples a closed, star-shaped ring evenly in polar angle.
+ *
+ * `pts` must run once counter-clockwise from (1, 0) — both cross-sections do,
+ * and both have a polar angle that increases strictly with the parameter, so
+ * the walk below never has to search backwards. The returned points keep the
+ * ring's own shape; only which points of it are kept changes.
+ *
+ * The first output is `pts[0]` unchanged, which is what keeps the flat outline
+ * the solid's own equator.
+ */
+function byPolarAngle(pts: Point[], count: number): Point[] {
+  const n = pts.length;
+  if (n < 3) return pts;
+
+  // Unwrapped so the angles increase monotonically across the seam at ±pi
+  // instead of jumping, which is what lets one forward walk cover the ring.
+  const angle: number[] = [];
+  let turns = 0;
+  let prev = 0;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i];
+    const a = Math.atan2(p.y, p.x);
+    if (i > 0 && a < prev - Math.PI) turns += 2 * Math.PI;
+    prev = a;
+    angle.push(a + turns);
+  }
+
+  const out: Point[] = [];
+  let seg = 0;
+  for (let k = 0; k < count; k++) {
+    const want = (2 * Math.PI * k) / count;
+    while (seg < n - 1 && (angle[seg + 1] ?? 0) < want) seg++;
+    const a = pts[seg];
+    const b = pts[(seg + 1) % n];
+    const start = angle[seg] ?? 0;
+    const span = (angle[seg + 1] ?? 2 * Math.PI) - start;
+    const t = span === 0 ? 0 : (want - start) / span;
+    out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  }
+  return out;
+}
+
+/**
  * Resamples a closed outline evenly along its perimeter.
  *
  * The families sample themselves by their own parameter, which clusters points
@@ -356,23 +421,41 @@ function evenlySpaced(pts: Point[], count: number): Point[] {
 }
 
 /**
+ * How large a bin's radius has to be, relative to the widest, to count as a
+ * sample rather than as numerical dust. See `fillGaps`.
+ */
+const REACHED = 1e-6;
+
+/**
  * Interpolates any bin no sample reached. A hole would otherwise read as a
  * dent the character does not have — and at a sharp taper the gap is real
  * geometry, not noise, so it has to be bridged rather than sampled harder.
+ *
+ * "Reached" is measured against the widest bin rather than against zero. Seen
+ * pole-on the turn annihilates the profile's own y — `cos(90°)` is 6e-17, not
+ * 0 — so the profile's two poles, which are single points on the axis, land in
+ * bins as radii of about 1e-14. Read as samples they pin those bins to nothing
+ * and `smoothRadii` then cuts a notch halfway to the centre beside each one,
+ * which is the deformation a drop, capsule, cylinder, cone or diamond showed
+ * when it was turned to face the viewer directly.
  */
 function fillGaps(radii: Float64Array): Float64Array {
   const n = radii.length;
+  let hi = 0;
+  for (const v of radii) hi = Math.max(hi, v);
+  const floor = hi * REACHED;
+
   let filled = 0;
-  for (const v of radii) if (v > 0) filled++;
+  for (const v of radii) if (v > floor) filled++;
   if (filled === n || filled === 0) return radii;
 
   const out = Float64Array.from(radii);
   for (let i = 0; i < n; i++) {
-    if ((out[i] ?? 0) > 0) continue;
+    if ((out[i] ?? 0) > floor) continue;
     let back = 1;
-    while (back < n && (radii[(i - back + n) % n] ?? 0) === 0) back++;
+    while (back < n && (radii[(i - back + n) % n] ?? 0) <= floor) back++;
     let fwd = 1;
-    while (fwd < n && (radii[(i + fwd) % n] ?? 0) === 0) fwd++;
+    while (fwd < n && (radii[(i + fwd) % n] ?? 0) <= floor) fwd++;
     const a = radii[(i - back + n) % n] ?? 0;
     const b = radii[(i + fwd) % n] ?? 0;
     out[i] = a + ((b - a) * back) / (back + fwd);
