@@ -263,15 +263,15 @@ export function StudioView() {
               />
             )}
             {tab === "loops" && (
-              <PanelScroll>
-                <LoopsPanel
-                  kit={kit}
-                  dispatch={dispatch}
-                  t={t}
-                  selectedLoopId={selectedLoopId}
-                  onSelectLoop={selectLoop}
-                />
-              </PanelScroll>
+              <LoopsPanel
+                kit={kit}
+                dispatch={dispatch}
+                t={t}
+                selectedLoopId={selectedLoopId}
+                onSelectLoop={selectLoop}
+                selectedStepId={selectedStepId}
+                onSelectStep={setSelectedStepId}
+              />
             )}
             {tab === "share" && (
               <PanelScroll>

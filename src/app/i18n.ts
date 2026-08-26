@@ -127,6 +127,13 @@ export type MessageKey =
   | "loops.summaryBlink"
   | "loops.blinkOff"
   | "loops.step"
+  | "loops.stepOf"
+  | "loops.hold"
+  | "loops.entryTransition"
+  | "loops.moveLeft"
+  | "loops.moveRight"
+  | "loops.noStep"
+  | "loops.settings"
   | "loops.transitionLinear"
   | "loops.transitionEase"
   | "loops.transitionSpring"
@@ -304,6 +311,13 @@ const es: Record<MessageKey, string> = {
   "loops.summaryBlink": "Parpadeo",
   "loops.blinkOff": "Sin parpadeo",
   "loops.step": "Paso",
+  "loops.stepOf": "de",
+  "loops.hold": "Mantener",
+  "loops.entryTransition": "Transición de entrada",
+  "loops.moveLeft": "Mover el paso a la izquierda",
+  "loops.moveRight": "Mover el paso a la derecha",
+  "loops.noStep": "Elige un paso en la pista para ajustarlo",
+  "loops.settings": "Ciclo",
   "loops.transitionLinear": "Lineal",
   "loops.transitionEase": "Suave",
   "loops.transitionSpring": "Muelle",
@@ -487,6 +501,13 @@ const en: Record<MessageKey, string> = {
   "loops.summaryBlink": "Blink",
   "loops.blinkOff": "No blinking",
   "loops.step": "Step",
+  "loops.stepOf": "of",
+  "loops.hold": "Hold",
+  "loops.entryTransition": "Entry transition",
+  "loops.moveLeft": "Move step left",
+  "loops.moveRight": "Move step right",
+  "loops.noStep": "Pick a step on the track to tune it",
+  "loops.settings": "Loop",
   "loops.transitionLinear": "Linear",
   "loops.transitionEase": "Ease",
   "loops.transitionSpring": "Spring",

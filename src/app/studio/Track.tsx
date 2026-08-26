@@ -33,6 +33,7 @@ import type { StageMode } from "../stage/StageEngine";
 import type { MessageKey } from "../i18n";
 import type { Action } from "./store";
 import { Menu, MenuItem, RangeInput, Segmented } from "./ui";
+import { useDragReorder } from "./dragReorder";
 
 export interface TrackProps {
   bubble: Bubble;
@@ -149,6 +150,16 @@ export function Track({
   const [seamFor, setSeamFor] = useState<string | null>(null);
   /** FR-5.10: where a mood being dragged over the strip would land. */
   const [dropAt, setDropAt] = useState<number | null>(null);
+  // The step list left the inspector for the track, and FR-5.2's drag came
+  // with it. A mood from the tray travels on the same MIME and is not in this
+  // list of ids, so `movedOrder` declines it and it falls through to the
+  // strip's own handler, which is what turns it into a new step.
+  const stepDrag = useDragReorder(
+    kit.loops.find((l) => l.id === loopId)?.steps.map((s) => s.id) ?? [],
+    (stepIds) => {
+      if (loopId) dispatch({ type: "step/reorder", loopId, stepIds });
+    },
+  );
   const stripRef = useRef<HTMLOListElement>(null);
 
   // A bubble switch can leave the selection pointing at another kit's loop;
@@ -453,6 +464,7 @@ export function Track({
                     }}
                     stripRef={stripRef}
                     stripMs={stripMs}
+                    dragProps={stepDrag.itemProps(step.id)}
                   />,
                 ];
               })}
@@ -622,6 +634,7 @@ function StepChip({
   onRetime,
   stripRef,
   stripMs,
+  dragProps,
 }: {
   bubble: Bubble;
   kit: Kit;
@@ -638,6 +651,9 @@ function StepChip({
   onRetime: (holdMs: number) => void;
   stripRef: React.RefObject<HTMLElement | null>;
   stripMs: number;
+  /** FR-5.2's drag, spread on the button rather than the chip: the grip is a
+   *  pointer drag, and a `draggable` ancestor would steal it. */
+  dragProps: ReturnType<ReturnType<typeof useDragReorder>["itemProps"]>;
 }) {
   const mood = kit.moods.find((m) => m.id === step.moodId);
   const thumb = useMemo(
@@ -695,10 +711,11 @@ function StepChip({
       data-testid="step-chip"
       data-step-id={step.id}
       style={{ flexGrow: step.holdMs, flexShrink: 1, flexBasis: 0 }}
-      className="relative min-w-0"
+      className="relative min-w-0 data-[dragging]:opacity-40"
     >
       <button
         type="button"
+        {...dragProps}
         aria-pressed={selected}
         onClick={onSelect}
         className={`flex h-full w-full items-center gap-2.5 overflow-hidden rounded-[10px] px-2.5 text-left transition-colors duration-150 ease-out ${

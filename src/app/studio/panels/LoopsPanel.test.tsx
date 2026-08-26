@@ -1,5 +1,10 @@
-// Loops panel: rename (FR-5.2), the blink card (FR-5.5), the summary a loop
-// shows of itself (FR-5.8) and the grouped loop list (docs/05 §2).
+// Loops panel: rename (FR-5.2), the blink card (FR-5.5), the grouped loop list
+// with its proportion bars, and the editor for the step the track has in hand
+// (FR-5.1, FR-6.7).
+//
+// The sequence itself moved to the track, and the FR-5.8 summary went with it —
+// steps, cycle and blink are stated there now, and each step's own duration is
+// the width and the caption of its chip. Track.test.tsx covers those.
 //
 // Fields are controlled by props and dispatch is a spy that never updates
 // them, so each case commits a whole value in one change event.
@@ -14,12 +19,16 @@ import type { Kit } from "../../../domain/document/types";
 
 beforeEach(cleanup);
 
-function setup(mutate: (k: Kit) => Kit = (k) => k) {
+function setup(
+  mutate: (k: Kit) => Kit = (k) => k,
+  over: { selectedStepId?: string | null } = {},
+) {
   const doc = createDefaultDocument();
   const bubble = doc.bubbles[0];
   if (!bubble) throw new Error("fixture missing bubble");
   const kit = mutate(structuredClone(effectiveKit(bubble, doc)));
   const dispatch = vi.fn();
+  const onSelectStep = vi.fn();
   const first = kit.loops[0];
   if (!first) throw new Error("fixture missing loop");
   render(
@@ -29,14 +38,30 @@ function setup(mutate: (k: Kit) => Kit = (k) => k) {
       t={translator("es")}
       selectedLoopId={first.id}
       onSelectLoop={() => {}}
+      selectedStepId={over.selectedStepId ?? null}
+      onSelectStep={onSelectStep}
     />,
   );
-  return { kit, dispatch, loop: first };
+  return { kit, dispatch, loop: first, onSelectStep };
+}
+
+/**
+ * The loop and blink cards start collapsed: the list is what the panel is for,
+ * and these are settings you go looking for. Every case that reaches inside
+ * one opens it first, the way a user would.
+ */
+async function openCard(
+  user: ReturnType<typeof userEvent.setup>,
+  title: string,
+) {
+  await user.click(screen.getByRole("button", { name: title }));
 }
 
 describe("loop rename (FR-5.2)", () => {
-  it("commits the typed name to the selected loop", () => {
+  it("commits the typed name to the selected loop", async () => {
+    const user = userEvent.setup();
     const { dispatch, loop } = setup();
+    await openCard(user, "Ciclo");
     fireEvent.change(screen.getByLabelText("Nombre del ciclo"), {
       target: { value: "saludo" },
     });
@@ -47,8 +72,10 @@ describe("loop rename (FR-5.2)", () => {
     });
   });
 
-  it("ignores a blank name rather than committing an invalid one", () => {
+  it("ignores a blank name rather than committing an invalid one", async () => {
+    const user = userEvent.setup();
     const { dispatch } = setup();
+    await openCard(user, "Ciclo");
     fireEvent.change(screen.getByLabelText("Nombre del ciclo"), {
       target: { value: "   " },
     });
@@ -68,8 +95,10 @@ describe("blink card (FR-5.5)", () => {
     });
   });
 
-  it("commits a blink duration without touching the intervals", () => {
+  it("commits a blink duration without touching the intervals", async () => {
+    const user = userEvent.setup();
     const { dispatch, loop } = setup();
+    await openCard(user, "Parpadeo");
     fireEvent.change(screen.getByLabelText("Duración del parpadeo (ms)"), {
       target: { value: "220" },
     });
@@ -78,88 +107,6 @@ describe("blink card (FR-5.5)", () => {
       loopId: loop.id,
       patch: { blink: { ...loop.blink, durationMs: 220 } },
     });
-  });
-});
-
-describe("loop summary (FR-5.8)", () => {
-  it("reports the step count, each hold and the whole cycle", () => {
-    setup((k) => {
-      const l = k.loops[0];
-      if (!l) throw new Error("fixture missing loop");
-      l.mode = "loop";
-      l.steps = [
-        {
-          id: "s1",
-          moodId: l.steps[0]?.moodId ?? "",
-          holdMs: 400,
-          transition: "ease",
-        },
-        {
-          id: "s2",
-          moodId: l.steps[0]?.moodId ?? "",
-          holdMs: 1600,
-          transition: "ease",
-        },
-      ];
-      return k;
-    });
-    const summary = screen.getByTestId("loop-summary").textContent ?? "";
-    expect(summary).toContain("2 pasos");
-    expect(summary).toContain("0.4 · 1.6 s");
-    expect(summary).toContain("2.0 s");
-  });
-
-  it("counts the leg a pingpong cycle plays back", () => {
-    setup((k) => {
-      const l = k.loops[0];
-      if (!l) throw new Error("fixture missing loop");
-      l.mode = "pingpong";
-      l.steps = [
-        {
-          id: "s1",
-          moodId: l.steps[0]?.moodId ?? "",
-          holdMs: 400,
-          transition: "ease",
-        },
-        {
-          id: "s2",
-          moodId: l.steps[0]?.moodId ?? "",
-          holdMs: 1600,
-          transition: "ease",
-        },
-      ];
-      return k;
-    });
-    // 0.4 + 1.6 + 0.4 back = 2.4s, not the 2.0s the authored steps sum to.
-    expect(screen.getByTestId("loop-summary").textContent).toContain("2.4 s");
-  });
-
-  it("states the blink interval and duration, and says so when it is off", () => {
-    setup((k) => {
-      const l = k.loops[0];
-      if (!l) throw new Error("fixture missing loop");
-      l.blink = {
-        enabled: true,
-        minIntervalMs: 2000,
-        maxIntervalMs: 5000,
-        durationMs: 140,
-      };
-      return k;
-    });
-    const summary = screen.getByTestId("loop-summary").textContent ?? "";
-    expect(summary).toContain("2.0–5.0 s");
-    expect(summary).toContain("140 ms");
-
-    cleanup();
-    setup((k) => {
-      const l = k.loops[0];
-      if (!l) throw new Error("fixture missing loop");
-      l.blink = { ...l.blink, enabled: false };
-      return k;
-    });
-    expect(screen.getByTestId("loop-summary").textContent).toContain(
-      "Sin parpadeo",
-    );
   });
 });
 
@@ -174,6 +121,7 @@ describe("grouped loop list (docs/05 §2)", () => {
   it("moves a loop between groups", async () => {
     const user = userEvent.setup();
     const { dispatch, loop } = setup();
+    await openCard(user, "Ciclo");
     const target = loop.group === "life" ? "Reacciones" : "Vida";
     await user.click(screen.getByRole("radio", { name: target }));
     expect(dispatch).toHaveBeenCalledWith({
@@ -183,56 +131,175 @@ describe("grouped loop list (docs/05 §2)", () => {
     });
   });
 
-  it("keeps a group the starter catalogue never names selectable", () => {
+  it("keeps a group the starter catalogue never names selectable", async () => {
+    const user = userEvent.setup();
     setup((k) => {
       const l = k.loops[0];
       if (!l) throw new Error("fixture missing loop");
       l.group = "cinemática";
       return k;
     });
+    await openCard(user, "Ciclo");
     expect(screen.getByRole("radio", { name: "cinemática" })).toBeTruthy();
   });
 });
-/** jsdom's drag events carry no dataTransfer; supply the parts the hook reads. */
-function dragCard(from: Element, to: Element) {
-  const data = new Map<string, string>();
-  const dataTransfer = {
-    setData: (k: string, v: string) => data.set(k, v),
-    getData: (k: string) => data.get(k) ?? "",
-    effectAllowed: "",
-    dropEffect: "",
-  };
-  fireEvent.dragStart(from, { dataTransfer });
-  fireEvent.dragOver(to, { dataTransfer });
-  fireEvent.drop(to, { dataTransfer });
-}
-
-const rowOf = (el: Element): Element => {
-  const li = el.closest("li");
-  if (!li) throw new Error("expected the control to sit in a list row");
-  return li;
-};
-
-describe("step reorder by drag (FR-5.2, docs/05 §2)", () => {
-  it("keeps the ↑ ↓ fallback alongside the drag", () => {
-    setup();
+describe("loop rows (docs/05 §2)", () => {
+  it("draws each loop's own proportions, so it can be told by its shape", () => {
+    const { loop } = setup((k) => {
+      const l = k.loops[0];
+      if (!l) throw new Error("fixture missing loop");
+      l.steps = [
+        {
+          id: "s1",
+          moodId: l.steps[0]?.moodId ?? "",
+          holdMs: 400,
+          transition: "ease",
+        },
+        {
+          id: "s2",
+          moodId: l.steps[0]?.moodId ?? "",
+          holdMs: 1600,
+          transition: "ease",
+        },
+      ];
+      return k;
+    });
+    const shape = screen.getAllByTestId("loop-shape")[0];
     expect(
-      screen.getAllByRole("button", { name: /Subir paso/ }).length,
-    ).toBeGreaterThan(0);
+      [...shape.children].map((c) => (c as HTMLElement).style.flexGrow),
+    ).toEqual(["400", "1600"]);
+    expect(shape.closest("button")?.textContent).toContain("2.00 s");
+    expect(loop.steps).toHaveLength(2);
   });
 
-  it("moves a step without changing which mood it references", () => {
-    const { dispatch, loop } = setup();
-    if (loop.steps.length < 3) throw new Error("fixture needs three steps");
-    dragCard(
-      rowOf(screen.getByLabelText("Nombre 1")),
-      rowOf(screen.getByLabelText("Nombre 3")),
+  it("marks the loop in hand for assistive tech, not only in paint", () => {
+    const { loop } = setup();
+    const rows = screen.getAllByRole("button", { pressed: true });
+    expect(rows.map((r) => r.textContent?.startsWith(loop.name))).toContain(
+      true,
     );
-    const ids = loop.steps.map((s) => s.id);
+  });
+});
+
+describe("step editor (FR-5.1, FR-6.7)", () => {
+  it("asks for a step rather than showing empty controls", () => {
+    setup();
+    expect(
+      screen.getByText("Elige un paso en la pista para ajustarlo"),
+    ).toBeTruthy();
+  });
+
+  it("says which step of how many is in hand", () => {
+    setup(
+      (k) => {
+        const l = k.loops[0];
+        if (!l) throw new Error("fixture missing loop");
+        l.steps = l.steps.map((st, i) => ({ ...st, id: `s${String(i + 1)}` }));
+        return k;
+      },
+      { selectedStepId: "s2" },
+    );
+    const editor = screen.getByTestId("step-editor");
+    expect(editor.textContent).toContain("Paso 2 de");
+  });
+
+  it("holds are edited in seconds, the unit the timeline is ruled in", () => {
+    const { dispatch, loop } = setup(
+      (k) => {
+        const l = k.loops[0];
+        if (!l) throw new Error("fixture missing loop");
+        l.steps = l.steps.map((st, i) => ({
+          ...st,
+          id: `s${String(i + 1)}`,
+          holdMs: 700,
+        }));
+        return k;
+      },
+      { selectedStepId: "s2" },
+    );
+    const field = screen.getByLabelText("Mantener");
+    expect((field as HTMLInputElement).value).toBe("0.7");
+    fireEvent.change(field, { target: { value: "1.25" } });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/update",
+      loopId: loop.id,
+      stepId: "s2",
+      patch: { holdMs: 1250 },
+    });
+  });
+
+  it("commits the entry transition the step is given", async () => {
+    const user = userEvent.setup();
+    const { dispatch, loop } = withStepIds();
+    await user.click(screen.getByRole("radio", { name: "Muelle" }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/update",
+      loopId: loop.id,
+      stepId: "s2",
+      patch: { transition: "spring" },
+    });
+  });
+
+  it("changes which mood a step plays without moving it", async () => {
+    const user = userEvent.setup();
+    const { dispatch, kit, loop } = withStepIds();
+    await user.click(screen.getByRole("button", { name: /^Ánimos:/ }));
+    const target = kit.moods[5];
+    if (!target) throw new Error("fixture needs six moods");
+    await user.click(screen.getByRole("menuitem", { name: target.name }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/update",
+      loopId: loop.id,
+      stepId: "s2",
+      patch: { moodId: target.id },
+    });
+  });
+
+  it("keeps ← → as the keyboard path for reordering (FR-5.2)", async () => {
+    // The chips on the track answer a drag; this is the other half of the
+    // pair docs/05 §2 asks for, and it moves a step without touching which
+    // mood it names.
+    const user = userEvent.setup();
+    const { dispatch, loop } = withStepIds();
+    await user.click(
+      screen.getByRole("button", { name: "Mover el paso a la izquierda" }),
+    );
     expect(dispatch).toHaveBeenCalledWith({
       type: "step/reorder",
       loopId: loop.id,
-      stepIds: [ids[1], ids[2], ids[0], ...ids.slice(3)],
+      stepIds: ["s2", "s1", "s3"],
+    });
+  });
+
+  it("cannot move the first step further left", () => {
+    setup(stepIds, { selectedStepId: "s1" });
+    expect(
+      screen
+        .getByRole("button", { name: "Mover el paso a la izquierda" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  it("lets go of the step it just removed", async () => {
+    const user = userEvent.setup();
+    const { dispatch, onSelectStep, loop } = withStepIds();
+    await user.click(screen.getByRole("button", { name: /^Eliminar ·/ }));
+    expect(onSelectStep).toHaveBeenCalledWith(null);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/remove",
+      loopId: loop.id,
+      stepId: "s2",
     });
   });
 });
+
+/** Gives the first loop's steps predictable ids so a case can name one. */
+function stepIds(k: Kit): Kit {
+  const l = k.loops[0];
+  if (!l) throw new Error("fixture missing loop");
+  if (l.steps.length < 3) throw new Error("fixture needs three steps");
+  l.steps = l.steps.map((st, i) => ({ ...st, id: `s${String(i + 1)}` }));
+  return k;
+}
+
+const withStepIds = () => setup(stepIds, { selectedStepId: "s2" });

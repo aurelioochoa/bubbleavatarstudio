@@ -1,32 +1,51 @@
-// Loops panel: steps referencing moods, playback config (FR-5).
-// Transport lives on the stage dock (docs/05 §1), not here — this panel owns
-// which loop is being edited and what that loop is made of. Rows stack rather
-// than sharing one line so nothing clips at the inspector's width.
+// Loops panel: the catalogue, and the one step in hand (FR-5).
+//
+// The sequence itself is not here any more. Steps are chips on the track,
+// where their widths are their durations (FR-6.7), and playback mode, spring
+// speed and step order are edited there too — so what is left in the column is
+// the list of loops to choose between, the loop's own settings, and an editor
+// for whichever step the track has selected.
+//
+// That editor is pinned to the foot of the column rather than sitting in the
+// scroll box: it describes the chip currently lit on the track, and a panel
+// that scrolls its own subject out of view is answering a question nobody
+// asked. Rows carry a proportion bar so a loop can be told from its shape
+// before it is played.
 import type {
   BlinkConfig,
   Kit,
   Loop,
-  PlaybackMode,
+  LoopStep,
   TransitionStyle,
 } from "../../../domain/document/types";
-import { summarizeLoop } from "../../../domain/playback/summary";
+import { stepBounds, summarizeLoop } from "../../../domain/playback/summary";
 import type { Action } from "../store";
 import type { MessageKey } from "../../i18n";
 import { NumberField } from "./look/fields";
-import { Card, IconButton, RangeInput, Segmented } from "../ui";
-import { useDragReorder } from "../dragReorder";
+import { Card, IconButton, Menu, MenuItem, Segmented } from "../ui";
+import { useState } from "react";
 
 export interface LoopsPanelProps {
   kit: Kit;
   dispatch: React.Dispatch<Action>;
   t: (k: MessageKey) => string;
-  /** Shared with the stage dock so "play" always means the selected loop. */
+  /** Shared with the track so "play" always means the selected loop. */
   selectedLoopId: string | null;
   onSelectLoop: (loopId: string) => void;
+  /** The chip lit on the track; this panel edits it (FR-6.7). */
+  selectedStepId: string | null;
+  onSelectStep: (stepId: string | null) => void;
 }
 
-const MODES: PlaybackMode[] = ["loop", "once", "pingpong"];
 const TRANSITIONS: TransitionStyle[] = ["linear", "ease", "spring", "step"];
+
+/** Exhaustive by construction: a new style without a label fails typecheck. */
+const TRANSITION_LABELS: Record<TransitionStyle, MessageKey> = {
+  linear: "loops.transitionLinear",
+  ease: "loops.transitionEase",
+  spring: "loops.transitionSpring",
+  step: "loops.transitionStep",
+};
 
 type LoopPatch = Extract<Action, { type: "loop/update" }>["patch"];
 
@@ -34,7 +53,7 @@ type LoopPatch = Extract<Action, { type: "loop/update" }>["patch"];
 const KNOWN_GROUPS = ["life", "reaction"] as const;
 
 const FIELD =
-  "rounded-field border border-line bg-panel px-2 py-1.5 text-xs text-ink";
+  "rounded-field border border-line bg-stage px-2 py-1.5 text-xs text-ink";
 
 /**
  * A group is a free string, so only the two the catalogue authors are
@@ -58,7 +77,7 @@ function byGroup(loops: Loop[]): { group: string; loops: Loop[] }[] {
   return out;
 }
 
-const seconds = (ms: number): string => (ms / 1000).toFixed(1);
+const s2 = (ms: number): string => (ms / 1000).toFixed(2);
 
 export function LoopsPanel({
   kit,
@@ -66,11 +85,17 @@ export function LoopsPanel({
   t,
   selectedLoopId,
   onSelectLoop,
+  selectedStepId,
+  onSelectStep,
 }: LoopsPanelProps) {
   // Switching bubbles can leave the selection pointing at another kit's loop;
   // fall back to this kit's first loop rather than showing nothing (FR-6.4).
   const loop =
     kit.loops.find((l) => l.id === selectedLoopId) ?? kit.loops.at(0) ?? null;
+  const stepIndex = loop
+    ? loop.steps.findIndex((s) => s.id === selectedStepId)
+    : -1;
+  const step = stepIndex >= 0 ? (loop?.steps[stepIndex] ?? null) : null;
 
   const patchLoop = (loopId: string, patch: LoopPatch) => {
     dispatch({ type: "loop/update", loopId, patch });
@@ -81,13 +106,6 @@ export function LoopsPanel({
     patchLoop(loop.id, { blink: { ...loop.blink, ...patch } });
   };
 
-  const stepDrag = useDragReorder(
-    loop?.steps.map((s) => s.id) ?? [],
-    (stepIds) => {
-      if (loop) dispatch({ type: "step/reorder", loopId: loop.id, stepIds });
-    },
-  );
-
   const groups = byGroup(kit.loops);
   // A group the catalogue never names still needs a chip, or its loops would
   // be unreachable from the control that moves loops between groups.
@@ -96,393 +114,420 @@ export function LoopsPanel({
   ];
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        {groups.map((g) => (
-          <div
-            key={g.group}
-            role="group"
-            aria-label={groupLabel(g.group, t)}
-            className="space-y-1"
-          >
-            <p className="text-[10px] font-semibold tracking-wide text-ink-dim uppercase">
-              {groupLabel(g.group, t)}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+        <div className="space-y-1">
+          {groups.map((g) => (
+            <div
+              key={g.group}
+              role="group"
+              aria-label={groupLabel(g.group, t)}
+              className="space-y-0.5"
+            >
+              <div className="flex items-center gap-2 pt-1.5 pb-1">
+                <span className="text-[9px] font-semibold tracking-[0.09em] text-ink-dim uppercase">
+                  {groupLabel(g.group, t)}
+                </span>
+                <span aria-hidden="true" className="h-px flex-1 bg-line-soft" />
+                <span className="text-[9.5px] tabular-nums text-ink-mute">
+                  {g.loops.length}
+                </span>
+              </div>
               {g.loops.map((l) => (
-                <button
+                <LoopRow
                   key={l.id}
-                  type="button"
-                  onClick={() => {
+                  loop={l}
+                  selected={l.id === loop?.id}
+                  onSelect={() => {
                     onSelectLoop(l.id);
                   }}
-                  className={`max-w-full truncate rounded-full px-3 py-1 text-xs transition-colors duration-150 ease-out ${
-                    l.id === loop?.id
-                      ? "bg-primary text-white"
-                      : "bg-panel-2 text-ink-dim hover:text-ink"
-                  }`}
-                >
-                  {l.name}
-                </button>
+                />
               ))}
             </div>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => {
-            dispatch({
-              type: "loop/add",
-              init: { name: `loop ${String(kit.loops.length + 1)}` },
-            });
-          }}
-          className="rounded-full border border-dashed border-line px-3 py-1 text-xs text-ink-dim transition-colors duration-150 ease-out hover:border-primary hover:text-ink"
-        >
-          + {t("loops.add")}
-        </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({
+                type: "loop/add",
+                init: { name: `loop ${String(kit.loops.length + 1)}` },
+              });
+            }}
+            className="mt-2 w-full rounded-field border border-dashed border-line py-1.5 text-xs text-ink-dim transition-colors duration-150 ease-out hover:border-primary hover:text-ink"
+          >
+            + {t("loops.add")}
+          </button>
+        </div>
+
+        {loop && (
+          <>
+            {/* Mode and spring speed are on the track, where they are next to
+                the sequence they change. Everything a loop carries that the
+                track has no room for is here. */}
+            <Card title={t("loops.settings")} defaultOpen={false}>
+              <label className="block text-xs">
+                <span className="text-ink-dim">{t("loops.name")}</span>
+                <input
+                  type="text"
+                  value={loop.name}
+                  aria-label={t("loops.name")}
+                  onChange={(e) => {
+                    // FR-1.2's rule for bubbles holds for loops: a name is
+                    // required, so a blank field is simply not committed.
+                    const name = e.target.value.trim();
+                    if (name) patchLoop(loop.id, { name });
+                  }}
+                  className={`mt-1 w-full ${FIELD}`}
+                />
+              </label>
+              <Segmented
+                label={t("loops.group")}
+                value={loop.group}
+                options={groupOptions.map((g) => ({
+                  value: g,
+                  label: groupLabel(g, t),
+                }))}
+                onChange={(group) => {
+                  patchLoop(loop.id, { group });
+                }}
+              />
+              <div className="flex gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    dispatch({ type: "loop/duplicate", loopId: loop.id });
+                  }}
+                  className="flex-1 rounded-field bg-panel px-3 py-1.5 text-xs text-ink transition-colors duration-150 ease-out hover:bg-panel-3"
+                >
+                  {t("common.duplicate")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // docs/05 §3: destructive actions confirm.
+                    if (!globalThis.confirm(t("confirm.removeLoop"))) return;
+                    const next = kit.loops.find((l) => l.id !== loop.id);
+                    dispatch({ type: "loop/remove", loopId: loop.id });
+                    if (next) onSelectLoop(next.id);
+                  }}
+                  className="flex-1 rounded-field bg-danger/15 px-3 py-1.5 text-xs text-danger transition-colors duration-150 ease-out hover:bg-danger/25"
+                >
+                  {t("common.remove")}
+                </button>
+              </div>
+            </Card>
+
+            <Card
+              title={t("loops.blink")}
+              defaultOpen={false}
+              aside={
+                <input
+                  type="checkbox"
+                  checked={loop.blink.enabled}
+                  aria-label={t("loops.blink")}
+                  onChange={(e) => {
+                    patchBlink({ enabled: e.target.checked });
+                  }}
+                />
+              }
+            >
+              <NumberField
+                label={t("loops.blinkMin")}
+                value={loop.blink.minIntervalMs}
+                min={200}
+                step={100}
+                onChange={(minIntervalMs) => {
+                  patchBlink({ minIntervalMs });
+                }}
+              />
+              <NumberField
+                label={t("loops.blinkMax")}
+                value={loop.blink.maxIntervalMs}
+                min={200}
+                step={100}
+                onChange={(maxIntervalMs) => {
+                  patchBlink({ maxIntervalMs });
+                }}
+              />
+              <NumberField
+                label={t("loops.blinkDuration")}
+                value={loop.blink.durationMs}
+                min={40}
+                step={10}
+                onChange={(durationMs) => {
+                  patchBlink({ durationMs });
+                }}
+              />
+            </Card>
+          </>
+        )}
       </div>
 
       {loop && (
-        <>
-          <Card title={t("loops.mode")}>
-            <label className="block text-xs">
-              <span className="text-ink-dim">{t("loops.name")}</span>
-              <input
-                type="text"
-                value={loop.name}
-                aria-label={t("loops.name")}
-                onChange={(e) => {
-                  // FR-1.2's rule for bubbles holds for loops: a name is
-                  // required, so a blank field is simply not committed.
-                  const name = e.target.value.trim();
-                  if (name) patchLoop(loop.id, { name });
-                }}
-                className={`mt-1 w-full ${FIELD}`}
-              />
-            </label>
-            <Segmented
-              label={t("loops.group")}
-              value={loop.group}
-              options={groupOptions.map((g) => ({
-                value: g,
-                label: groupLabel(g, t),
-              }))}
-              onChange={(group) => {
-                patchLoop(loop.id, { group });
-              }}
+        <div
+          data-testid="step-editor"
+          className="flex shrink-0 flex-col gap-2.5 border-t border-line bg-panel-2 p-3"
+        >
+          {step === null ? (
+            <p className="py-1 text-center text-[11px] text-ink-mute">
+              {t("loops.noStep")}
+            </p>
+          ) : (
+            <StepEditor
+              kit={kit}
+              loop={loop}
+              step={step}
+              index={stepIndex}
+              t={t}
+              dispatch={dispatch}
+              onSelectStep={onSelectStep}
             />
-            <Segmented
-              label={t("loops.mode")}
-              value={loop.mode}
-              options={MODES.map((m) => ({ value: m, label: m }))}
-              onChange={(mode) => {
-                patchLoop(loop.id, { mode });
-              }}
-            />
-            <label className="block text-xs">
-              <span className="flex justify-between text-ink-dim">
-                {t("loops.springSpeed")}
-                <span className="tabular-nums text-ink">
-                  {loop.springSpeed.toFixed(1)}×
-                </span>
-              </span>
-              <RangeInput
-                label={t("loops.springSpeed")}
-                value={loop.springSpeed}
-                min={0.1}
-                max={3}
-                step={0.1}
-                onChange={(springSpeed) => {
-                  patchLoop(loop.id, { springSpeed });
-                }}
-                className="mt-1 w-full"
-              />
-            </label>
-          </Card>
-
-          <LoopSummary loop={loop} t={t} />
-
-          <Card
-            title={t("loops.blink")}
-            aside={
-              <input
-                type="checkbox"
-                checked={loop.blink.enabled}
-                aria-label={t("loops.blink")}
-                onChange={(e) => {
-                  patchBlink({ enabled: e.target.checked });
-                }}
-              />
-            }
-          >
-            <NumberField
-              label={t("loops.blinkMin")}
-              value={loop.blink.minIntervalMs}
-              min={200}
-              step={100}
-              onChange={(minIntervalMs) => {
-                patchBlink({ minIntervalMs });
-              }}
-            />
-            <NumberField
-              label={t("loops.blinkMax")}
-              value={loop.blink.maxIntervalMs}
-              min={200}
-              step={100}
-              onChange={(maxIntervalMs) => {
-                patchBlink({ maxIntervalMs });
-              }}
-            />
-            <NumberField
-              label={t("loops.blinkDuration")}
-              value={loop.blink.durationMs}
-              min={40}
-              step={10}
-              onChange={(durationMs) => {
-                patchBlink({ durationMs });
-              }}
-            />
-          </Card>
-          <Card title={t("loops.steps")}>
-            <ol className="space-y-2">
-              {loop.steps.map((s, i) => {
-                const moodName =
-                  kit.moods.find((m) => m.id === s.moodId)?.name ?? "?";
-                const first = i === 0;
-                const last = i === loop.steps.length - 1;
-                return (
-                  <li
-                    key={s.id}
-                    {...stepDrag.itemProps(s.id)}
-                    className="space-y-1.5 rounded-field border border-line bg-panel/60 p-2 data-[dragging]:opacity-40"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-4 shrink-0 text-center text-[10px] text-ink-dim tabular-nums">
-                        {i + 1}
-                      </span>
-                      <select
-                        value={s.moodId}
-                        onChange={(e) => {
-                          dispatch({
-                            type: "step/update",
-                            loopId: loop.id,
-                            stepId: s.id,
-                            patch: { moodId: e.target.value },
-                          });
-                        }}
-                        className={`min-w-0 flex-1 ${FIELD}`}
-                        aria-label={`${t("moods.name")} ${String(i + 1)}`}
-                      >
-                        {kit.moods.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                      <IconButton
-                        label={`${t("loops.moveUp")} ${moodName}`}
-                        disabled={first}
-                        onClick={() => {
-                          dispatch({
-                            type: "step/reorder",
-                            loopId: loop.id,
-                            stepIds: swapped(
-                              loop.steps.map((x) => x.id),
-                              i,
-                              i - 1,
-                            ),
-                          });
-                        }}
-                      >
-                        ↑
-                      </IconButton>
-                      <IconButton
-                        label={`${t("loops.moveDown")} ${moodName}`}
-                        disabled={last}
-                        onClick={() => {
-                          dispatch({
-                            type: "step/reorder",
-                            loopId: loop.id,
-                            stepIds: swapped(
-                              loop.steps.map((x) => x.id),
-                              i,
-                              i + 1,
-                            ),
-                          });
-                        }}
-                      >
-                        ↓
-                      </IconButton>
-                      <IconButton
-                        label={`${t("common.remove")} ${moodName}`}
-                        danger
-                        onClick={() => {
-                          dispatch({
-                            type: "step/remove",
-                            loopId: loop.id,
-                            stepId: s.id,
-                          });
-                        }}
-                      >
-                        ✕
-                      </IconButton>
-                    </div>
-                    <div className="flex gap-1.5 pl-[1.375rem]">
-                      <label className="flex min-w-0 flex-1 items-center gap-1 text-[10px] text-ink-dim">
-                        <input
-                          type="number"
-                          min={0}
-                          max={60000}
-                          step={50}
-                          value={s.holdMs}
-                          onChange={(e) => {
-                            dispatch({
-                              type: "step/update",
-                              loopId: loop.id,
-                              stepId: s.id,
-                              patch: { holdMs: Number(e.target.value) },
-                            });
-                          }}
-                          className={`w-full text-right tabular-nums ${FIELD}`}
-                          aria-label={t("loops.holdMs")}
-                        />
-                        <span className="shrink-0">ms</span>
-                      </label>
-                      <select
-                        value={s.transition}
-                        onChange={(e) => {
-                          dispatch({
-                            type: "step/update",
-                            loopId: loop.id,
-                            stepId: s.id,
-                            patch: {
-                              transition: e.target.value as TransitionStyle,
-                            },
-                          });
-                        }}
-                        className={`min-w-0 flex-1 ${FIELD}`}
-                        aria-label={t("loops.transition")}
-                      >
-                        {TRANSITIONS.map((tr) => (
-                          <option key={tr} value={tr}>
-                            {tr}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-
-            <select
-              value=""
-              onChange={(e) => {
-                if (!e.target.value) return;
-                dispatch({
-                  type: "step/add",
-                  loopId: loop.id,
-                  step: {
-                    moodId: e.target.value,
-                    holdMs: 800,
-                    transition: "ease",
-                  },
-                });
-              }}
-              className="w-full rounded-field border border-dashed border-line bg-transparent px-2 py-1.5 text-xs text-ink-dim"
-              aria-label={t("loops.addStep")}
-            >
-              <option value="">+ {t("loops.addStep")}</option>
-              {kit.moods.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </Card>
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                dispatch({ type: "loop/duplicate", loopId: loop.id });
-              }}
-              className="rounded-field bg-panel-2 px-3 py-1.5 text-xs text-ink transition-colors duration-150 ease-out hover:bg-panel-3"
-            >
-              {t("common.duplicate")}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                // docs/05 §3: destructive actions confirm.
-                if (!globalThis.confirm(t("confirm.removeLoop"))) return;
-                const next = kit.loops.find((l) => l.id !== loop.id);
-                dispatch({ type: "loop/remove", loopId: loop.id });
-                if (next) onSelectLoop(next.id);
-              }}
-              className="rounded-field bg-danger/15 px-3 py-1.5 text-xs text-danger transition-colors duration-150 ease-out hover:bg-danger/25"
-            >
-              {t("common.remove")}
-            </button>
-          </div>
-        </>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
 /**
- * FR-5.8: what the loop will do, read off the same expansion LoopPlayer walks.
- * Seconds for the timeline, milliseconds for the blink — the units the fields
- * that set them use.
+ * One loop, told apart by its shape before it is played: the bar is the
+ * sequence's own proportions, at the size a row can spare.
  */
-function LoopSummary({
+function LoopRow({
   loop,
-  t,
+  selected,
+  onSelect,
 }: {
   loop: Loop;
-  t: (k: MessageKey) => string;
+  selected: boolean;
+  onSelect: () => void;
 }) {
-  const s = summarizeLoop(loop);
-  const holds =
-    s.holdsMs.length === 0 ? "—" : `${s.holdsMs.map(seconds).join(" · ")} s`;
+  const summary = summarizeLoop(loop);
   return (
-    <Card title={t("loops.summary")}>
-      <dl data-testid="loop-summary" className="space-y-1 text-xs">
-        <Row
-          term={t("loops.steps")}
-          value={`${String(s.steps)} ${t("loops.summarySteps")}`}
-        />
-        <Row term={t("loops.summaryHolds")} value={holds} />
-        <Row term={t("loops.summaryCycle")} value={`${seconds(s.totalMs)} s`} />
-        <Row
-          term={t("loops.summaryBlink")}
-          value={
-            s.blink.enabled
-              ? `${seconds(s.blink.minIntervalMs)}–${seconds(s.blink.maxIntervalMs)} s · ${String(s.blink.durationMs)} ms`
-              : t("loops.blinkOff")
-          }
-        />
-      </dl>
-    </Card>
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={`flex h-7.5 w-full items-center gap-2.5 rounded-field px-2.5 transition-colors duration-150 ease-out ${
+        selected
+          ? "bg-panel-3 shadow-[inset_0_0_0_1.5px_var(--color-brand)]"
+          : "hover:bg-white/5"
+      }`}
+    >
+      <span
+        className={`min-w-0 flex-1 truncate text-left text-xs ${
+          selected ? "font-semibold text-ink" : "text-ink-dim"
+        }`}
+      >
+        {loop.name}
+      </span>
+      <span
+        aria-hidden="true"
+        data-testid="loop-shape"
+        className="flex w-18 shrink-0 gap-px"
+      >
+        {loop.steps.map((s) => (
+          <span
+            key={s.id}
+            style={{ flexGrow: s.holdMs, flexShrink: 1, flexBasis: 0 }}
+            className={`h-1.5 rounded-[2px] ${selected ? "bg-brand" : "bg-track"}`}
+          />
+        ))}
+      </span>
+      <span
+        className={`w-9 shrink-0 text-right text-[10px] tabular-nums ${
+          selected ? "text-ink" : "text-ink-mute"
+        }`}
+      >
+        {s2(summary.totalMs)} s
+      </span>
+    </button>
   );
 }
 
-function Row({ term, value }: { term: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-2">
-      <dt className="shrink-0 text-ink-dim">{term}</dt>
-      <dd className="min-w-0 truncate text-right tabular-nums text-ink">
-        {value}
-      </dd>
-    </div>
-  );
-}
+/**
+ * The step the track has in hand (FR-5.1).
+ *
+ * ← → are FR-5.2's keyboard path for reordering, which the chips answer with a
+ * drag. The hold is in seconds here and on the chip, because the timeline is
+ * ruled in seconds and a field in milliseconds beside it makes the reader do
+ * the conversion.
+ */
+function StepEditor({
+  kit,
+  loop,
+  step,
+  index,
+  t,
+  dispatch,
+  onSelectStep,
+}: {
+  kit: Kit;
+  loop: Loop;
+  step: LoopStep;
+  index: number;
+  t: (k: MessageKey) => string;
+  dispatch: React.Dispatch<Action>;
+  onSelectStep: (stepId: string | null) => void;
+}) {
+  const [picking, setPicking] = useState(false);
+  const mood = kit.moods.find((m) => m.id === step.moodId);
+  const bounds = stepBounds(loop);
+  const start = bounds[index]?.startMs ?? 0;
 
-/** Order with the entries at `a` and `b` exchanged; out-of-range is a no-op. */
-function swapped(ids: string[], a: number, b: number): string[] {
-  if (a < 0 || b < 0 || a >= ids.length || b >= ids.length) return ids;
-  const next = [...ids];
-  [next[a], next[b]] = [ids[b], ids[a]] as [string, string];
-  return next;
+  const patch = (p: Extract<Action, { type: "step/update" }>["patch"]) => {
+    dispatch({
+      type: "step/update",
+      loopId: loop.id,
+      stepId: step.id,
+      patch: p,
+    });
+  };
+
+  const move = (to: number) => {
+    const ids = loop.steps.map((x) => x.id);
+    if (to < 0 || to >= ids.length) return;
+    const next = [...ids];
+    [next[index], next[to]] = [ids[to], ids[index]] as [string, string];
+    dispatch({ type: "step/reorder", loopId: loop.id, stepIds: next });
+  };
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="text-[9px] font-semibold tracking-[0.09em] text-ink-dim uppercase">
+          {t("loops.step")} {index + 1} {t("loops.stepOf")} {loop.steps.length}
+        </span>
+        <span aria-hidden="true" className="h-px flex-1 bg-line" />
+        <span className="text-[9.5px] tabular-nums text-ink-mute">
+          {s2(start)} s
+        </span>
+        <IconButton
+          label={t("loops.moveLeft")}
+          disabled={index <= 0}
+          onClick={() => {
+            move(index - 1);
+          }}
+        >
+          ←
+        </IconButton>
+        <IconButton
+          label={t("loops.moveRight")}
+          disabled={index >= loop.steps.length - 1}
+          onClick={() => {
+            move(index + 1);
+          }}
+        >
+          →
+        </IconButton>
+        <IconButton
+          label={`${t("common.remove")} · ${mood?.name ?? "?"}`}
+          danger
+          onClick={() => {
+            onSelectStep(null);
+            dispatch({
+              type: "step/remove",
+              loopId: loop.id,
+              stepId: step.id,
+            });
+          }}
+        >
+          ✕
+        </IconButton>
+      </div>
+
+      <div className="flex items-end gap-2">
+        <span className="relative min-w-0 flex-1">
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={picking}
+            aria-label={`${t("moods.title")}: ${mood?.name ?? "?"}`}
+            onClick={() => {
+              setPicking((v) => !v);
+            }}
+            className="flex h-8.5 w-full items-center gap-2 rounded-field border border-line bg-stage px-2 text-xs text-ink transition-colors duration-150 ease-out hover:border-outline"
+          >
+            <span className="min-w-0 flex-1 truncate text-left">
+              {mood?.name ?? "?"}
+            </span>
+            <svg
+              viewBox="0 0 12 12"
+              className="h-2.5 w-2.5 shrink-0 text-ink-dim"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 4.5 6 8l3-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          {picking && (
+            <Menu
+              label={t("moods.title")}
+              onClose={() => {
+                setPicking(false);
+              }}
+              className="absolute bottom-full left-0 z-30 mb-1.5 max-h-64 w-full overflow-y-auto"
+            >
+              {kit.moods.map((m) => (
+                <MenuItem
+                  key={m.id}
+                  label={m.name}
+                  onClick={() => {
+                    setPicking(false);
+                    patch({ moodId: m.id });
+                  }}
+                />
+              ))}
+            </Menu>
+          )}
+        </span>
+
+        <label className="flex w-24 shrink-0 flex-col gap-1">
+          <span className="text-[10px] text-ink-dim">{t("loops.hold")}</span>
+          <span className="flex h-8.5 items-center rounded-field border border-line bg-stage pr-1.5 pl-2">
+            <input
+              type="number"
+              min={0.05}
+              max={60}
+              step={0.05}
+              value={step.holdMs / 1000}
+              aria-label={t("loops.hold")}
+              onChange={(e) => {
+                const seconds = Number(e.target.value);
+                if (Number.isFinite(seconds)) {
+                  patch({ holdMs: Math.round(seconds * 1000) });
+                }
+              }}
+              className="min-w-0 flex-1 bg-transparent text-right text-xs tabular-nums text-ink outline-none"
+            />
+            <span className="w-3 text-right text-[9.5px] text-ink-dim">s</span>
+          </span>
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[10px] text-ink-dim">
+          {t("loops.entryTransition")}
+        </span>
+        <Segmented<TransitionStyle>
+          label={t("loops.transition")}
+          value={step.transition}
+          options={TRANSITIONS.map((style) => ({
+            value: style,
+            label: t(TRANSITION_LABELS[style]),
+          }))}
+          onChange={(transition) => {
+            patch({ transition });
+          }}
+        />
+      </div>
+    </>
+  );
 }

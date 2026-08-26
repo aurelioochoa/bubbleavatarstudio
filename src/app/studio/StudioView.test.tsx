@@ -127,7 +127,9 @@ describe("StudioView", () => {
     const user = userEvent.setup();
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ciclos" }));
-    expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
+    // A row states its name, its shape and how long it runs, so it is named
+    // for the row it is rather than for the loop alone.
+    expect(screen.getByRole("button", { name: /^idle/ })).toBeTruthy();
   });
 
   it("transport sits on the track, reachable from every tab (FR-6.6)", async () => {
@@ -314,21 +316,25 @@ describe("StudioView", () => {
     const user = userEvent.setup();
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ciclos" }));
-    expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
+    const row = () => screen.queryByRole("button", { name: /^idle/ });
+    expect(row()).toBeTruthy();
+    // Delete lives in the loop's own card, which the panel keeps collapsed:
+    // the list is what the column is for.
+    await user.click(screen.getByRole("button", { name: "Ciclo" }));
 
     vi.stubGlobal(
       "confirm",
       vi.fn(() => false),
     );
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
-    expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
+    expect(row()).toBeTruthy();
 
     vi.stubGlobal(
       "confirm",
       vi.fn(() => true),
     );
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
-    expect(screen.queryByRole("button", { name: "idle" })).toBeNull();
+    expect(row()).toBeNull();
   });
 
   it("reorders the rail by dragging one bubble onto another (FR-1.4)", async () => {

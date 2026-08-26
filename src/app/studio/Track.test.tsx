@@ -638,3 +638,77 @@ describe("Track mood tray (FR-5.10)", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 });
+
+describe("Track step reordering (FR-5.2)", () => {
+  it("reorders steps by dragging one chip onto another", () => {
+    // The step list left the inspector for the track, and its drag came with
+    // it. The ← → buttons in the step editor are still the keyboard path.
+    const { dispatch } = setup({ kit: threeStepKit });
+    const dataTransfer = transfer();
+    const grab = (i: number) =>
+      within(screen.getAllByTestId("step-chip")[i]).getAllByRole("button")[0];
+    fireDrag(grab(0), "dragstart", { dataTransfer });
+    fireDrag(grab(2), "dragover", { dataTransfer });
+    fireDrag(grab(2), "drop", { dataTransfer });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/reorder",
+      loopId: "loop_t",
+      stepIds: ["s2", "s3", "s1"],
+    });
+  });
+
+  it("does not take a mood from the tray as a reorder", () => {
+    // Both drags travel on text/plain. A mood dropped onto a chip has to fall
+    // through to the strip's own handler and become a new step, not silently
+    // reshuffle the sequence.
+    const { dispatch } = setup({ kit: threeStepKit, tray: true });
+    measureChips();
+    const dataTransfer = transfer();
+    fireDrag(screen.getAllByTestId("tray-card")[0], "dragstart", {
+      dataTransfer,
+    });
+    const chip = within(screen.getAllByTestId("step-chip")[1]).getAllByRole(
+      "button",
+    )[0];
+    fireDrag(chip, "drop", { dataTransfer, clientX: 150 });
+    expect(dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "step/reorder" }),
+    );
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "step/add" }),
+    );
+  });
+});
+
+describe("Track loop summary (FR-5.8)", () => {
+  it("states each step's own hold on the chip that is that long", () => {
+    // The FR-5.8 summary lived in the Loops panel as a list of durations. The
+    // chip is both the duration and a picture of it, so the list went.
+    setup({ kit: threeStepKit });
+    expect(
+      chips().map((c) => within(c).getAllByRole("button")[0].textContent),
+    ).toEqual([
+      expect.stringContaining("0.40 s"),
+      expect.stringContaining("0.60 s"),
+      expect.stringContaining("1.00 s"),
+    ]);
+  });
+
+  it("says so when a loop does not blink at all", () => {
+    setup({
+      kit: (base) => {
+        const k = threeStepKit(base);
+        return {
+          ...k,
+          loops: k.loops.map((l) => ({
+            ...l,
+            blink: { ...l.blink, enabled: false },
+          })),
+        };
+      },
+    });
+    expect(screen.getByTestId("track-blink").textContent).toContain(
+      "Sin parpadeo",
+    );
+  });
+});

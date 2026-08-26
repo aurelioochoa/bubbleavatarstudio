@@ -195,19 +195,34 @@ the thing being judged is the stage behind it.
 
 ### Loops
 
-**[built]** all of the above. The loop list grouped by `group` in
-first-appearance order with a segmented control that moves a loop between
-groups; loop rename (blank names are not committed, matching FR-1.2's rule for
-bubbles); the step list with hold and transition per step, add and remove step,
-both the accessible ↑ ↓ fallback and drag-reorder; playback mode as a segmented
-control; springSpeed; the blink card (toggle, min/max interval, duration); the
-loop summary (FR-5.8); and loop duplicate. Playback itself lives on the stage
-dock, so this panel carries no transport buttons.
+**[built]** all of the above, and the track redesign moved half of it out.
 
-The summary reads off `summarizeLoop()`, which shares its step expansion with
-`LoopPlayer`. A pingpong loop plays a mirrored leg back, so its whole cycle is
-longer than its holds sum to — the summary and the playback say so from one
-place and cannot disagree.
+**The sequence is on the track now** (§1): steps are chips whose widths are
+their durations, ordered by dragging them there, retimed by their edges
+(FR-5.9), and joined by transitions edited on the seams. Playback mode and
+spring speed went with them, because they change what the sequence does and
+belong beside it. The FR-5.8 summary went too — the track states the step
+count, the whole cycle and the blink schedule, and each step's own duration
+is both the width and the caption of its chip. A second summary in this
+column would be the same numbers, further from the thing they describe.
+
+What is left is the part the track has no room for. The list is grouped by
+`group` in first-appearance order, and each row carries the loop's **own
+proportions** as a bar plus its cycle length, so a loop can be told apart by
+its shape before it is played. The loop's own settings — rename (blank names
+are not committed, matching FR-1.2's rule for bubbles), the group control,
+duplicate and delete — sit in a card that starts collapsed, as does the blink
+card (toggle, min/max interval, duration), because the list is what the
+column is for and these are settings you go looking for.
+
+**The step editor is pinned to the foot of the column.** It describes
+whichever chip the track has lit, so it must not scroll its own subject out
+of view: which step of how many, when it starts, ← → to reorder (FR-5.2's
+keyboard path — the chips answer a drag), remove, the mood it plays, its hold
+**in seconds** (the unit the timeline is ruled in; milliseconds beside a
+second-ruled strip makes the reader convert), and its entry transition. With
+no step selected it says to pick one rather than showing controls attached to
+nothing.
 
 Groups are free strings. The two the starter catalogue authors are translated;
 anything else — an imported loop's own word — reaches the UI as typed, and is
@@ -227,6 +242,10 @@ kept selectable so its loops are never stranded without a chip.
   springSpeed slider 0.1–3, blink card (toggle + min/max interval + duration).
 - Transport "Play" always plays the selected loop. It lives on the stage dock
   (§1), which shares its loop selection with this panel.
+
+  _(The paragraphs above are the description; this list is the original
+  target. The step list, the mode and spring controls and the summary are all
+  on the track now, and the dock is a track.)_
 
 ### Share (export)
 
