@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_full_a",
   "locale": "en",
@@ -51,9 +51,17 @@
           }
         ]
       },
-      "colors": { "body": "#ff8ac2", "accent": "#ffffff", "eyes": "#1c2033" },
+      "colors": {
+        "body": "#ff8ac2",
+        "accent": "#ffffff",
+        "eyes": "#1c2033"
+      },
       "restingFace": {
-        "eye": { "width": 36, "height": 54, "roundness": 1 },
+        "eye": {
+          "width": 36,
+          "height": 54,
+          "roundness": 1
+        },
         "left": {
           "offsetX": -6,
           "offsetY": 0,
@@ -101,7 +109,14 @@
               "offsetX": 0,
               "offsetY": 0
             },
-            "colorOverride": { "body": "#ffb703" }
+            "colorOverride": {
+              "body": "#ffb703"
+            },
+            "head": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
           },
           {
             "id": "mood_own_wide",
@@ -124,7 +139,12 @@
               "offsetX": 0,
               "offsetY": -4
             },
-            "colorOverride": null
+            "colorOverride": null,
+            "head": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
           }
         ],
         "loops": [
@@ -191,9 +211,17 @@
           }
         ]
       },
-      "colors": { "body": "#48cae4", "accent": "#ffffff", "eyes": "#1c2033" },
+      "colors": {
+        "body": "#48cae4",
+        "accent": "#ffffff",
+        "eyes": "#1c2033"
+      },
       "restingFace": {
-        "eye": { "width": 28, "height": 44, "roundness": 0.9 },
+        "eye": {
+          "width": 28,
+          "height": 44,
+          "roundness": 0.9
+        },
         "left": {
           "offsetX": -4,
           "offsetY": 2,
@@ -244,7 +272,12 @@
           "offsetX": 0,
           "offsetY": 4
         },
-        "colorOverride": null
+        "colorOverride": null,
+        "head": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
       },
       {
         "id": "mood_st_sleepy",
@@ -267,7 +300,14 @@
           "offsetX": 0,
           "offsetY": 10
         },
-        "colorOverride": { "eyes": "#5a5f7a" }
+        "colorOverride": {
+          "eyes": "#5a5f7a"
+        },
+        "head": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
       }
     ],
     "loops": [

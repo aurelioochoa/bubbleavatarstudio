@@ -22,6 +22,7 @@ import { sceneToSvg } from "../../../render/svg";
 import type {
   Bubble,
   ColorOverride,
+  HeadPose,
   Kit,
   Mood,
   MoodEye,
@@ -78,10 +79,12 @@ const DEFAULT_OVERRIDE = "#6c7bff";
 const sampleOf = (mood: {
   left: MoodEye;
   right: MoodEye;
+  head: HeadPose;
   colorOverride: ColorOverride;
 }): MoodSample => ({
   left: mood.left,
   right: mood.right,
+  head: mood.head,
   colorOverride: mood.colorOverride,
 });
 

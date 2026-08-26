@@ -4,7 +4,7 @@ import { ease, linear, spring, step, transitionFn } from "./easing";
 import { LoopPlayer, blendMoods } from "./LoopPlayer";
 import { ambientAt, blinkAt } from "./ambient";
 import { starterKit } from "../document/create";
-import type { Loop, Mood } from "../document/types";
+import type { Loop, Mood, MoodEye } from "../document/types";
 
 describe("easing", () => {
   it("endpoints hit 0 and 1 for all curves", () => {
@@ -52,6 +52,7 @@ describe("blendMoods", () => {
       offsetX: 0,
       offsetY: 0,
     },
+    head: { x: 0, y: 0, z: 0 },
     colorOverride: null,
   };
   const b: Mood = {
@@ -232,5 +233,79 @@ describe("ambientAt (FR-7)", () => {
     );
     for (const s of scales) expect(Math.abs(s - 1)).toBeLessThan(0.05);
     expect(new Set(scales).size).toBeGreaterThan(1);
+  });
+});
+
+// FR-4.10: a mood turns the whole character, so a loop has to carry the pose
+// between its keyframes the way it carries the eye deltas.
+describe("blendMoods · the pose (FR-4.10)", () => {
+  const zero: MoodEye = {
+    rotationXDeg: 0,
+    rotationYDeg: 0,
+    rotationZDeg: 0,
+    scaleX: 1,
+    scaleY: 1,
+    offsetX: 0,
+    offsetY: 0,
+  };
+  const at = (head: { x: number; y: number; z: number }): Mood => ({
+    id: `mood_${String(head.x)}_${String(head.y)}_${String(head.z)}`,
+    name: "m",
+    left: zero,
+    right: zero,
+    head,
+    colorOverride: null,
+  });
+
+  it("travels between the two poses", () => {
+    const s = blendMoods(
+      at({ x: 0, y: 0, z: 0 }),
+      at({ x: 10, y: -20, z: 4 }),
+      0.5,
+    );
+    expect(s.head).toEqual({ x: 5, y: -10, z: 2 });
+  });
+
+  it("takes the short way round the wrap, not the long way", () => {
+    // 170 -> -170 is twenty degrees across the back, not three hundred and
+    // forty across the front. Interpolating each axis as a plain number sends
+    // the character all the way round, which is the defect their own engine
+    // avoids by interpolating the rotation as a rotation.
+    const s = blendMoods(
+      at({ x: 0, y: 170, z: 0 }),
+      at({ x: 0, y: -170, z: 0 }),
+      0.5,
+    );
+    expect(Math.abs(s.head.y)).toBe(180);
+  });
+
+  it("stays inside a half turn either side, so the value is always drawable", () => {
+    const s = blendMoods(
+      at({ x: 0, y: -170, z: 0 }),
+      at({ x: 0, y: 170, z: 0 }),
+      0.25,
+    );
+    expect(s.head.y).toBeLessThanOrEqual(180);
+    expect(s.head.y).toBeGreaterThanOrEqual(-180);
+  });
+
+  it("goes the short way on each axis independently", () => {
+    const s = blendMoods(
+      at({ x: 175, y: 10, z: -175 }),
+      at({ x: -175, y: 30, z: 175 }),
+      0.5,
+    );
+    expect(Math.abs(s.head.x)).toBe(180);
+    expect(s.head.y).toBe(20);
+    expect(Math.abs(s.head.z)).toBe(180);
+  });
+
+  it("holds the pose of the step it is sitting on before a transition starts", () => {
+    const posed = at({ x: 6, y: -4, z: 2 });
+    expect(blendMoods(posed, at({ x: 0, y: 0, z: 0 }), 0).head).toEqual({
+      x: 6,
+      y: -4,
+      z: 2,
+    });
   });
 });

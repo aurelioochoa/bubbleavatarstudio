@@ -128,3 +128,53 @@ describe("starter loops (FR-5.7)", () => {
     }
   });
 });
+
+// FR-4.10: a mood turns the whole character, and the starter library has to
+// use that or the feature ships invisible — every animation would still be
+// eyes moving on a body that never moves.
+describe("starter poses (FR-4.10)", () => {
+  const posed = STARTER_MOODS.filter(
+    (m) => m.head.x !== 0 || m.head.y !== 0 || m.head.z !== 0,
+  );
+
+  it("gives most of the library a pose of its own", () => {
+    expect(posed.length).toBeGreaterThanOrEqual(STARTER_MOODS.length - 1);
+  });
+
+  it("keeps every angle inside the half turn the schema allows", () => {
+    for (const m of STARTER_MOODS) {
+      for (const axis of [m.head.x, m.head.y, m.head.z]) {
+        expect(Number.isFinite(axis)).toBe(true);
+        expect(Math.abs(axis)).toBeLessThanOrEqual(180);
+      }
+    }
+  });
+
+  it("keeps them small enough to read as a reaction, not a camera move", () => {
+    // A body swinging tens of degrees per keyframe reads as a character being
+    // shaken. The observed reference values sat in the low tens too.
+    for (const m of STARTER_MOODS) {
+      for (const axis of [m.head.x, m.head.y, m.head.z]) {
+        expect(Math.abs(axis)).toBeLessThanOrEqual(25);
+      }
+    }
+  });
+
+  it("sinks further the sleepier the mood gets", () => {
+    // The three sleepy stages are a sequence, so their pitches should be one
+    // too — a library where they were unordered would look arbitrary in a
+    // loop that walks them.
+    const pitch = (key: string) => {
+      const m = STARTER_MOODS.find((x) => x.key === key);
+      if (!m) throw new Error(`no starter mood ${key}`);
+      return m.head.x;
+    };
+    expect(pitch("sleepy")).toBeGreaterThan(pitch("drowsy"));
+    expect(pitch("drowsy")).toBeGreaterThan(pitch("dozing"));
+  });
+
+  it("does not move a mood the loops use as a neutral resting point", () => {
+    const calm = STARTER_MOODS.find((m) => m.key === "calm");
+    expect(Math.abs(calm?.head.y ?? 99)).toBeLessThanOrEqual(2);
+  });
+});

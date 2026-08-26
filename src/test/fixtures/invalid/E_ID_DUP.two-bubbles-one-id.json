@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_min",
   "locale": "es",
@@ -138,7 +138,12 @@
           "offsetX": 0,
           "offsetY": 4
         },
-        "colorOverride": null
+        "colorOverride": null,
+        "head": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
       }
     ],
     "loops": [

@@ -91,6 +91,7 @@ describe("StageEngine mood preview (FR-4.4)", () => {
       preview: {
         left: sleepy.left,
         right: sleepy.right,
+        head: sleepy.head,
         colorOverride: sleepy.colorOverride,
       },
     });

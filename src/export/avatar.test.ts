@@ -148,7 +148,7 @@ describe("export integrity", () => {
   it("projected document from a portable avatar validates", () => {
     const avatar = buildPortableAvatar(doc.bubbles[0], doc);
     const projected = {
-      version: 5 as const,
+      version: 6 as const,
       kind: "bubble-studio-project" as const,
       activeBubbleId: avatar.bubble.id,
       locale: "es" as const,
@@ -348,5 +348,40 @@ describe("snapshot carries the pose (FR-10.1)", () => {
     const d = createDefaultDocument();
     const b = d.bubbles[0];
     expect(buildPortableAvatar(b, d).bubble).toEqual(b);
+  });
+});
+
+// FR-4.10 reached the portable format too: a v4 file's moods predate the pose,
+// and the runtime still has to read them.
+describe("readPortableAvatar · v4 -> v5", () => {
+  it("upgrades a v4 file by facing every mood straight ahead", () => {
+    const d = createDefaultDocument();
+    const v5 = buildPortableAvatar(d.bubbles[0], d);
+    const v4 = structuredClone(v5) as unknown as Record<string, unknown>;
+    v4.version = 4;
+    for (const m of (v4.kit as { moods: Record<string, unknown>[] }).moods) {
+      delete m.head;
+    }
+
+    const read = readPortableAvatar(v4 as never);
+    expect(read.version).toBe(AVATAR_VERSION);
+    expect(read.kit.moods.every((m) => m.head.x === 0)).toBe(true);
+    // Facing ahead is what those moods already looked like, so nothing about
+    // the character changes on the way in.
+    expect(read.kit.moods.map((m) => m.head)).toEqual(
+      v5.kit.moods.map(() => ({ x: 0, y: 0, z: 0 })),
+    );
+  });
+
+  it("leaves a pose a current file already carries", () => {
+    const d = createDefaultDocument();
+    const current = buildPortableAvatar(d.bubbles[0], d);
+    const posed = structuredClone(current);
+    posed.kit.moods[0].head = { x: 5, y: -12, z: 3 };
+    expect(readPortableAvatar(posed).kit.moods[0].head).toEqual({
+      x: 5,
+      y: -12,
+      z: 3,
+    });
   });
 });

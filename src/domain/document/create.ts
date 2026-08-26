@@ -84,6 +84,7 @@ export function starterKit(ids?: { moods?: string[]; loops?: string[] }): Kit {
       name: m.name,
       left: { ...m.left },
       right: { ...m.right },
+      head: { ...m.head },
       colorOverride: m.colorOverride,
     })),
     loops: STARTER_LOOPS.map((l, i) => ({
@@ -117,7 +118,7 @@ export function createDefaultDocument(): StudioDocument {
   const kit = starterKit();
   const bubble = createBubble("Bubble");
   return {
-    version: 5,
+    version: 6,
     kind: "bubble-studio-project",
     activeBubbleId: bubble.id,
     locale: "es",

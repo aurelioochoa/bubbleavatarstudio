@@ -335,6 +335,9 @@ export function addMood(
     name: name.trim(),
     left: zeroMoodEye(),
     right: zeroMoodEye(),
+    // A new mood faces straight ahead: the user authors the pose, the same
+    // way they author the eyes (FR-4.10).
+    head: { x: 0, y: 0, z: 0 },
     colorOverride: null,
   };
   return withOwnKit(ctx, bubbleId, (kit) => ({
@@ -648,7 +651,7 @@ export function resetKit(
 export function freshDocument(deps?: MutationDeps): StudioDocument {
   const bubble = createBubble("Bubble", newId("bbl", deps?.random));
   return {
-    version: 5,
+    version: 6,
     kind: "bubble-studio-project",
     activeBubbleId: bubble.id,
     locale: "es",

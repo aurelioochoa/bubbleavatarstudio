@@ -1,4 +1,4 @@
-// Document migration (docs/03 §8). v5 is current; v1..v4 upgrade on the way in.
+// Document migration (docs/03 §8). v6 is current; v1..v5 upgrade on the way in.
 import { validateDocument } from "./validate";
 import { topUpKit } from "./library";
 import type { Kit, StudioDocument } from "./types";
@@ -7,7 +7,7 @@ export type MigrateResult =
   | { ok: true; doc: StudioDocument }
   | { ok: false; code: "E_VERSION" | "E_INVALID"; detail: string };
 
-const CURRENT = 5;
+const CURRENT = 6;
 
 /**
  * The depth radius the projection derived for itself before v3, as a fraction
@@ -114,6 +114,37 @@ function v4ToV5(doc: StudioDocument): StudioDocument {
   };
 }
 
+/**
+ * v5 -> v6: FR-4.10 gave a mood a pose of its own. A v5 mood predates it and
+ * joins v6 facing straight ahead, which is exactly what it already looked
+ * like — the body did not move for any mood before this, so no saved
+ * character changes and the render goldens do not move.
+ *
+ * Shape-only, like the migrations above it: a husk whose moods are not
+ * objects is left alone and fails validation below as E_INVALID.
+ */
+function v5ToV6(doc: Record<string, unknown>): void {
+  const kits: unknown[] = [doc.starterKit];
+  const bubbles = doc.bubbles;
+  if (Array.isArray(bubbles)) {
+    for (const b of bubbles) {
+      if (typeof b === "object" && b !== null) {
+        kits.push((b as { ownKit?: unknown }).ownKit);
+      }
+    }
+  }
+  for (const kit of kits) {
+    if (typeof kit !== "object" || kit === null) continue;
+    const moods = (kit as { moods?: unknown }).moods;
+    if (!Array.isArray(moods)) continue;
+    for (const mood of moods) {
+      if (typeof mood !== "object" || mood === null) continue;
+      const m = mood as Record<string, unknown>;
+      m.head ??= { x: 0, y: 0, z: 0 };
+    }
+  }
+}
+
 export function migrate(input: unknown): MigrateResult {
   if (typeof input !== "object" || input === null) {
     return { ok: false, code: "E_INVALID", detail: "not an object" };
@@ -124,6 +155,7 @@ export function migrate(input: unknown): MigrateResult {
     version !== 2 &&
     version !== 3 &&
     version !== 4 &&
+    version !== 5 &&
     version !== CURRENT
   ) {
     return {
@@ -139,6 +171,7 @@ export function migrate(input: unknown): MigrateResult {
   if (version === 1) v1ToV2(doc);
   if (version <= 2) v2ToV3(doc);
   if (version <= 3) v3ToV4(doc);
+  if (version <= 5) v5ToV6(doc);
   doc.version = CURRENT;
 
   // Validation runs after the upgrade, because it demands the current version.
@@ -146,9 +179,9 @@ export function migrate(input: unknown): MigrateResult {
   if (!r.ok)
     return { ok: false, code: "E_INVALID", detail: "validation failed" };
 
-  // The library top-up wants a validated document, so it comes last. A v5
-  // document has had it already; running it again would resurrect a starter
-  // mood the user has since deleted.
+  // The library top-up wants a validated document, so it comes last. A v5 or
+  // later document has had it already; running it again would resurrect a
+  // starter mood the user has since deleted.
   const migrated = doc as unknown as StudioDocument;
   return {
     ok: true,

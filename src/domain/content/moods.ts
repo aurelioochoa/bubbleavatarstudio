@@ -8,7 +8,7 @@
 //
 // Cleanroom (docs/CLEANROOM.md §3): the count and the spread of bands are
 // capability parity; every name and every delta below is ours.
-import type { ColorOverride, MoodEye } from "../document/types";
+import type { ColorOverride, HeadPose, MoodEye } from "../document/types";
 
 /** The expressive range FR-4.7 names. Every band carries at least one mood. */
 export const MOOD_BANDS = [
@@ -32,6 +32,7 @@ export interface MoodSpec {
   band: MoodBand;
   left: MoodEye;
   right: MoodEye;
+  head: HeadPose;
   colorOverride: ColorOverride;
 }
 
@@ -47,6 +48,57 @@ const NEUTRAL: MoodEye = {
 
 const eye = (patch: Partial<MoodEye>): MoodEye => ({ ...NEUTRAL, ...patch });
 
+const FACING: HeadPose = { x: 0, y: 0, z: 0 };
+
+/**
+ * FR-4.10: where each mood turns the whole character, in degrees — pitch on
+ * `x`, yaw on `y`, roll on `z`.
+ *
+ * A table rather than a fifth argument on every entry below, so the list of
+ * moods stays a list. A mood absent from here faces straight ahead, which is
+ * what every mood did before poses existed.
+ *
+ * The values are ours and they are deliberately small: a mood is an
+ * expression, not a camera move, and a body that swings twenty degrees per
+ * keyframe reads as a character being shaken rather than one reacting. They
+ * are authored from what each mood means — a bow leans away and down, a proud
+ * one lifts its chin, a sceptical one cocks to the side.
+ */
+const POSES: Record<string, Partial<HeadPose>> = {
+  // alert — leaning in, or recoiling from, whatever was noticed
+  curious: { x: -3, y: 12, z: 6 },
+  surprised: { x: 8, y: -4 },
+  attentive: { y: 6 },
+  startled: { x: 10, y: -10, z: -6 },
+  // calm — small settling movements
+  calm: { x: -2 },
+  thoughtful: { x: -4, y: -14, z: 8 },
+  patient: { x: -6 },
+  focused: { x: 3, y: 3 },
+  // warm
+  happy: { x: 4, z: -3 },
+  fond: { x: 2, z: 9 },
+  proud: { x: 12, z: -4 },
+  grateful: { x: -8, z: 3 },
+  // negative — turning away, or sinking
+  annoyed: { y: -16, z: -5 },
+  sad: { x: -14, z: 4 },
+  worried: { x: -8, y: 8 },
+  sceptical: { x: 5, y: -12, z: 10 },
+  // sleepy — the head drooping further with each stage
+  sleepy: { x: -10, z: 5 },
+  drowsy: { x: -12, z: 8 },
+  dozing: { x: -16, z: 12 },
+  yawning: { x: 14, z: -3 },
+  // playful
+  playful: { x: 4, y: 14, z: -14 },
+  wink: { y: 6, z: -10 },
+  smug: { x: 6, y: -10, z: 7 },
+  mischief: { x: -3, y: 16, z: -9 },
+};
+
+const poseOf = (key: string): HeadPose => ({ ...FACING, ...POSES[key] });
+
 /** Both eyes take the same delta — a shared glance, squash or tilt. */
 function sym(
   key: string,
@@ -61,6 +113,7 @@ function sym(
     band,
     left: both,
     right: { ...both },
+    head: poseOf(key),
     colorOverride: null,
   };
 }
@@ -79,6 +132,7 @@ function pair(
     band,
     left: eye(left),
     right: eye(right),
+    head: poseOf(key),
     colorOverride: null,
   };
 }

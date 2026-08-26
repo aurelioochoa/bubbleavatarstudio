@@ -111,11 +111,27 @@ export interface MoodEye {
 
 export type ColorOverride = Partial<Pick<BubbleColors, "body" | "eyes">> | null;
 
+/**
+ * A three-axis orientation in degrees: yaw on `y`, pitch on `x`, roll on `z`
+ * — the same axes and signs `projection.ts` reads for the head, so a pose a
+ * mood carries and a pose a drag sets are the same kind of number.
+ */
+export interface HeadPose {
+  x: number;
+  y: number;
+  z: number;
+}
+
 export interface Mood {
   id: string;
   name: string;
   left: MoodEye;
   right: MoodEye;
+  /**
+   * FR-4.10: where the whole character is turned while this mood shows. A
+   * mood used to move only the eyes, on a body that never moved.
+   */
+  head: HeadPose;
   colorOverride: ColorOverride;
 }
 
@@ -165,7 +181,7 @@ export interface Bubble {
 export type Locale = "es" | "en";
 
 export interface StudioDocument {
-  version: 5;
+  version: 6;
   kind: "bubble-studio-project";
   activeBubbleId: string | null;
   locale: Locale;

@@ -156,6 +156,11 @@ export interface LiveInput {
 
 export const SCENE_SIZE = 512;
 
+/** Folds an angle into the half turn either side of zero. */
+function wrapDeg(v: number): number {
+  return ((((v + 180) % 360) + 360) % 360) - 180;
+}
+
 function extraPath(kind: ExtraPrimitive["kind"], w: number, h: number): string {
   switch (kind) {
     case "blob":
@@ -439,7 +444,20 @@ function guideFor(
   };
 }
 
-export function buildScene(bubble: Bubble, live: LiveInput): Scene {
+export function buildScene(bubble: Bubble, input: LiveInput): Scene {
+  // FR-4.10: a mood turns the whole character, and the pose it carries
+  // composes with the one a drag set rather than replacing it — a user who has
+  // turned the character to look at its side keeps that view while it
+  // animates. Folded into the half turn either side of zero, because that is
+  // the range every reader of it downstream is written for.
+  const live: LiveInput = {
+    ...input,
+    headRotation: {
+      x: wrapDeg(input.headRotation.x + input.mood.head.x),
+      y: wrapDeg(input.headRotation.y + input.mood.head.y),
+      z: wrapDeg(input.headRotation.z + input.mood.head.z),
+    },
+  };
   const { surface } = bubble.body;
   const bodyY = surface.y + live.ambient.bodyY;
   const bodyRot =
@@ -697,6 +715,7 @@ export function restingScene(
   const mood: MoodSample = {
     left: zeroEye(),
     right: zeroEye(),
+    head: { x: 0, y: 0, z: 0 },
     colorOverride: null,
   };
   const ambient = ambientAt(bubble.ambient, tAbsMs);

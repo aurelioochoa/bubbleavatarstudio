@@ -10,6 +10,8 @@ import full from "../test/fixtures/full.json";
 
 const doc = full as unknown as StudioDocument;
 
+const FACING = { x: 0, y: 0, z: 0 };
+
 const ZERO_EYE: MoodEye = {
   rotationXDeg: 0,
   rotationYDeg: 0,
@@ -149,7 +151,12 @@ describe("volume: the surface is shaded", () => {
       const svg = sceneToSvg(
         buildScene(bubble, {
           tAbsMs: 0,
-          mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+          mood: {
+            left: ZERO_EYE,
+            right: ZERO_EYE,
+            head: FACING,
+            colorOverride: null,
+          },
           blink: 0,
           ambient: {
             bodyY: 0,
@@ -221,6 +228,7 @@ describe("volume: the face sits on a surface (FR-8.2)", () => {
       mood: {
         left: ZERO_EYE,
         right: ZERO_EYE,
+        head: FACING,
         colorOverride: null,
       },
       blink: 0,
@@ -280,6 +288,7 @@ describe("mood eye rotation (FR-4.1)", () => {
       mood: {
         left: { ...ZERO_EYE, ...delta },
         right: ZERO_EYE,
+        head: FACING,
         colorOverride: null,
       },
       blink: 0,
@@ -494,7 +503,12 @@ describe("volume: the light survives a full turn", () => {
   const shadingAt = (rotation: { x: number; y: number; z: number }) => {
     const s = buildScene(bubble, {
       tAbsMs: 0,
-      mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+      mood: {
+        left: ZERO_EYE,
+        right: ZERO_EYE,
+        head: FACING,
+        colorOverride: null,
+      },
       blink: 0,
       ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale: 1 },
       headRotation: rotation,
@@ -567,7 +581,12 @@ describe("volume: extras sit on the surface too (FR-8.2)", () => {
   const at = (rotation: { x: number; y: number; z: number }) =>
     buildScene(bubble, {
       tAbsMs: 0,
-      mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+      mood: {
+        left: ZERO_EYE,
+        right: ZERO_EYE,
+        head: FACING,
+        colorOverride: null,
+      },
       blink: 0,
       ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale: 1 },
       headRotation: rotation,
@@ -629,7 +648,12 @@ describe("volume: extras sit on the surface too (FR-8.2)", () => {
     const scene = (rotation: { x: number; y: number; z: number }) =>
       buildScene(disc, {
         tAbsMs: 0,
-        mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+        mood: {
+          left: ZERO_EYE,
+          right: ZERO_EYE,
+          head: FACING,
+          colorOverride: null,
+        },
         blink: 0,
         ambient: {
           bodyY: 0,
@@ -678,7 +702,12 @@ describe("contact shadow (stage chrome)", () => {
   ) =>
     buildScene(bubble, {
       tAbsMs: 0,
-      mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+      mood: {
+        left: ZERO_EYE,
+        right: ZERO_EYE,
+        head: FACING,
+        colorOverride: null,
+      },
       blink: 0,
       ambient: { bodyY, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale },
       headRotation: rotation,
@@ -991,5 +1020,69 @@ describe("volume: extras are solids with a depth of their own", () => {
     );
     // 80 wide at rest is 80 wide: no turn, no foreshortening.
     expect(reach(rest.extras[0]?.path ?? "")).toBeCloseTo(40, 5);
+  });
+});
+
+// FR-4.10: a mood turns the whole character, not only its eyes. The pose
+// composes with the one a drag sets (FR-8.1) rather than replacing it, so a
+// user who has turned the character keeps their view while it animates.
+describe("mood pose (FR-4.10)", () => {
+  const scene = (
+    head: { x: number; y: number; z: number },
+    headRotation = FACING,
+  ) =>
+    buildScene(doc.bubbles[0], {
+      tAbsMs: 0,
+      mood: { left: ZERO_EYE, right: ZERO_EYE, head, colorOverride: null },
+      blink: 0,
+      ambient: { bodyY: 0, bodyRotationDeg: 0, eyeY: 0, eyeX: 0, bodyScale: 1 },
+      headRotation,
+    });
+
+  it("turns the body, not just the face", () => {
+    const facing = scene(FACING);
+    const turned = scene({ x: 0, y: 40, z: 0 });
+    // The silhouette is a solid of revolution read at a screen angle, so a yaw
+    // changes the drawn body itself.
+    expect(turned.body.transform).not.toBe(facing.body.transform);
+  });
+
+  it("moves the eyes with the surface they are anchored to", () => {
+    const facing = scene(FACING);
+    const turned = scene({ x: 0, y: 30, z: 0 });
+    // The eyes are anchored to the surface, so a pose sweeps them across it
+    // (FR-8.2) rather than leaving them painted where they were.
+    expect(turned.eyes.left.x).not.toBeCloseTo(facing.eyes.left.x, 3);
+  });
+
+  it("a mood facing ahead draws exactly what it drew before poses existed", () => {
+    // The whole starter library, every saved project and all three goldens
+    // rest on this: a zero pose has to be a no-op, not merely a small one.
+    expect(scene(FACING)).toEqual(scene({ x: 0, y: 0, z: 0 }));
+  });
+
+  it("composes with a drag rather than overriding it", () => {
+    const both = scene({ x: 0, y: 20, z: 0 }, { x: 0, y: 25, z: 0 });
+    const sum = scene({ x: 0, y: 45, z: 0 });
+    expect(both.body.transform).toBe(sum.body.transform);
+  });
+
+  it("keeps the composed angle inside a half turn either side", () => {
+    // Two large angles that add past 180 must land on the equivalent negative
+    // angle, not on a number the projection has never been asked for.
+    const wrapped = scene({ x: 0, y: 170, z: 0 }, { x: 0, y: 30, z: 0 });
+    const equivalent = scene({ x: 0, y: -160, z: 0 });
+    expect(wrapped.body.transform).toBe(equivalent.body.transform);
+  });
+
+  it("the roll reaches the head group the same way a drag's does", () => {
+    // The roll is not in the body's own transform — it turns the whole head
+    // group, so the eyes and extras roll with it instead of sliding across a
+    // body that rolled underneath them.
+    const rolled = scene({ x: 0, y: 0, z: 12 });
+    expect(rolled.head.transform).toBe(
+      scene(FACING, { x: 0, y: 0, z: 12 }).head.transform,
+    );
+    expect(rolled.head.transform).not.toBe(scene(FACING).head.transform);
   });
 });

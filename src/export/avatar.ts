@@ -4,14 +4,15 @@ import { sceneToSvg, type SvgOptions } from "../render/svg";
 import type { Bubble, Kit, StudioDocument } from "../domain/document/types";
 
 export const AVATAR_FORMAT = "bubble-avatar";
-export const AVATAR_VERSION = 4;
+export const AVATAR_VERSION = 5;
 
 /**
  * Versions the runtime still reads. v1 predates the shape family (FR-2.6), v2
  * the surface's authored depth (FR-2.2), v3 the depth every assembled
- * primitive now carries (FR-2.3).
+ * primitive now carries (FR-2.3), v4 the pose a mood turns the body to
+ * (FR-4.10).
  */
-export type AvatarFileVersion = 1 | 2 | 3 | typeof AVATAR_VERSION;
+export type AvatarFileVersion = 1 | 2 | 3 | 4 | typeof AVATAR_VERSION;
 
 export interface PortableAvatar {
   version: AvatarFileVersion;
@@ -22,10 +23,11 @@ export interface PortableAvatar {
 
 /**
  * Accepts any avatar file the runtime still reads and returns it at the
- * current version. These are the same two defaults migrate() applies to a
+ * current version. These are the same defaults migrate() applies to a
  * project, for the same reason: "round" is the family whose outline is
- * byte-identical to what v1 drew, and `min(width, height) * 0.85` is the depth
- * the projection derived for itself before v3.
+ * byte-identical to what v1 drew, `min(width, height) * 0.85` is the depth
+ * the projection derived for itself before v3, and facing straight ahead is
+ * exactly what a mood looked like before it could turn the body.
  *
  * Returns the input untouched when it is already current, so the common path
  * costs nothing.
@@ -57,6 +59,9 @@ export function readPortableAvatar(input: PortableAvatar): PortableAvatar {
     const { width, height } = extra;
     if (typeof width !== "number" || typeof height !== "number") continue;
     extra.depth = Math.min(width, height) * 0.85;
+  }
+  for (const mood of next.kit.moods as unknown as Record<string, unknown>[]) {
+    mood.head ??= { x: 0, y: 0, z: 0 };
   }
   return next;
 }

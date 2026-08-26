@@ -86,6 +86,7 @@ describe("mood cards (FR-4.5, docs/05 §2)", () => {
     expect(onPreview).toHaveBeenCalledWith({
       left: second.left,
       right: second.right,
+      head: second.head,
       colorOverride: second.colorOverride,
     });
   });
@@ -411,6 +412,7 @@ describe("mood editor (FR-4.1, FR-4.3, FR-4.4)", () => {
     expect(onPreview).toHaveBeenLastCalledWith({
       left: first.left,
       right: first.right,
+      head: first.head,
       colorOverride: first.colorOverride,
     });
     expect(screen.queryByRole("dialog")).toBeNull();

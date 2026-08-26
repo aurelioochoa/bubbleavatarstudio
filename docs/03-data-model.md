@@ -129,12 +129,22 @@ Coordinate system: face frame origin = surface center; +x right, +y **down**
     "offsetX": 0,
     "offsetY": 4,
   },
+  "head": { "x": 4, "y": 0, "z": -3 }, // degrees: pitch, yaw, roll (FR-4.10)
   "colorOverride": null, // null | { "body"?: "#...", "eyes"?: "#..." }
 }
 ```
 
 Deltas are **added** to resting values (scale multiplies). No absolute
 positions → moods transfer across bodies (FR-4.6).
+
+`head` is the pose the mood turns the **whole character** to (FR-4.10) — the
+same three axes, and the same signs, that a drag on the stage sets. It is
+added to the pose direct manipulation is holding rather than replacing it, so
+a character the user has turned to see side-on keeps that view while it
+animates, and the sum is folded back into the half turn either side of zero.
+It is not a delta on the eyes: the eyes are anchored to the surface and travel
+with it, which is why a posed mood sweeps them across the face rather than
+leaving them painted where they were.
 
 ### Loop
 
@@ -253,6 +263,22 @@ The portable `*.bubble-avatar.json` bumps to 2 on the same rule. It is a public
 embed surface, so `readPortableAvatar()` in `export/avatar.ts` still accepts a
 v1 file and upgrades it the same way; the runtime reads every definition
 through it.
+
+### v5 → v6 (a mood turns the body, FR-4.10) — **landed**
+
+v6 adds `head` to a mood: three angles that turn the whole character while
+that mood is displayed. Before it, a mood moved the eyes on a body that never
+moved, so every animation in the library was a face working on a statue.
+
+A v5 mood predates the field and joins v6 facing straight ahead — `{0, 0, 0}`
+— which is precisely what it already drew, so no saved character changes and
+the render goldens do not move. Shape-only, like every migration except the
+v4 → v5 content one, and it reaches every kit the document holds: the shared
+one and any a bubble has forked.
+
+The portable avatar format took the same step at its own v5, with the same
+default, because the runtime still has to read files written before poses
+existed.
 
 ### v4 → v5 (the starter library reaches saved projects, FR-4.7/FR-5.7) — **landed**
 

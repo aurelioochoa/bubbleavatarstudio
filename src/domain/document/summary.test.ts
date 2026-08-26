@@ -12,6 +12,8 @@ const ok = (r: ReturnType<typeof addBubble>): StudioDocument => {
   return r.doc;
 };
 
+const facing = () => ({ x: 0, y: 0, z: 0 });
+
 const eye = (): MoodEye => ({
   rotationXDeg: 0,
   rotationYDeg: 0,
@@ -71,9 +73,30 @@ describe("summarizeDocument (FR-9.3)", () => {
 describe("moodUsage (FR-4.8)", () => {
   const kit = (): Kit => ({
     moods: [
-      { id: "m_a", name: "a", left: eye(), right: eye(), colorOverride: null },
-      { id: "m_b", name: "b", left: eye(), right: eye(), colorOverride: null },
-      { id: "m_c", name: "c", left: eye(), right: eye(), colorOverride: null },
+      {
+        id: "m_a",
+        name: "a",
+        left: eye(),
+        right: eye(),
+        head: facing(),
+        colorOverride: null,
+      },
+      {
+        id: "m_b",
+        name: "b",
+        left: eye(),
+        right: eye(),
+        head: facing(),
+        colorOverride: null,
+      },
+      {
+        id: "m_c",
+        name: "c",
+        left: eye(),
+        right: eye(),
+        head: facing(),
+        colorOverride: null,
+      },
     ],
     loops: [
       loop("l_1", ["m_a", "m_b"]),

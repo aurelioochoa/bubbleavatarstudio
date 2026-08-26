@@ -32,7 +32,7 @@ describe("migrate", () => {
     const r = migrate(v1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(5);
+    expect(r.doc.version).toBe(6);
     for (const b of r.doc.bubbles) {
       expect(b.body.surface.shape).toBe("round");
     }
@@ -52,7 +52,7 @@ describe("migrate", () => {
   });
 
   it("rejects future versions with E_VERSION", () => {
-    const r = migrate({ version: 6 });
+    const r = migrate({ version: 7 });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.code).toBe("E_VERSION");
   });
@@ -84,7 +84,7 @@ describe("migrate", () => {
     const r = migrate(v2);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(5);
+    expect(r.doc.version).toBe(6);
     for (const b of r.doc.bubbles) {
       const s = b.body.surface;
       expect(s.depth).toBeCloseTo(Math.min(s.width, s.height) * 0.85, 10);
@@ -106,7 +106,7 @@ describe("migrate", () => {
     if (r.ok) expect(r.doc.bubbles[0]?.body.surface.depth).toBe(42);
   });
 
-  it("still migrates a v1 document all the way to v5", () => {
+  it("still migrates a v1 document all the way to v6", () => {
     const doc = createDefaultDocument() as unknown as Record<string, unknown>;
     const v1 = structuredClone(doc);
     v1.version = 1;
@@ -120,7 +120,7 @@ describe("migrate", () => {
     const r = migrate(v1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(5);
+    expect(r.doc.version).toBe(6);
     expect(r.doc.bubbles[0]?.body.surface.shape).toBe("round");
     expect(r.doc.bubbles[0]?.body.surface.depth).toBeGreaterThan(0);
   });
@@ -155,7 +155,7 @@ describe("migrate", () => {
     const r = migrate(v3);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(5);
+    expect(r.doc.version).toBe(6);
     expect(r.doc.bubbles[0]?.body.extras[0]?.depth).toBeCloseTo(40 * 0.85, 10);
   });
 });
@@ -181,7 +181,7 @@ describe("migrate · v4 -> v5 tops the kit up to the starter library", () => {
     const r = migrate(thinned());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(5);
+    expect(r.doc.version).toBe(6);
     expect(libraryGap(r.doc.starterKit)).toEqual({ moods: 0, loops: 0 });
   });
 
@@ -251,5 +251,63 @@ describe("migrate · v4 -> v5 tops the kit up to the starter library", () => {
     expect(r.doc.starterKit.moods.some((m) => m.name === gone.name)).toBe(
       false,
     );
+  });
+});
+
+// FR-4.10 gave a mood a pose. Every project already in storage predates it.
+describe("migrate · v5 -> v6 gives every mood a pose", () => {
+  /** A v5 project: current in every way except that its moods cannot turn. */
+  const v5 = () => {
+    const doc = structuredClone(createDefaultDocument()) as unknown as Record<
+      string,
+      unknown
+    >;
+    doc.version = 5;
+    const kit = doc.starterKit as { moods: Record<string, unknown>[] };
+    for (const m of kit.moods) delete m.head;
+    return doc;
+  };
+
+  it("faces every mood straight ahead", () => {
+    const r = migrate(v5());
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.doc.starterKit.moods.every((m) => m.head.x === 0)).toBe(true);
+    expect(r.doc.version).toBe(6);
+  });
+
+  it("changes nothing about how the character looks", () => {
+    // Facing ahead is exactly what those moods drew, because before this the
+    // body did not move for any mood at all.
+    const r = migrate(v5());
+    if (!r.ok) throw new Error("expected a migrated document");
+    expect(r.doc.starterKit.moods.map((m) => m.head)).toEqual(
+      r.doc.starterKit.moods.map(() => ({ x: 0, y: 0, z: 0 })),
+    );
+  });
+
+  it("reaches a kit a bubble owns, not only the shared one", () => {
+    const doc = v5();
+    const bubbles = doc.bubbles as Record<string, unknown>[];
+    const own = structuredClone(doc.starterKit) as {
+      moods: Record<string, unknown>[];
+    };
+    for (const m of own.moods) delete m.head;
+    bubbles[0].ownKit = own;
+
+    const r = migrate(doc);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.doc.bubbles[0].ownKit?.moods.every((m) => m.head.y === 0)).toBe(
+      true,
+    );
+  });
+
+  it("leaves a pose a v6 document already carries", () => {
+    const doc = createDefaultDocument();
+    doc.starterKit.moods[0].head = { x: 3, y: -9, z: 1 };
+    const r = migrate(doc);
+    if (!r.ok) throw new Error("expected a migrated document");
+    expect(r.doc.starterKit.moods[0].head).toEqual({ x: 3, y: -9, z: 1 });
   });
 });

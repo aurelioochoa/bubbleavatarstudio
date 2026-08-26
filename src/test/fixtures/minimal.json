@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "kind": "bubble-studio-project",
   "activeBubbleId": "bbl_min",
   "locale": "es",
@@ -22,9 +22,17 @@
         },
         "extras": []
       },
-      "colors": { "body": "#6c7bff", "accent": "#ffffff", "eyes": "#1c2033" },
+      "colors": {
+        "body": "#6c7bff",
+        "accent": "#ffffff",
+        "eyes": "#1c2033"
+      },
       "restingFace": {
-        "eye": { "width": 30, "height": 46, "roundness": 1 },
+        "eye": {
+          "width": 30,
+          "height": 46,
+          "roundness": 1
+        },
         "left": {
           "offsetX": -5,
           "offsetY": 0,
@@ -75,7 +83,12 @@
           "offsetX": 0,
           "offsetY": 4
         },
-        "colorOverride": null
+        "colorOverride": null,
+        "head": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
       }
     ],
     "loops": [

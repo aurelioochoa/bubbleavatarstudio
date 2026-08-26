@@ -663,6 +663,7 @@ function StepChip({
             moodScene(bubble, {
               left: mood.left,
               right: mood.right,
+              head: mood.head,
               colorOverride: mood.colorOverride,
             }),
             { background: null, size: 30 },
@@ -1099,6 +1100,7 @@ function TrayCard({ bubble, mood }: { bubble: Bubble; mood: Mood }) {
         moodScene(bubble, {
           left: mood.left,
           right: mood.right,
+          head: mood.head,
           colorOverride: mood.colorOverride,
         }),
         { background: null, size: 30 },

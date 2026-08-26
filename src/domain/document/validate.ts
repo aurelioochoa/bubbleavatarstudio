@@ -127,6 +127,18 @@ function validateMoodEye(ctx: Ctx, e: unknown, path: string): void {
   num(ctx, m.offsetY, `${path}.offsetY`, -400, 400);
 }
 
+/** FR-4.10: a pose is three finite angles, each inside a whole turn. */
+function validateHeadPose(ctx: Ctx, h: unknown, path: string): void {
+  if (typeof h !== "object" || h === null) {
+    ctx.fail("E_SHAPE", path);
+    return;
+  }
+  const pose = h as Record<string, unknown>;
+  num(ctx, pose.x, `${path}.x`, -180, 180);
+  num(ctx, pose.y, `${path}.y`, -180, 180);
+  num(ctx, pose.z, `${path}.z`, -180, 180);
+}
+
 function validateMood(ctx: Ctx, m: unknown, path: string): void {
   if (typeof m !== "object" || m === null) {
     ctx.fail("E_SHAPE", path);
@@ -137,6 +149,7 @@ function validateMood(ctx: Ctx, m: unknown, path: string): void {
   nonEmptyName(ctx, mood.name, `${path}.name`);
   validateMoodEye(ctx, mood.left, `${path}.left`);
   validateMoodEye(ctx, mood.right, `${path}.right`);
+  validateHeadPose(ctx, mood.head, `${path}.head`);
   const co = mood.colorOverride;
   if (co !== null && co !== undefined) {
     if (typeof co !== "object") {
@@ -420,7 +433,7 @@ export function validateDocument(doc: unknown): ValidateResult {
     return { ok: false, issues: [{ code: "E_SHAPE", path: "$" }] };
   }
   const d = doc as Record<string, unknown>;
-  ctx.check(d.version === 5, "E_VERSION", "$.version");
+  ctx.check(d.version === 6, "E_VERSION", "$.version");
   ctx.check(d.kind === "bubble-studio-project", "E_KIND", "$.kind");
   if (!Array.isArray(d.bubbles)) {
     ctx.fail("E_SHAPE", "$.bubbles");

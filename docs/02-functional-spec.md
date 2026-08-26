@@ -88,6 +88,12 @@
   backstop for every other path into a deletion).
 - **FR-4.9** The mood grid is filterable by name, so a 24-mood library is
   reachable without scrolling past what is not wanted.
+- **FR-4.10** A mood carries a **pose**: a three-axis orientation of the whole
+  character, stored alongside its eye deltas. It composes with the pose direct
+  manipulation sets (FR-8.1) rather than replacing it, and a loop travels
+  between its steps' poses along the **shorter arc** on each axis — the long
+  way round is a character spinning through the front to reach a neighbouring
+  angle. Ambient idle motion (FR-7) composes on top, unchanged.
 
 ## FR-5 Loops (animations)
 
