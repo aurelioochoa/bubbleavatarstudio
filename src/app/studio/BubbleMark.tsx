@@ -6,16 +6,27 @@
 // from our own pure serializer, never from a document or a user, and there is
 // no other way to put an SVG document into the tree without re-parsing it.
 import { useMemo } from "react";
-import { markSvg } from "../../render/mark";
+import { markInkRatio, markSvg } from "../../render/mark";
 
 export function BubbleMark({ size = 18 }: { size?: number }) {
   const svg = useMemo(() => markSvg(size), [size]);
+  // The scene is square and the capsule is not, so the drawing is shorter than
+  // the box that holds it. Occupying the whole box would make the header taller
+  // by the transparent remainder — a row of stage paid for nothing anyone can
+  // see — so the span claims only the inked height and lets the rest overflow.
+  const ink = markInkRatio();
   return (
     <span
       aria-hidden="true"
       data-testid="bubble-mark"
-      className="inline-flex shrink-0"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+      className="relative inline-block shrink-0"
+      style={{ width: size * ink.x, height: size * ink.y }}
+    >
+      <span
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{ width: size, height: size }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    </span>
   );
 }

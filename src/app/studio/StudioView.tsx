@@ -172,7 +172,7 @@ export function StudioView() {
   return (
     <div className="flex h-dvh flex-col bg-stage text-ink">
       <header className="flex shrink-0 items-center gap-3 border-b border-line bg-panel px-4 py-2.5">
-        <BubbleMark size={28} />
+        <BubbleMark size={34} />
         <h1 className="text-sm font-semibold tracking-tight">
           {t("app.title")}
         </h1>

@@ -295,9 +295,14 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
   things, not one sentence, so the list can be read down a column of key caps.
 - **FR-9.8** The studio wears its own character as its mark: the header logo
   and the browser favicon are the same render, produced by `render/mark.ts`
-  rather than authored as an asset. The mark carries its own face — wider eyes,
-  set further apart than the default template's — because a favicon is
-  rasterized to as few as 16 device pixels and the default pair merges there.
+  rather than authored as an asset. The mark is its own character, not the
+  default template, and every difference is legibility at 16 device pixels:
+  the **capsule** family, whose straight run survives being shrunk where a
+  round body blurs into a smudge; a body filling most of its box rather than
+  the template's 43%; and wider eyes set further apart, because the default
+  pair merges into one bar down there. Its layout height is the height it
+  inks, not the square scene box, so a larger mark does not push the header
+  down over the stage.
 - **FR-9.9** The same help sheet carries a guide to the studio as a second tab:
   what a bubble is, and what each surface of the shell is for, in es/en.
 
@@ -1467,13 +1472,13 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ### 4b. Current state (re-derive; do not trust)
 
-As of the help sheet and the mark (F9): **39 Vitest files, 682 tests**, plus
+As of the help sheet and the mark (F9): **39 Vitest files, 684 tests**, plus
 **1 Playwright spec** of **12 scenarios** — boot, panels, a playing loop and
 the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, a 1024×720
 check that the track's first row and the inspector do not clip, and the help
-sheet's backdrop reaching every window edge. Production bundle 357.16 kB JS /
-38.86 kB CSS (107.01 / 7.72 gzipped).
+sheet's backdrop reaching every window edge. Production bundle 357.39 kB JS /
+38.88 kB CSS (107.06 / 7.73 gzipped).
 
 Three of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not

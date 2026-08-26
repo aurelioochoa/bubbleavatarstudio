@@ -58,12 +58,16 @@ describe("the mark reads at 16px", () => {
     }
   });
 
+  it("is a capsule — the family whose straight run reads at icon size", () => {
+    expect(markBubble().body.surface.shape).toBe("capsule");
+  });
+
   it("fills its box, so the glyph is not a dot in a field of nothing", () => {
     // The scene is 512 wide whatever the character does, and the default
     // template's 220 fills 43% of it — legible on a stage, a speck in a tab
     // strip or beside a wordmark. An icon wants most of its own box.
     const width = markBubble().body.surface.width;
-    expect(width / scene.size).toBeGreaterThan(0.65);
+    expect(width / scene.size).toBeGreaterThan(0.75);
     // Not so far that the silhouette touches the edge and looks cropped.
     expect(width / scene.size).toBeLessThan(0.85);
   });
