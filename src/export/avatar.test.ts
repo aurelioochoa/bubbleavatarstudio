@@ -9,6 +9,9 @@ import {
   summarizeExport,
 } from "./avatar";
 import { createBubble, createDefaultDocument } from "../domain/document/create";
+import { restingScene } from "../render/scene";
+import { sceneToSvg } from "../render/svg";
+import { previewSvg } from "./avatar";
 import { addMood } from "../domain/document/mutate";
 import { validateDocument } from "../domain/document/validate";
 import full from "../test/fixtures/full.json";
@@ -292,5 +295,58 @@ describe("summarizeExport (FR-10.6)", () => {
     expect(s).toMatchObject({ loops: 0, moods: 0 });
     // The character itself is always in the file, so the weight is never zero.
     expect(s.bytes).toBeGreaterThan(0);
+  });
+});
+
+// FR-10.1 asks for "the current stage", and a head turned by dragging it
+// (FR-8.1) is part of that stage. It reached the render and the export frame
+// drawn over it, but not the file the button wrote.
+describe("snapshot carries the pose (FR-10.1)", () => {
+  const posed = { x: 0, y: 40, z: 0 };
+
+  it("renders a turned head as turned", () => {
+    const d = createDefaultDocument();
+    const b = d.bubbles[0];
+    const resting = snapshotSvg(b, { size: 512, background: null });
+    const turned = snapshotSvg(b, { size: 512, background: null }, posed);
+    expect(turned).not.toBe(resting);
+  });
+
+  it("leaves the resting call byte-identical", () => {
+    // The goldens go through restingScene directly, but the snapshot is the
+    // other public path to the same bytes and must not drift from them.
+    const d = createDefaultDocument();
+    const b = d.bubbles[0];
+    expect(snapshotSvg(b, { size: 512, background: null })).toBe(
+      sceneToSvg(restingScene(b, 0), { background: null, size: 512 }),
+    );
+  });
+
+  it("is still deterministic: the same pose twice is the same bytes", () => {
+    // Ambient breathing stays parked at t=0. A pose is an instruction; a
+    // wobble is not, and a snapshot that caught a random phase of one could
+    // not be re-made.
+    const d = createDefaultDocument();
+    const b = d.bubbles[0];
+    expect(snapshotSvg(b, { size: 512, background: null }, posed)).toBe(
+      snapshotSvg(b, { size: 512, background: null }, posed),
+    );
+  });
+
+  it("previews the same pose the download will carry", () => {
+    // The preview's whole claim is that it is the snapshot in a smaller box.
+    const d = createDefaultDocument();
+    const b = d.bubbles[0];
+    expect(previewSvg(b, { background: null, size: 132 }, posed)).not.toBe(
+      previewSvg(b, { background: null, size: 132 }),
+    );
+  });
+
+  it("leaves the portable definition unposed", () => {
+    // A character file is a definition the runtime plays loops from. Baking a
+    // pose into it would pose every future frame it renders.
+    const d = createDefaultDocument();
+    const b = d.bubbles[0];
+    expect(buildPortableAvatar(b, d).bubble).toEqual(b);
   });
 });

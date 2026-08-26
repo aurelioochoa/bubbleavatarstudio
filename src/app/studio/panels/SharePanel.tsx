@@ -23,6 +23,7 @@ import {
   previewSvg,
   snapshotPng,
   snapshotSvg,
+  type HeadRotation,
 } from "../../../export/avatar";
 import { createZip, textEntry } from "../../../export/zip";
 import { validateDocument } from "../../../domain/document/validate";
@@ -48,6 +49,11 @@ export interface SharePanelProps {
    * erases it — the same rule every stage overlay follows (docs/05 §1).
    */
   stageHost?: HTMLElement | null;
+  /**
+   * The pose the stage is holding (FR-8.1). FR-10.1's snapshot is the current
+   * stage, and that includes a head the user turned by dragging it.
+   */
+  head?: HeadRotation;
 }
 
 const SIZES = [512, 1024, 2048] as const;
@@ -62,6 +68,7 @@ export function SharePanel({
   t,
   overlayHost = null,
   stageHost = null,
+  head = { x: 0, y: 0, z: 0 },
 }: SharePanelProps) {
   const [size, setSize] = useState<(typeof SIZES)[number]>(1024);
   const [bg, setBg] = useState<BackgroundKind>("transparent");
@@ -244,7 +251,7 @@ export function SharePanel({
           role="img"
           className="mx-auto grid place-items-center rounded-field border border-line bg-[repeating-conic-gradient(var(--color-panel-3)_0_25%,transparent_0_50%)] bg-[length:12px_12px] p-1"
           dangerouslySetInnerHTML={{
-            __html: previewSvg(bubble, { background, size: PREVIEW_PX }),
+            __html: previewSvg(bubble, { background, size: PREVIEW_PX }, head),
           }}
         />
 
@@ -254,7 +261,7 @@ export function SharePanel({
             onClick={() => {
               download(
                 `bubble.svg`,
-                snapshotSvg(bubble, { size, background }),
+                snapshotSvg(bubble, { size, background }, head),
                 "image/svg+xml",
               );
             }}
@@ -265,9 +272,11 @@ export function SharePanel({
           <button
             type="button"
             onClick={() =>
-              void snapshotPng(bubble, { size, background }).then((b2) => {
-                download("bubble.png", b2);
-              })
+              void snapshotPng(bubble, { size, background }, head).then(
+                (b2) => {
+                  download("bubble.png", b2);
+                },
+              )
             }
             className={BTN}
           >

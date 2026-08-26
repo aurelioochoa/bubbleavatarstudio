@@ -156,6 +156,9 @@ export function packageFiles(
   return [
     { name: DEFINITION_FILE, text: JSON.stringify(avatar, null, 2) },
     {
+      // Unposed on purpose: this sits beside a definition that carries no
+      // pose either, and the README below says which one it is. The Share
+      // panel's own snapshot does carry the stage's pose (FR-10.1).
       name: "bubble.svg",
       text: snapshotSvg(bubble, { size: 1024, background: null }),
     },
@@ -204,6 +207,15 @@ export interface SnapshotOptions {
 }
 
 /**
+ * The pose the stage is holding (FR-8.1), which FR-10.1's "current stage"
+ * includes. Defaulted rather than required: every caller that wants the
+ * resting character — the goldens' neighbours, the runtime, a test — keeps
+ * asking for exactly the bytes it always got.
+ */
+export type HeadRotation = { x: number; y: number; z: number };
+const RESTING_HEAD: HeadRotation = { x: 0, y: 0, z: 0 };
+
+/**
  * A small framed render of what a snapshot would produce (docs/05 §2). Same
  * scene and same background as `snapshotSvg`; only the box differs, which is
  * what makes it an honest preview rather than an approximation of one.
@@ -211,13 +223,25 @@ export interface SnapshotOptions {
 export function previewSvg(
   bubble: Bubble,
   opts: { background: SvgOptions["background"]; size: number },
+  head: HeadRotation = RESTING_HEAD,
 ): string {
-  return sceneToSvg(restingScene(bubble, 0), opts);
+  return sceneToSvg(restingScene(bubble, 0, head), opts);
 }
 
-/** Deterministic resting-pose snapshot SVG string at the requested size. */
-export function snapshotSvg(bubble: Bubble, opts: SnapshotOptions): string {
-  return sceneToSvg(restingScene(bubble, 0), {
+/**
+ * The stage as a file (FR-10.1), at the requested size.
+ *
+ * Deterministic in the one way that matters: ambient breathing stays parked
+ * at t=0, so the same character and the same pose are always the same bytes.
+ * The pose itself is an instruction the user gave by dragging; a breath is
+ * not, and a snapshot that caught a random phase of one could not be re-made.
+ */
+export function snapshotSvg(
+  bubble: Bubble,
+  opts: SnapshotOptions,
+  head: HeadRotation = RESTING_HEAD,
+): string {
+  return sceneToSvg(restingScene(bubble, 0, head), {
     background: opts.background,
     size: opts.size,
   });
@@ -227,8 +251,9 @@ export function snapshotSvg(bubble: Bubble, opts: SnapshotOptions): string {
 export async function snapshotPng(
   bubble: Bubble,
   opts: SnapshotOptions,
+  head: HeadRotation = RESTING_HEAD,
 ): Promise<Blob> {
-  const svg = snapshotSvg(bubble, opts);
+  const svg = snapshotSvg(bubble, opts, head);
   const blob = new Blob([svg], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
   try {

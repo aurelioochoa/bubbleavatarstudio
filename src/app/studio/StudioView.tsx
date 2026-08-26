@@ -34,6 +34,10 @@ export function StudioView() {
   // than inside the scroll box that would clip it (docs/05 §2).
   const [inspector, setInspector] = useState<HTMLElement | null>(null);
   const [stageHost, setStageHost] = useState<HTMLElement | null>(null);
+  // FR-8.1's pose lives here rather than inside Stage: FR-10.1's snapshot is
+  // "the current stage", and the Share panel has to draw and export the same
+  // pose the stage is holding.
+  const [head, setHead] = useState({ x: 0, y: 0, z: 0 });
   // FR-6.6: the Share tab is not editing a sequence, so the track folds to a
   // single row there — kept as state rather than derived from the tab, so a
   // user who opens it back up gets to keep it open.
@@ -221,6 +225,8 @@ export function StudioView() {
             preview={preview}
             t={t}
             clock={clock}
+            head={head}
+            onHead={setHead}
             onPause={pause}
           />
         </main>
@@ -312,6 +318,7 @@ export function StudioView() {
                   dispatch={dispatch}
                   overlayHost={inspector}
                   stageHost={stageHost}
+                  head={head}
                   t={t}
                 />
               </PanelScroll>

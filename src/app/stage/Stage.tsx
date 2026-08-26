@@ -25,6 +25,14 @@ export interface StageProps {
   t: (k: MessageKey) => string;
   /** Handed to the engine, which publishes elapsed time for the track. */
   clock?: StageClock | undefined;
+  /**
+   * The head's pose (FR-8.1). Owned above rather than here because it is part
+   * of "the current stage" that a snapshot captures (FR-10.1) — the Share
+   * panel draws the same pose this does, and a pose the panel cannot see is a
+   * pose the download quietly leaves out.
+   */
+  head: { x: number; y: number; z: number };
+  onHead: (next: { x: number; y: number; z: number }) => void;
   onPause: () => void;
 }
 
@@ -46,11 +54,12 @@ export function Stage({
   preview,
   t,
   clock,
+  head,
+  onHead,
   onPause,
 }: StageProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<StageEngine | null>(null);
-  const [head, setHead] = useState({ x: 0, y: 0, z: 0 });
   const dragRef = useRef<{
     px: number;
     py: number;
@@ -136,11 +145,11 @@ export function Stage({
     // where the pointer goes: a positive yaw turns it toward the viewer's
     // right, and a positive pitch lifts the face while screen y runs downward,
     // which is why the pitch takes the drag with its sign flipped.
-    setHead((h) => ({
-      ...h,
+    onHead({
+      ...head,
       x: wrapDeg(d.sx - dy * DRAG_DEG_PER_PX),
       y: wrapDeg(d.sy + dx * DRAG_DEG_PER_PX),
-    }));
+    });
   };
 
   const onPointerUp = () => {
@@ -149,7 +158,7 @@ export function Stage({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") setHead(preDragRef.current); // Esc-undo (FR-8.3)
+    if (e.key === "Escape") onHead(preDragRef.current); // Esc-undo (FR-8.3)
   };
 
   // The pill names the loop on the stage, which is the selection the track
@@ -226,7 +235,7 @@ export function Stage({
             title={t("common.reset")}
             onClick={() => {
               preDragRef.current = head;
-              setHead({ x: 0, y: 0, z: 0 });
+              onHead({ x: 0, y: 0, z: 0 });
             }}
             className="grid h-7.5 w-7.5 place-items-center rounded-full border border-line bg-panel/80 text-ink-dim backdrop-blur-md transition-colors duration-150 ease-out hover:text-ink"
           >
@@ -259,7 +268,7 @@ export function Stage({
                   // Posing by hand owns the live state, same as a drag (FR-8.3).
                   if (mode === "playing") onPause();
                   preDragRef.current = head;
-                  setHead((h) => ({ ...h, [a.axis]: v }));
+                  onHead({ ...head, [a.axis]: v });
                 }}
                 className="mt-1 w-full"
               />

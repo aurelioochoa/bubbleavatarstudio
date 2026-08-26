@@ -252,3 +252,48 @@ describe("SharePanel export frame (FR-10.6)", () => {
     ).toBeTruthy();
   });
 });
+
+describe("SharePanel snapshot follows the stage (FR-10.1)", () => {
+  /** The FR-8.1 gesture: press the stage and drag sideways to turn the head. */
+  function turnHead(by = 140) {
+    const stage = screen.getByLabelText("bubble stage");
+    const at = (type: string, x: number) => {
+      const ev = new Event(type, { bubbles: true, cancelable: true });
+      Object.assign(ev, { pointerId: 1, clientX: x, clientY: 100 });
+      fireEvent(stage, ev);
+    };
+    at("pointerdown", 100);
+    at("pointermove", 100 + by);
+    at("pointerup", 100 + by);
+  }
+
+  it("redraws the preview when the head is turned", async () => {
+    // The pose used to live inside Stage, so the panel could not see it: the
+    // stage showed a turned character, the export frame drawn over it claimed
+    // to be what you would get, and the file was of the resting pose.
+    await openShare();
+    const before = preview().innerHTML;
+    turnHead();
+    expect(preview().innerHTML).not.toBe(before);
+  });
+
+  it("puts the preview back when the pose is reset", async () => {
+    const user = await openShare();
+    const resting = preview().innerHTML;
+    turnHead();
+    expect(preview().innerHTML).not.toBe(resting);
+    await user.click(screen.getByRole("button", { name: "Restablecer" }));
+    expect(preview().innerHTML).toBe(resting);
+  });
+
+  it("keeps the pose across a tab switch", async () => {
+    // The pose is the shell's now, not one panel's, so leaving Share and
+    // coming back must not quietly straighten the character.
+    const user = await openShare();
+    turnHead();
+    const posed = preview().innerHTML;
+    await user.click(screen.getByRole("tab", { name: "Aspecto" }));
+    await user.click(screen.getByRole("tab", { name: "Compartir" }));
+    expect(preview().innerHTML).toBe(posed);
+  });
+});

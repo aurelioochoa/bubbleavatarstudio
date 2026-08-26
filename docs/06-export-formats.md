@@ -5,6 +5,18 @@
 - Source: `sceneToSvg(scene, {viewBox, background})` — same scene as the stage
   at snapshot time (current live state frozen; ambient offset included, engine
   time frozen at capture).
+
+  **[built], with one deliberate split.** The snapshot carries the **pose** —
+  a head turned by dragging the stage (FR-8.1) reaches the preview and both
+  downloads, because "the current stage" is what FR-10.1 asks for and the
+  export frame drawn over that stage says so. It does **not** carry the
+  ambient breath: `restingScene(bubble, 0, head)` keeps engine time at zero,
+  so the same character in the same pose is always the same bytes. A pose is
+  an instruction the user gave; a breath is a phase they did not choose, and
+  a snapshot that caught one could not be re-made.
+
+  The ZIP's `bubble.svg` stays unposed on purpose (§5): it sits beside a
+  definition that has no pose either, and its README says which it is.
 - Backgrounds:
   - `transparent` — no background rect.
   - `solid` — `<rect fill="#..."/>`.

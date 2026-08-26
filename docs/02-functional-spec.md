@@ -182,7 +182,10 @@
 
 - **FR-10.1** Snapshot: current stage as SVG string and PNG raster at chosen
   resolution (512/1024/2048) with background: transparent | solid color |
-  linear gradient | radial gradient (two stops, configurable).
+  linear gradient | radial gradient (two stops, configurable). "Current stage"
+  includes the **pose** — a head turned by dragging (FR-8.1) — and excludes the
+  ambient breath, which is a phase the user did not choose and would make the
+  same snapshot unreproducible.
 - **FR-10.2** Character file: one bubble + its effective kit (own kit if present,
   else starter kit) → `*.bubble-avatar.json` (schema in `03-data-model.md`).
 - **FR-10.3** Loop picker for export: choose which loops are embedded (default all).

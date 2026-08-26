@@ -15,7 +15,8 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Stage } from "./Stage";
+import { useState } from "react";
+import { Stage, type StageProps } from "./Stage";
 import { StageEngine } from "./StageEngine";
 import { createDefaultDocument } from "../../domain/document/create";
 import { effectiveKit } from "../../domain/document/mutate";
@@ -56,13 +57,24 @@ interface StageOverrides {
   onPause?: () => void;
 }
 
+/**
+ * The pose is a prop now — the shell owns it, so the Share panel can export
+ * the same stage the user is looking at (FR-10.1). A controlled component
+ * needs somebody to hold that state, and in the app that is StudioView; here
+ * it is this harness, so every case below still drives a real drag.
+ */
+function Harness(props: Omit<StageProps, "head" | "onHead">) {
+  const [head, setHead] = useState({ x: 0, y: 0, z: 0 });
+  return <Stage {...props} head={head} onHead={setHead} />;
+}
+
 function setupStage(overrides: StageOverrides = {}) {
   const doc = createDefaultDocument();
   const bubble = doc.bubbles[0];
   if (!bubble) throw new Error("fixture missing bubble");
   const kit = effectiveKit(bubble, doc);
   const { container } = render(
-    <Stage
+    <Harness
       bubble={bubble}
       kit={kit}
       loopId={
