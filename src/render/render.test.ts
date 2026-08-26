@@ -1086,3 +1086,50 @@ describe("mood pose (FR-4.10)", () => {
     expect(rolled.head.transform).not.toBe(scene(FACING).head.transform);
   });
 });
+
+// FR-4.10 end to end: a loop whose steps carry different poses turns the
+// character as it plays. The unit tests above cover the pieces; this is the
+// composed path — kit, player, blend, scene — which is the thing that was
+// broken and the thing a browser can only show once its frame loop is awake.
+describe("a loop turns the character (FR-4.10)", () => {
+  // full.json predates poses, so its moods all face ahead; pose the ones this
+  // loop walks, which is exactly what the starter library now does.
+  const base = doc.bubbles[0].ownKit ?? doc.starterKit;
+  const loop = base.loops[0];
+  const posed = [
+    { x: 6, y: -14, z: 4 },
+    { x: -8, y: 12, z: -6 },
+    { x: 2, y: 0, z: 10 },
+  ];
+  const kit = {
+    ...base,
+    moods: base.moods.map((m, i) => ({ ...m, head: posed[i % posed.length] })),
+  };
+
+  const headAt = (ms: number) =>
+    liveFrame(doc.bubbles[0], kit, loop.id, ms, { x: 0, y: 0, z: 0 }).scene.head
+      .transform;
+
+  it("draws a different pose at different points of the cycle", () => {
+    const seen = new Set(
+      [0, 400, 900, 1400, 1900, 2400].map((ms) => headAt(ms)),
+    );
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it("moves the body itself, not only the head group", () => {
+    const body = (ms: number) =>
+      liveFrame(doc.bubbles[0], kit, loop.id, ms, { x: 0, y: 0, z: 0 }).scene
+        .body.transform;
+    // The silhouette is read off the solid at a screen angle, so a yaw in the
+    // pose changes the drawn body — this is what "the whole body moves" means
+    // rather than "the head group is rotated".
+    const seen = new Set([0, 700, 1500, 2300].map(body));
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it("comes back to where it started after a whole cycle", () => {
+    const cycle = loop.steps.reduce((n, s) => n + s.holdMs, 0);
+    expect(headAt(cycle)).toBe(headAt(0));
+  });
+});

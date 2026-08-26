@@ -80,6 +80,8 @@ export type MessageKey =
   | "moods.mirror"
   | "moods.topUp"
   | "moods.topUpHint"
+  | "moods.pose"
+  | "moods.poseHint"
   | "moods.editTitle"
   | "moods.eyeLink"
   | "moods.linkedEyes"
@@ -294,6 +296,8 @@ const es: Record<MessageKey, string> = {
   "moods.topUp": "Añadir lo que falta",
   "moods.topUpHint":
     "La biblioteca creció desde que guardaste este proyecto. Añadir no cambia nada de lo que ya tienes.",
+  "moods.pose": "Postura",
+  "moods.poseHint": "Gira todo el personaje",
   "moods.editTitle": "Editar ánimo",
   "moods.eyeLink": "Vínculo entre ojos",
   "moods.linkedEyes": "Vinculados",
@@ -514,6 +518,8 @@ const en: Record<MessageKey, string> = {
   "moods.topUp": "Add what's missing",
   "moods.topUpHint":
     "The library has grown since this project was saved. Adding never changes what you already have.",
+  "moods.pose": "Pose",
+  "moods.poseHint": "Turns the whole character",
   "moods.editTitle": "Edit mood",
   "moods.eyeLink": "Eye linking",
   "moods.linkedEyes": "Linked",

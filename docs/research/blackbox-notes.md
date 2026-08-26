@@ -313,11 +313,11 @@ round one, whose symmetry keeps a yaw unambiguous.
 
 ### The rate is flat at a shade under 0.3° per pixel
 
-| gesture           | yaw before | yaw after | change |
-| ----------------- | ---------- | --------- | ------ |
-| 100px right       | 148.7      | 177.7     | +29.0  |
-| 200px left        | 177.7      | 119.7     | −58.0  |
-| 100px down (pitch)| 2.3        | −25.8     | −28.1  |
+| gesture            | yaw before | yaw after | change |
+| ------------------ | ---------- | --------- | ------ |
+| 100px right        | 148.7      | 177.7     | +29.0  |
+| 200px left         | 177.7      | 119.7     | −58.0  |
+| 100px down (pitch) | 2.3        | −25.8     | −28.1  |
 
 Exactly double the travel gives exactly double the angle, so there is no
 acceleration curve and no dead zone at the start of a press — 100px is 29° from

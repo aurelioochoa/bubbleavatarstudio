@@ -17,6 +17,7 @@
 
   The ZIP's `bubble.svg` stays unposed on purpose (§5): it sits beside a
   definition that has no pose either, and its README says which it is.
+
 - Backgrounds:
   - `transparent` — no background rect.
   - `solid` — `<rect fill="#..."/>`.

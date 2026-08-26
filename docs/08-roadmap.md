@@ -290,6 +290,53 @@ and the real path was confirmed in Chrome with a genuine `DragEvent`.
   `src/render/` and `src/domain/geometry/` against the branch point; every
   screen read against its artboard in a real browser at 1440px.
 
+## F7 — A mood turns the body (done)
+
+Reported as a gap by the user, confirmed by a black-box session against the
+deployed reference (`docs/research/blackbox-notes.md`, 2026-08-26): their
+expressions carry a three-axis rotation of the whole character, every one of
+their preset thumbnails shows the body at a different orientation because of
+it, and playback travels between those poses. Ours moved the eyes on a body
+that never moved, so every animation in the library was a face working on a
+statue.
+
+**Schema v6** adds `head` to a mood. Three decisions in it are worth keeping.
+
+_It composes, it does not replace._ The mood's pose is added to whatever
+direct manipulation is holding, so a user who turned the character to see it
+side-on keeps that view while it animates. `buildScene` does the addition
+once, at the top, which is why all seven readers of the head rotation cannot
+drift apart.
+
+_The travel takes the shorter arc per axis._ From 170° to −170° is twenty
+degrees across the back, not three hundred and forty across the front. The
+eye deltas never hit this because they live inside ±30; a body pose spans the
+whole turn. Their own engine avoids the same defect by interpolating the
+rotation as a rotation, which was the fact worth taking from the observation
+rather than the technique.
+
+_The migration is a no-op by construction._ A v5 mood joins v6 facing
+straight ahead, which is exactly what it drew, so no saved character changes
+and the goldens are byte-identical. The portable format took the same step at
+its own v5, because the runtime still reads files written before poses
+existed.
+
+**The starter library uses it**, or the feature would have shipped invisible:
+24 poses in a table beside the moods, authored from what each one means and
+deliberately small — a body swinging tens of degrees per keyframe reads as a
+character being shaken rather than one reacting.
+
+One note for whoever verifies this next in a browser. `requestAnimationFrame`
+stalls in an unfocused automated tab, which freezes the engine and makes a
+posed loop look static through the automation even though it is not. The
+composed path is covered deterministically instead (`render.test.ts`, "a loop
+turns the character"), and the visual check was done by clicking between two
+moods, which needs no frame loop at all.
+
+- **AC:** all gates green — **637 tests / 36 files**, 11 e2e scenarios;
+  goldens byte-unchanged against the branch point; the observation logged and
+  committed before the implementation, per docs/CLEANROOM.md.
+
 ## Beyond the roadmap — the 3D question
 
 `docs/research/3d-bubble-exploration.md` is an investigation, not a committed

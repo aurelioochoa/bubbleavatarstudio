@@ -174,6 +174,17 @@ stage until the track redesign). `stopped` rewinds the loop clock but keeps
 ambient breathing; `paused` freezes everything. Picking a mood in the Moods
 panel takes over the live state and pauses playback (FR-6.1/FR-4.4).
 
+**A mood carries a pose, and it composes rather than replaces.** `Mood.head`
+(FR-4.10, schema v6) turns the whole character while that mood shows — the
+same three axes a drag sets. `buildScene` adds the two together once, at the
+top, and folds the sum into ±180, so all seven places that read the head
+rotation see one composed value and cannot drift apart. Additive is the
+deliberate choice: a user who turned the character to see it side-on keeps
+that view while it animates. The travel between two poses takes the **shorter
+arc per axis** (`blendMoods`), because treating a pose axis as a plain number
+sends a character from 170° to −170° the long way round; the eye deltas never
+hit this because they live inside ±30.
+
 **The timeline has two totals, and they are not the same number.** The strip
 the chips are laid on is the _authored_ steps end to end (`stepBounds`); the
 cycle a loop plays is what `summarizeLoop().totalMs` reports, which for a

@@ -200,7 +200,14 @@ the mood's thumbnail, its name, how many loops use it, ↑/↓ — which were th
 kebab's keyboard path for reordering and are still the only one — edit,
 duplicate and delete-with-confirm. Cards also reorder by dragging (FR-4.2).
 
-**The editor is two XY pads, not fourteen sliders.** A per-eye offset is two
+**The editor opens with the pose** (FR-4.10): three sliders, one per axis,
+turning the whole character rather than its eyes. They sit above everything
+else in the editor because that is what they are about, and they span the
+same ±180° the stage gizmo does — both set the same kind of angle, and a
+narrower control would silently clamp an imported mood that turns further
+than we guessed was expressive.
+
+**The rest of the editor is two XY pads, not fourteen sliders.** A per-eye offset is two
 numbers that mean one place, so it is dragged as one place, on a pad per eye
 that states the ±40u it spans; scale and rotation are one compact row each.
 The pad is a pointer affordance only — each axis also has a real range input,

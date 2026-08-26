@@ -536,3 +536,68 @@ describe("the starter-library row (FR-4.7, FR-5.7)", () => {
     expect(dispatch).toHaveBeenCalledWith({ type: "library/topUp" });
   });
 });
+
+// FR-4.10: a mood turns the whole character, so the editor has to be able to
+// author that — otherwise the field exists and nothing but the starter
+// library can ever set it.
+describe("mood pose (FR-4.10)", () => {
+  it("offers all three axes", async () => {
+    const user = userEvent.setup();
+    const { first } = setup();
+    await openEditor(user, first.name);
+    const pose = screen.getByRole("group", { name: "Postura" });
+    for (const axis of ["Rotación X", "Rotación Y", "Rotación Z"]) {
+      expect(within(pose).getByLabelText(axis)).toBeTruthy();
+    }
+  });
+
+  it("previews the turn before it is committed", async () => {
+    const user = userEvent.setup();
+    const { onPreview, first } = setup();
+    await openEditor(user, first.name);
+    fireEvent.change(
+      within(screen.getByRole("group", { name: "Postura" })).getByLabelText(
+        "Rotación Y",
+      ),
+      { target: { value: "24" } },
+    );
+    const last = onPreview.mock.calls.at(-1)?.[0] as {
+      head: { x: number; y: number; z: number };
+    };
+    expect(last.head.y).toBe(24);
+  });
+
+  it("saves the pose with the rest of the mood", async () => {
+    const user = userEvent.setup();
+    const { dispatch, first } = setup();
+    await openEditor(user, first.name);
+    fireEvent.change(
+      within(screen.getByRole("group", { name: "Postura" })).getByLabelText(
+        "Rotación X",
+      ),
+      { target: { value: "-9" } },
+    );
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    const call = dispatch.mock.calls.at(-1)?.[0] as {
+      patch: { head: { x: number } };
+    };
+    expect(call.patch.head.x).toBe(-9);
+  });
+
+  it("shows the mood's own pose when the editor opens", async () => {
+    const user = userEvent.setup();
+    const { first } = setup({
+      kit: (base) => ({
+        ...base,
+        moods: base.moods.map((m, i) =>
+          i === 0 ? { ...m, head: { x: 7, y: -3, z: 11 } } : m,
+        ),
+      }),
+    });
+    await openEditor(user, first.name);
+    const pose = screen.getByRole("group", { name: "Postura" });
+    expect(
+      (within(pose).getByLabelText("Rotación Z") as HTMLInputElement).value,
+    ).toBe("11");
+  });
+});

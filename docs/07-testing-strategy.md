@@ -69,7 +69,7 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of the track redesign (F6): **36 Vitest files, 600 tests**, plus **1
+As of the mood-pose pass (F7): **36 Vitest files, 637 tests**, plus **1
 Playwright spec** of **11 scenarios** — boot, panels, a playing loop and the
 rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720

@@ -69,6 +69,13 @@ const FIELD_LABELS: Record<keyof MoodEye, MessageKey> = {
 /** docs/05 §2: how far from the resting anchor an eye may be nudged. */
 const OFFSET_RANGE = 40;
 
+/** FR-4.10: the three axes of a mood's pose, in the gizmo's own order. */
+const POSE_AXES: { axis: "x" | "y" | "z"; label: MessageKey }[] = [
+  { axis: "x", label: "common.rotationX" },
+  { axis: "y", label: "common.rotationY" },
+  { axis: "z", label: "common.rotationZ" },
+];
+
 /** Fixed decimals so a row does not reflow as its neighbour is dragged. */
 const scale = (v: number): string => v.toFixed(2);
 const degrees = (v: number): string => `${String(Math.round(v))}°`;
@@ -162,6 +169,7 @@ export function MoodsPanel({
         name: draft.name,
         left: draft.left,
         right: draft.right,
+        head: draft.head,
         colorOverride: draft.colorOverride,
       },
     });
@@ -507,6 +515,47 @@ function MoodEditor({
           className="mt-1 w-full rounded-field border border-line bg-stage px-2.5 py-2 text-[12.5px] text-ink"
         />
       </label>
+
+      {/* FR-4.10. The whole character, so it sits above everything that is
+          about the eyes. The range is the stage gizmo's, both because the two
+          set the same kind of angle and because anything narrower would
+          silently clamp an imported mood that turns further than we guessed
+          was expressive. */}
+      <div
+        role="group"
+        aria-label={t("moods.pose")}
+        className="flex flex-col gap-1.5 rounded-[10px] border border-line bg-panel-2 p-2.5"
+      >
+        <div className="flex items-baseline gap-2">
+          <span className="text-[9px] font-semibold tracking-[0.08em] text-ink-dim uppercase">
+            {t("moods.pose")}
+          </span>
+          <span className="text-[9.5px] text-ink-mute">
+            {t("moods.poseHint")}
+          </span>
+        </div>
+        {POSE_AXES.map(({ axis, label }) => (
+          <span key={axis} className="flex h-4.5 items-center gap-1.5">
+            <span className="w-2.5 text-[9.5px] text-ink-dim">
+              {axis.toUpperCase()}
+            </span>
+            <RangeInput
+              label={t(label)}
+              value={draft.head[axis]}
+              min={-180}
+              max={180}
+              step={1}
+              onChange={(v) => {
+                onChange({ ...draft, head: { ...draft.head, [axis]: v } });
+              }}
+              className="min-w-0 flex-1"
+            />
+            <span className="w-7 text-right text-[9.5px] tabular-nums">
+              {degrees(draft.head[axis])}
+            </span>
+          </span>
+        ))}
+      </div>
 
       {/* Linked is an editing mode, not something the mood stores: it mirrors
           each edit onto the other eye as it is made, which is the same rule

@@ -365,6 +365,7 @@ export function updateMood(
   patch: Partial<Pick<Mood, "name" | "colorOverride">> & {
     left?: Partial<Mood["left"]>;
     right?: Partial<Mood["right"]>;
+    head?: Partial<Mood["head"]>;
   },
 ): MutationResult {
   const ctx: Ctx = { doc, deps: {} };
@@ -382,6 +383,7 @@ export function updateMood(
         : {}),
       left: { ...m.left, ...(patch.left ?? {}) },
       right: { ...m.right, ...(patch.right ?? {}) },
+      head: { ...m.head, ...(patch.head ?? {}) },
     })),
   );
 }
