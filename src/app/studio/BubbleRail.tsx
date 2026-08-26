@@ -1,4 +1,4 @@
-// Bubble rail (docs/05 §1): a 56px column of live mini-renders, the active one
+// Bubble rail (docs/05 §1): a 72px column of live mini-renders, the active one
 // highlighted, `+` at the bottom, and a per-bubble context menu carrying
 // rename, duplicate, move up/down and delete-with-confirm.
 import { useMemo, useState } from "react";
@@ -17,8 +17,13 @@ export interface BubbleRailProps {
   t: (k: MessageKey) => string;
 }
 
-/** Rendered size of a rail thumbnail, in px. */
-const THUMB = 40;
+/**
+ * Rendered size of a rail thumbnail, in px. The rail is 72px and the thumb
+ * 56px, so the 8px of margin either side is the same gutter the 56/40 pair
+ * had — the column grew because the mini-render is the thing being read, not
+ * because it needed more air.
+ */
+const THUMB = 56;
 
 export function BubbleRail({
   bubbles,
@@ -38,7 +43,7 @@ export function BubbleRail({
   return (
     <nav
       aria-label={t("rail.bubbles")}
-      className="flex w-14 shrink-0 flex-col items-center gap-2 border-r border-line bg-panel py-3"
+      className="flex w-18 shrink-0 flex-col items-center gap-2 border-r border-line bg-panel py-3"
     >
       <ul className="flex w-full flex-col items-center gap-2">
         {bubbles.map((b, i) => (
@@ -71,7 +76,7 @@ export function BubbleRail({
         onClick={() => {
           dispatch({ type: "bubble/add", name: "Bubble" });
         }}
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-field border border-dashed border-line text-lg leading-none text-ink-dim transition-colors duration-150 ease-out hover:border-primary hover:text-ink"
+        className="grid h-14 w-14 shrink-0 place-items-center rounded-field border border-dashed border-line text-lg leading-none text-ink-dim transition-colors duration-150 ease-out hover:border-primary hover:text-ink"
       >
         +
       </button>
@@ -135,7 +140,7 @@ function RailItem({
           e.preventDefault();
           onToggleMenu();
         }}
-        className={`grid h-10 w-10 place-items-center overflow-hidden rounded-field bg-panel-2 transition-shadow duration-150 ease-out ${
+        className={`grid h-14 w-14 place-items-center overflow-hidden rounded-field bg-panel-2 transition-shadow duration-150 ease-out ${
           active
             ? "ring-2 ring-brand"
             : "opacity-70 ring-1 ring-line hover:opacity-100"

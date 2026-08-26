@@ -144,7 +144,8 @@ landed in F5.
   thumbnails with rename/duplicate/reorder/delete (FR-1.2, FR-1.4), loop
   duplicate and the accessible ↑ ↓ step reorder (FR-5.2, FR-5.5), mood
   duplicate, collapsible inspector cards on shared tokens, and the rail and
-  inspector at their documented 56px / 360px.
+  inspector at their then-documented 56px / 360px (the rail is 72px now — see
+  docs/05 §1).
 
   The completion pass closed the rest:
 

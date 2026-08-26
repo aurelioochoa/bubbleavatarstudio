@@ -95,6 +95,18 @@ test("rail: the context menu carries rename, reorder and delete", async ({
   page,
 }) => {
   await page.goto("/");
+
+  // docs/05 §1 states the rail's width as a number, so measure it where a
+  // number can be measured: jsdom has no answer for a Tailwind class.
+  const rail = await page.getByLabel("Burbujas").boundingBox();
+  expect(rail?.width).toBe(72);
+  const thumb = await page
+    .getByLabel("Burbujas")
+    .locator("li button")
+    .first()
+    .boundingBox();
+  expect(thumb?.width).toBe(56);
+
   await page.getByRole("button", { name: "Acciones de la burbuja" }).click();
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitem", { name: "Duplicar" })).toBeVisible();
@@ -232,8 +244,8 @@ test("drag-to-reorder: a mood card dropped on another moves it (FR-4.2)", async 
 /**
  * The track crosses the whole width and its first row is a lot of controls in
  * a line, so a narrow window is where it would break first. 1024×720 is the
- * smallest the studio claims to work at (docs/05 §1: a 56px rail and a 360px
- * inspector leave ~600px of stage).
+ * smallest the studio claims to work at (docs/05 §1: a 72px rail and a 360px
+ * inspector leave ~590px of stage).
  */
 test("narrow window: the shell holds together at 1024×720", async ({
   page,

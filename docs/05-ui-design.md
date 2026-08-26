@@ -8,9 +8,9 @@
 > today; **[target]** ones do not yet, and are tracked as roadmap P4. Do not
 > read an unmarked sentence as a claim about what runs.
 >
-> The rail and inspector now ship at the documented sizes (56px / 360px,
-> `w-14` / `w-90`); an earlier note here recorded them as 176px and 288px,
-> which the P4 UI pass closed.
+> The rail and inspector ship at the sizes below (72px / 360px, `w-18` /
+> `w-90`); an earlier note here recorded them as 176px and 288px, which the P4
+> UI pass closed, and the rail was 56px until its thumbnails were enlarged.
 >
 > **The F5 visual pass has been read** against a fresh `pnpm e2e` archive
 > (eleven frames under `docs/screenshots/`). §1–§4 hold as described, with one
@@ -58,8 +58,12 @@
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Rail (56px):** vertical bubble thumbnails (live mini-renders), active
-  highlighted, `+` at bottom. Context menu (right-click / kebab): rename,
+- **Rail (72px):** vertical bubble thumbnails (live mini-renders) at 56px,
+  active highlighted, `+` at bottom. The column is sized off the thumbnail
+  rather than the other way round: the mini-render is the thing being read, so
+  it takes the width and leaves the same 8px gutter either side the narrower
+  56/40 pair had. Measured in the browser by the rail smoke scenario, because
+  a Tailwind class is not a width until something lays it out. Context menu (right-click / kebab): rename,
   duplicate, move up/down, delete (confirm).
   **[built]** all of the above: the list with live mini-render thumbnails,
   active highlight, add, and a per-bubble context menu (kebab or right-click)
