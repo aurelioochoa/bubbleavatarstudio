@@ -1,13 +1,31 @@
+<p align="center">
+  <img src="docs/media/banner.webp" alt="Bubble Avatar Studio" width="100%">
+</p>
+
 # Bubble Avatar Studio
 
 Procedural SVG avatar authoring studio by helpbubble. Original clean-room work —
 see `docs/CLEANROOM.md` before contributing.
+
+## The studio, running
+
+A real capture of the app: playing a loop, swapping shape families and scaling
+the body, previewing moods from the library, posing a mood and aiming its eyes,
+turning the character by hand under the wireframe, and framing the export on
+the stage it crops.
+
+![The studio in use](docs/media/demo.gif)
+
+> The banner is generated art. Everything in the recording above is the actual
+> application — `docs/media/demo.mp4` is the same take at full resolution, and
+> `docs/screenshots/` holds the eleven frames `pnpm e2e` archives.
 
 ## Docs
 
 - `docs/01..08` — product overview, functional spec, data model, architecture,
   UI design, export formats, testing strategy, roadmap.
 - `docs/research/` — provenance notes.
+- `docs/media/` — README banner and the walkthrough capture.
 
 ## Commands
 
