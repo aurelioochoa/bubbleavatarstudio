@@ -17,27 +17,29 @@ export function LookPanel({ bubble, dispatch, t }: PanelProps) {
       <SurfaceSection bubble={bubble} dispatch={dispatch} t={t} />
 
       <Card title={t("look.colors")}>
-        <ColorField
-          label={t("look.bodyColor")}
-          value={bubble.colors.body}
-          onChange={(v) => {
-            dispatch({ type: "colors/patch", patch: { body: v } });
-          }}
-        />
-        <ColorField
-          label={t("look.accentColor")}
-          value={bubble.colors.accent}
-          onChange={(v) => {
-            dispatch({ type: "colors/patch", patch: { accent: v } });
-          }}
-        />
-        <ColorField
-          label={t("look.eyeColor")}
-          value={bubble.colors.eyes}
-          onChange={(v) => {
-            dispatch({ type: "colors/patch", patch: { eyes: v } });
-          }}
-        />
+        <div className="grid grid-cols-3 gap-2">
+          <ColorField
+            label={t("look.bodyColor")}
+            value={bubble.colors.body}
+            onChange={(v) => {
+              dispatch({ type: "colors/patch", patch: { body: v } });
+            }}
+          />
+          <ColorField
+            label={t("look.accentColor")}
+            value={bubble.colors.accent}
+            onChange={(v) => {
+              dispatch({ type: "colors/patch", patch: { accent: v } });
+            }}
+          />
+          <ColorField
+            label={t("look.eyeColor")}
+            value={bubble.colors.eyes}
+            onChange={(v) => {
+              dispatch({ type: "colors/patch", patch: { eyes: v } });
+            }}
+          />
+        </div>
       </Card>
 
       <EyesSection bubble={bubble} dispatch={dispatch} t={t} />

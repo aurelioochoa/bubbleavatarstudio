@@ -51,7 +51,12 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
 
   return (
     <Card
-      title={`${t("look.extras")} ${String(extras.length)}/${String(MAX_EXTRAS)}`}
+      title={t("look.extras")}
+      state={
+        <span className="rounded-full bg-panel px-1.5 py-0.5 tabular-nums">
+          {extras.length}/{MAX_EXTRAS}
+        </span>
+      }
     >
       <label className="flex items-center justify-between text-xs text-ink-dim">
         {t("look.addExtra")}

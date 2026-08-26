@@ -24,7 +24,9 @@ const SHAPE_LABELS: Record<ShapeFamily, MessageKey> = {
 export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
   const surface = bubble.body.surface;
   return (
-    <Card title={t("look.surface")}>
+    // The family is the one thing about this card worth reading while it is
+    // shut, so it rides in the header (docs/05 §2).
+    <Card title={t("look.surface")} state={t(SHAPE_LABELS[surface.shape])}>
       {/* FR-2.6: the outline family is a property of the bubble. */}
       <Segmented<ShapeFamily>
         label={t("look.shape")}
@@ -39,7 +41,7 @@ export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
       />
       {/* FR-2.7: only the organic family has bumps to tune. */}
       {surface.shape === "organic" && (
-        <>
+        <div className="grid grid-cols-2 gap-2">
           <NumberField
             label={t("look.lobes")}
             value={surface.lobes ?? 5}
@@ -69,72 +71,77 @@ export function SurfaceSection({ bubble, dispatch, t }: SectionProps) {
               });
             }}
           />
-        </>
+        </div>
       )}
-      <NumberField
-        label={t("look.width")}
-        value={surface.width}
-        min={1}
-        unit="u"
-        onChange={(v) => {
-          dispatch({ type: "surface/patch", patch: { width: v } });
-        }}
-      />
-      <NumberField
-        label={t("look.height")}
-        value={surface.height}
-        min={1}
-        unit="u"
-        onChange={(v) => {
-          dispatch({ type: "surface/patch", patch: { height: v } });
-        }}
-      />
-      <NumberField
-        label={t("look.depth")}
-        value={surface.depth}
-        min={1}
-        unit="u"
-        onChange={(v) => {
-          dispatch({ type: "surface/patch", patch: { depth: v } });
-        }}
-      />
-      <NumberField
-        label={t("look.roundness")}
-        value={surface.roundness}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(v) => {
-          dispatch({ type: "surface/patch", patch: { roundness: v } });
-        }}
-      />
-      <NumberField
-        label={t("look.x")}
-        value={surface.x}
-        unit="u"
-        onChange={(v) => {
-          dispatch({ type: "surface/patch", patch: { x: v } });
-        }}
-      />
-      <NumberField
-        label={t("look.y")}
-        value={surface.y}
-        unit="u"
-        onChange={(v) => {
-          dispatch({ type: "surface/patch", patch: { y: v } });
-        }}
-      />
-      <NumberField
-        label={t("look.perspective")}
-        value={surface.perspective}
-        min={0}
-        max={1}
-        step={0.05}
-        unit="×"
-        onChange={(v) => {
-          dispatch({ type: "surface/patch", patch: { perspective: v } });
-        }}
-      />
+      {/* Two to a row: a 360px column fits them, and a stack of eight
+          single-file fields is a scroll tunnel. */}
+      <div className="grid grid-cols-2 gap-2">
+        <NumberField
+          label={t("look.width")}
+          value={surface.width}
+          min={1}
+          unit="u"
+          onChange={(v) => {
+            dispatch({ type: "surface/patch", patch: { width: v } });
+          }}
+        />
+        <NumberField
+          label={t("look.height")}
+          value={surface.height}
+          min={1}
+          unit="u"
+          onChange={(v) => {
+            dispatch({ type: "surface/patch", patch: { height: v } });
+          }}
+        />
+        <NumberField
+          label={t("look.depth")}
+          value={surface.depth}
+          min={1}
+          unit="u"
+          onChange={(v) => {
+            dispatch({ type: "surface/patch", patch: { depth: v } });
+          }}
+        />
+        <NumberField
+          label={t("look.roundness")}
+          value={surface.roundness}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={(v) => {
+            dispatch({ type: "surface/patch", patch: { roundness: v } });
+          }}
+        />
+        <NumberField
+          label={t("look.x")}
+          value={surface.x}
+          unit="u"
+          onChange={(v) => {
+            dispatch({ type: "surface/patch", patch: { x: v } });
+          }}
+        />
+        <NumberField
+          label={t("look.y")}
+          value={surface.y}
+          unit="u"
+          onChange={(v) => {
+            dispatch({ type: "surface/patch", patch: { y: v } });
+          }}
+        />
+        <NumberField
+          label={t("look.perspective")}
+          value={surface.perspective}
+          min={0}
+          max={1}
+          step={0.05}
+          unit="×"
+          onChange={(v) => {
+            dispatch({ type: "surface/patch", patch: { perspective: v } });
+          }}
+        />
+      </div>
+
       <Slider
         label={t("look.rotation")}
         value={surface.rotationDeg}

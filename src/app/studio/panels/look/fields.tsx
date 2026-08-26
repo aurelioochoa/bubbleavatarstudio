@@ -1,6 +1,11 @@
 // Shared inspector fields (docs/05 §3): every numeric input carries a label,
 // a unit suffix and native ↑↓ steppers with arrow-key support — plus
 // drag-to-scrub on the label itself (FR-9.5).
+//
+// The label sits above the box rather than beside it, so two fields fit a row
+// of the 360px column and a long label ("Profundidad") stops squeezing the
+// number it belongs to. The value is right-aligned and tabular: changing one
+// field must not shift the digits of the one next to it.
 import { useRef } from "react";
 import type { Bubble } from "../../../../domain/document/types";
 import type { Action } from "../../store";
@@ -78,18 +83,19 @@ export function NumberField({
   };
 
   return (
-    <label className="flex items-center justify-between gap-2 text-xs text-ink-dim">
+    <label className="flex min-w-0 flex-col gap-1">
       <span
         data-testid={`scrub-${label}`}
-        className="min-w-0 cursor-ew-resize touch-none truncate select-none"
+        className="flex cursor-ew-resize touch-none items-center gap-1 truncate text-[10px] text-ink-dim select-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endScrub}
         onPointerCancel={endScrub}
       >
-        {label}
+        <span className="truncate">{label}</span>
+        <ScrubIcon />
       </span>
-      <span className="flex shrink-0 items-center gap-1">
+      <span className="flex h-7 items-center rounded-field border border-line bg-stage pr-1.5 pl-2">
         <input
           type="number"
           value={value}
@@ -101,11 +107,29 @@ export function NumberField({
             const v = Number(e.target.value);
             if (Number.isFinite(v)) onChange(v);
           }}
-          className="w-20 rounded-field border border-line bg-panel px-2 py-1 text-right tabular-nums text-ink"
+          className="min-w-0 flex-1 bg-transparent text-right text-xs tabular-nums text-ink outline-none"
         />
-        {unit && <span className="w-3 text-[10px] text-ink-dim">{unit}</span>}
+        <span className="w-3 shrink-0 text-right text-[9.5px] text-ink-dim">
+          {unit ?? ""}
+        </span>
       </span>
     </label>
+  );
+}
+
+/** The double chevron that says a label can be dragged (FR-9.5). */
+function ScrubIcon() {
+  return (
+    <svg viewBox="0 0 12 8" className="h-1.5 w-2 shrink-0" aria-hidden="true">
+      <path
+        d="M4.2 1.6 1.7 4l2.5 2.4M7.8 1.6 10.3 4 7.8 6.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -145,6 +169,12 @@ export function Slider({
   );
 }
 
+/**
+ * One colour channel as a column: what it is, the colour itself at the width
+ * of the column, and the hex under it. The hex is the part that makes two
+ * near-identical swatches distinguishable, and it was not shown at all while
+ * the swatch was a 48px chip beside a label.
+ */
 export function ColorField({
   label,
   value,
@@ -155,17 +185,29 @@ export function ColorField({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className="flex items-center justify-between text-xs text-ink">
-      {label}
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-        }}
-        className="h-7 w-12 cursor-pointer rounded-field border border-line bg-panel"
-        aria-label={label}
-      />
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="truncate text-[10px] text-ink-dim">{label}</span>
+      {/* The hairline is a sibling rather than a border on the input: a
+          colour close to the panel's own — a near-black eye — would otherwise
+          read as an empty box rather than as a swatch. */}
+      <span className="relative block h-7.5 w-full">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+          }}
+          className="h-full w-full cursor-pointer rounded-field border-0 bg-transparent p-0"
+          aria-label={label}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-field shadow-[inset_0_0_0_1px_rgb(255_255_255/0.16)]"
+        />
+      </span>
+      <span className="text-[9.5px] tabular-nums text-ink-dim uppercase">
+        {value}
+      </span>
     </label>
   );
 }

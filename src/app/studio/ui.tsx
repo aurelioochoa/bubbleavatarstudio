@@ -8,12 +8,19 @@ export function Card({
   title,
   children,
   defaultOpen = true,
+  state,
   aside,
 }: {
   title: string;
   children: React.ReactNode;
   /** Sections open by default; the user collapses what they are not using. */
   defaultOpen?: boolean;
+  /**
+   * What the section currently says, shown quietly beside its title — the
+   * shape family, the count against the cap. It rides inside the toggle, so a
+   * collapsed card still answers the question it was collapsed on.
+   */
+  state?: React.ReactNode;
   /** Optional trailing control rendered in the header, outside the toggle. */
   aside?: React.ReactNode;
 }) {
@@ -35,6 +42,9 @@ export function Card({
           <span className="truncate text-xs font-semibold tracking-wide text-ink-dim uppercase">
             {title}
           </span>
+          {state !== undefined && (
+            <span className="shrink-0 text-[10px] text-ink-mute">{state}</span>
+          )}
         </button>
         {aside && <div className="shrink-0 pr-2">{aside}</div>}
       </div>

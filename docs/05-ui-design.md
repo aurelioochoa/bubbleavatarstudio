@@ -123,6 +123,18 @@ idle motion (FR-7.1), and drag-to-scrub on every numeric label (FR-9.5) — pres
 the label and drag horizontally to move the value by the field's own step. The
 cards collapse and reopen, remembering nothing across a reload by design.
 
+The track redesign reshaped the fields rather than the sections. A numeric
+field puts its label **above** its box, so two fit a row of the 360px column
+and a long label ("Profundidad") stops squeezing the number it belongs to;
+the value is right-aligned and tabular, so changing one field does not shift
+the digits of the one beside it. Colours are three columns — the channel, the
+swatch at the column's width, and its hex underneath, which is the part that
+tells two near-identical swatches apart. A card header carries what its
+section currently says (the shape family, `0/16` against the extras cap), so
+a collapsed card still answers the question it was collapsed on, and the two
+properties that belong to a whole section rather than to one number — the eye
+link, ambient on/off — sit on the header beside it.
+
 The wireframe toggle (FR-8.4) shipped on the stage's top-right cluster
 rather than inside the Surface card: it is a stage overlay, and it belongs
 beside the gizmo it is used with rather than in a panel the user may have

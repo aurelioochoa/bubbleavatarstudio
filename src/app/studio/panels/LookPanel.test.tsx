@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { LookPanel } from "./LookPanel";
 import { createBubble } from "../../../domain/document/create";
 import { translator } from "../../i18n";
+import { MAX_EXTRAS } from "../../../domain/document/validate";
 import type { Action } from "../store";
 import type { Bubble, ExtraPrimitive } from "../../../domain/document/types";
 
@@ -26,7 +27,7 @@ const t = translator("es");
 function setup(bubble: Bubble = createBubble("Look")) {
   const dispatch = vi.fn<(a: Action) => void>();
   render(<LookPanel bubble={bubble} dispatch={dispatch} t={t} />);
-  return { dispatch, user: userEvent.setup() };
+  return { dispatch, bubble, user: userEvent.setup() };
 }
 
 /** Last action of the given type, or undefined. */
@@ -311,5 +312,47 @@ describe("Look panel · ambient (FR-7.1)", () => {
 
     await user.click(header);
     expect(screen.getByLabelText("Redondez")).toBeTruthy();
+  });
+});
+
+describe("look card headers (docs/05 §2)", () => {
+  it("says which family the surface is while the card is shut", async () => {
+    // A card you have to open to learn what it currently says is a card you
+    // will not collapse.
+    const user = userEvent.setup();
+    setup();
+    const header = screen.getByRole("button", { name: /Cuerpo/ });
+    expect(header.textContent).toContain("Redonda");
+    await user.click(header);
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    expect(header.textContent).toContain("Redonda");
+  });
+
+  it("counts the assembled primitives against their cap in the header", () => {
+    setup();
+    expect(
+      screen.getByRole("button", { name: /Primitivas extra/ }).textContent,
+    ).toContain(`0/${String(MAX_EXTRAS)}`);
+  });
+
+  it("keeps the eye link on the header of the card that holds the pair", () => {
+    // It is a property of the pair, not one more number among the numbers.
+    setup();
+    const linked = screen.getByLabelText("Vinculados");
+    expect(linked.closest("section")?.textContent).toContain("Ojos");
+    expect(screen.getByRole("button", { name: /Ojos/ }).contains(linked)).toBe(
+      false,
+    );
+  });
+});
+
+describe("colour channels (FR-2.5)", () => {
+  it("shows the hex under each swatch, not only the colour", () => {
+    // Two near-identical swatches are indistinguishable; their hexes are not.
+    const { bubble } = setup();
+    const field = screen.getByLabelText("Cuerpo").closest("label");
+    expect(field?.textContent?.toLowerCase()).toContain(
+      bubble.colors.body.toLowerCase(),
+    );
   });
 });
