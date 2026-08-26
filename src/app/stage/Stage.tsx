@@ -179,7 +179,7 @@ export function Stage({
 
       <div
         ref={hostRef}
-        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:h-auto [&>svg]:max-h-[min(80%,32rem)] [&>svg]:w-auto [&>svg]:max-w-[min(80%,32rem)] active:cursor-grabbing"
+        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:aspect-square [&>svg]:h-[min(94%,40rem)] [&>svg]:w-auto [&>svg]:max-w-[94%] active:cursor-grabbing"
         role="img"
         aria-label="bubble stage"
         tabIndex={0}

@@ -32,7 +32,7 @@ between runs.
 mood pose and a two-defect pass over the v0.1.0 that closed F5. See
 `docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
 requirements each one closes. Current gate: **646 tests across 36 files**, plus
-a Playwright smoke of 11 scenarios, on a 347.13 kB / 37.86 kB production bundle
+a Playwright smoke of 11 scenarios, on a 347.14 kB / 37.87 kB production bundle
 — re-derive with `pnpm test` and `pnpm build` rather than trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio

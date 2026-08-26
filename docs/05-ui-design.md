@@ -69,7 +69,14 @@
   active highlight, add, and a per-bubble context menu (kebab or right-click)
   carrying rename, duplicate, move up/down and delete-with-confirm. The menu
   closes on Escape or an outside click.
-- **Stage:** soft radial gradient backdrop (indigo-950→black), bubble centered.
+- **Stage:** soft radial gradient backdrop (indigo-950→black), bubble centered
+  at `min(94%, 40rem)` of the column's short side — the scene's viewBox is
+  square, so the render is sized off the short side and the long one is padding.
+  It was `min(80%, 32rem)` capping an intrinsic 512px box, which on a wide
+  window left the character at its natural size with the stage growing around
+  it. The Share panel's export frame reads the same expression, because a frame
+  that does not cover exactly the box the render occupies is decorative
+  (FR-10.6).
   Overlays: top-left status pill (`● playing idle` / `paused`), top-right gizmo
   button. The transport was a dock floating here until the track redesign; it
   is the full-width band below all three columns now (FR-6.6, and the bullet
@@ -312,7 +319,7 @@ kept selectable so its loops are never stranded without a chip.
 number in the panel: framing is a decision made by looking at the character,
 and a crop stated only as `1024` has to be imagined over it. The frame covers
 exactly the box the render occupies — the scene's viewBox is square and the
-stage caps it at the same `min(80%, 32rem)` the frame uses — with corner
+stage caps it at the same `min(94%, 40rem)` the frame uses — with corner
 marks, a label naming the size and background it will have, and a line saying
 which stage chrome (the guide, the contact shadow) the export leaves behind.
 Like every stage overlay it is a sibling of the engine's host element, never

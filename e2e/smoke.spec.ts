@@ -28,6 +28,24 @@ test("boot: studio shell renders with a starter bubble", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Bubble Avatar Studio" }),
   ).toBeVisible();
   await expect(page.getByLabel("bubble stage")).toBeVisible();
+
+  // The render takes the stage's short side up to its own cap (docs/05 §1).
+  // Measured here because the cap is a CSS `min()` of a percentage and a rem —
+  // neither is a number until a browser lays the column out.
+  const fills = await page.evaluate(() => {
+    const stage = document.querySelector('[aria-label="bubble stage"]');
+    const svg = stage?.querySelector("svg");
+    if (!stage || !svg) return null;
+    const box = stage.getBoundingClientRect();
+    const drawn = svg.getBoundingClientRect();
+    const allowed = Math.min(box.width, box.height) * 0.94;
+    return {
+      drawn: Math.round(drawn.height),
+      want: Math.round(Math.min(allowed, 640)),
+    };
+  });
+  expect(fills?.drawn).toBe(fills?.want);
+
   await expect(page.getByRole("tab", { name: "Aspecto" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Nueva burbuja" }),

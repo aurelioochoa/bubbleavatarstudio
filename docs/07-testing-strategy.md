@@ -76,7 +76,7 @@ Playwright spec** of **11 scenarios** — boot, panels, a playing loop and the
 rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720
 check that the track's first row and the inspector do not clip. Production
-bundle 347.13 kB JS / 37.86 kB CSS (103.90 / 7.47 gzipped).
+bundle 347.14 kB JS / 37.87 kB CSS (103.93 / 7.49 gzipped).
 
 Two of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not

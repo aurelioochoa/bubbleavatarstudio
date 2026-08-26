@@ -499,7 +499,7 @@ function groupLabel(group: string, t: (k: MessageKey) => string): string {
  *
  * It covers exactly the box the render occupies, which is what makes it true
  * rather than decorative: the scene's viewBox is square and the stage caps it
- * at the same `min(80%, 32rem)` this uses.
+ * at the same `min(94%, 40rem)` this uses.
  */
 function ExportFrame({
   label,
@@ -519,7 +519,7 @@ function ExportFrame({
         <div
           data-testid="export-frame"
           aria-label={frameLabel}
-          className="relative h-[min(80%,32rem)] w-[min(80%,32rem)] border border-dashed border-accent/45"
+          className="relative aspect-square h-[min(94%,40rem)] w-auto max-w-[94%] border border-dashed border-accent/45"
         >
           {(
             [
