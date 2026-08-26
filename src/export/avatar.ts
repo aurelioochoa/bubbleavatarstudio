@@ -91,6 +91,45 @@ export function buildPortableAvatar(
   };
 }
 
+/** FR-10.6: what the export will contain, counted before it is written. */
+export interface ExportSummary {
+  /** Loops the definition will carry, after empty ones are dropped. */
+  loops: number;
+  /** Moods it will carry, after the prune to what those loops reference. */
+  moods: number;
+  /** Moods in the kit that the prune leaves behind. */
+  prunedMoods: number;
+  /** Weight of the definition file in bytes. */
+  bytes: number;
+}
+
+/**
+ * FR-10.6: the Share panel's line about the package, derived from the avatar
+ * `buildPortableAvatar` would actually build. Reusing the builder rather than
+ * re-counting the kit is the whole point — a panel that counts for itself will
+ * eventually promise a package the button does not write.
+ *
+ * The weight is the definition file, not the ZIP. The README, the example and
+ * the snapshot are fixed overhead that no choice in the panel moves; the
+ * definition is the part the loop picker changes, so it is the part worth
+ * showing while the picker is being used.
+ */
+export function summarizeExport(
+  bubble: Bubble,
+  doc: StudioDocument,
+  loopIds?: readonly string[],
+): ExportSummary {
+  const kit = bubble.ownKit ?? doc.starterKit;
+  const built = buildPortableAvatar(bubble, doc, loopIds);
+  const json = JSON.stringify(built, null, 2);
+  return {
+    loops: built.kit.loops.length,
+    moods: built.kit.moods.length,
+    prunedMoods: kit.moods.length - built.kit.moods.length,
+    bytes: new TextEncoder().encode(json).length,
+  };
+}
+
 /** One file of the export package, ready for `createZip` (FR-10.5). */
 export interface PackageFile {
   name: string;

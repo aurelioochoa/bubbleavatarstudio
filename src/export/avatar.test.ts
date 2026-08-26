@@ -6,6 +6,7 @@ import {
   packageFiles,
   readPortableAvatar,
   snapshotSvg,
+  summarizeExport,
 } from "./avatar";
 import { createBubble, createDefaultDocument } from "../domain/document/create";
 import { addMood } from "../domain/document/mutate";
@@ -236,5 +237,60 @@ describe("package files (FR-10.5)", () => {
     );
     expect(example?.text).toContain("<BubbleAvatar");
     expect(example?.text).not.toContain("loop=");
+  });
+});
+
+// FR-10.6: what the export will contain, said before it is built. Every number
+// is read off the avatar `buildPortableAvatar` would produce, so the panel can
+// never promise a package different from the one the button writes.
+describe("summarizeExport (FR-10.6)", () => {
+  const fresh = () => {
+    const d = createDefaultDocument();
+    const b = d.bubbles[0];
+    return { d, b, kit: b.ownKit ?? d.starterKit };
+  };
+
+  it("counts the loops and moods the whole kit would embed", () => {
+    const { d, b } = fresh();
+    const built = buildPortableAvatar(b, d);
+    const s = summarizeExport(b, d);
+    expect(s.loops).toBe(built.kit.loops.length);
+    expect(s.moods).toBe(built.kit.moods.length);
+  });
+
+  it("reports the moods the prune drops, not just the ones that survive", () => {
+    const { d, b, kit } = fresh();
+    const keep = kit.loops[1];
+    if (!keep) throw new Error("fixture needs two loops");
+    const s = summarizeExport(b, d, [keep.id]);
+    expect(s.moods).toBe(new Set(keep.steps.map((x) => x.moodId)).size);
+    expect(s.prunedMoods).toBe(kit.moods.length - s.moods);
+    expect(s.prunedMoods).toBeGreaterThan(0);
+  });
+
+  it("weighs the definition in bytes, not characters", () => {
+    const { d, b } = fresh();
+    const s = summarizeExport(b, d);
+    const json = JSON.stringify(buildPortableAvatar(b, d), null, 2);
+    expect(s.bytes).toBe(new TextEncoder().encode(json).length);
+    // Accented mood names would make a character count lie about the weight.
+    expect(s.bytes).toBeGreaterThanOrEqual(json.length);
+  });
+
+  it("gets lighter as loops are dropped from the selection", () => {
+    const { d, b, kit } = fresh();
+    const one = kit.loops[0];
+    if (!one) throw new Error("fixture needs a loop");
+    expect(summarizeExport(b, d, [one.id]).bytes).toBeLessThan(
+      summarizeExport(b, d).bytes,
+    );
+  });
+
+  it("still weighs the bubble when nothing is selected", () => {
+    const { d, b } = fresh();
+    const s = summarizeExport(b, d, []);
+    expect(s).toMatchObject({ loops: 0, moods: 0 });
+    // The character itself is always in the file, so the weight is never zero.
+    expect(s.bytes).toBeGreaterThan(0);
   });
 });
