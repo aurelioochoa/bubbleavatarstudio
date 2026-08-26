@@ -28,10 +28,10 @@ between runs.
 
 ## Status
 
-**v0.1.0 and two phases past it.** Every roadmap phase is closed, F7 included;
-the tag itself marks F5, so F6 and F7 are on `main` untagged. See
-`docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **637 tests across 36 files**, plus
+**v0.2.0.** Every roadmap phase is closed, F7 included — the track redesign
+and the mood pose over the v0.1.0 that closed F5. See `docs/08-roadmap.md` for
+the phases and `docs/02-functional-spec.md` for the requirements each one
+closes. Current gate: **637 tests across 36 files**, plus
 a Playwright smoke of 11 scenarios, on a 346.25 kB / 37.86 kB production bundle
 — re-derive with `pnpm test` and `pnpm build` rather than trusting this line.
 
