@@ -181,8 +181,21 @@ Sections as collapsible cards:
    rows (round / organic / drop / capsule / cylinder / cone / diamond, FR-2.6);
    the organic parameters — lobes, wobble, seed (FR-2.7) — appear only while
    organic is the family, since they do not bite on the others;
+   a **size** row — slider and field, 25–200% — above
    width/height/depth/roundness/perspective numeric steppers (unit suffixes u/×),
-   rotation slider ±180°.
+   and a rotation slider ±180°.
+
+   The size is a percentage of the width a new bubble starts at, derived from
+   the three dimensions rather than stored beside them: they are the truth, and
+   a stored scale is a second truth that can disagree with them. Moving it
+   multiplies all three by one factor in a single patch — depth included,
+   because a body that grew in width and height alone would flatten as it grew,
+   and the surface is a solid (FR-2.8), not an outline. The slider is for
+   finding a size against the stage; the field beside it is for stating one,
+   and it carries the same drag-to-scrub every numeric field does (FR-9.5).
+   The slider has no visible label of its own — the field names the pair, and a
+   second caption over a second copy of the number reads as two controls.
+
 2. **Colors** — body / accent / eyes swatch pickers (preset palette + hex input).
 3. **Extras** — list of primitives with kind icon, up/down z buttons, edit
    expander (same numeric controls, including a depth of its own since each one

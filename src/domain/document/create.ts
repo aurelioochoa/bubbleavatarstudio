@@ -10,6 +10,13 @@ export const DEFAULT_COLORS = {
   eyes: "#1c2033",
 } as const;
 
+/**
+ * The width a new body starts at. Exported because the Look panel's size
+ * control states a percentage, and a percentage needs a stated 100% — reading
+ * it from here is what stops the label drifting from the template.
+ */
+export const DEFAULT_BODY_WIDTH = 220;
+
 export function createBubble(name: string, id = newId("bbl")): Bubble {
   return {
     id,
@@ -18,7 +25,7 @@ export function createBubble(name: string, id = newId("bbl")): Bubble {
       surface: {
         kind: "blob",
         shape: "round",
-        width: 220,
+        width: DEFAULT_BODY_WIDTH,
         height: 200,
         depth: 170,
         roundness: 0.96,

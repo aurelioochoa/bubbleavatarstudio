@@ -17,6 +17,8 @@ export type MessageKey =
   | "stage.gizmo"
   | "stage.guide"
   | "look.surface"
+  | "look.size"
+  | "look.sizeSlider"
   | "look.width"
   | "look.height"
   | "look.depth"
@@ -234,6 +236,8 @@ const es: Record<MessageKey, string> = {
   "stage.gizmo": "Rotar cabeza",
   "stage.guide": "Guía de proyección",
   "look.surface": "Cuerpo",
+  "look.size": "Tamaño",
+  "look.sizeSlider": "Tamaño (deslizador)",
   "look.width": "Ancho",
   "look.height": "Alto",
   "look.depth": "Profundidad",
@@ -458,6 +462,8 @@ const en: Record<MessageKey, string> = {
   "stage.gizmo": "Rotate head",
   "stage.guide": "Projection guide",
   "look.surface": "Body",
+  "look.size": "Size",
+  "look.sizeSlider": "Size (slider)",
   "look.width": "Width",
   "look.height": "Height",
   "look.depth": "Depth",

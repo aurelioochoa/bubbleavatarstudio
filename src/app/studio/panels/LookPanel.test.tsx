@@ -72,6 +72,70 @@ describe("Look panel · surface (FR-2.2)", () => {
   });
 });
 
+describe("Look panel · size (FR-2.2)", () => {
+  /**
+   * One knob for the whole body. Width, height and depth are each editable on
+   * their own, which is what a shape needs and what a *size* does not: the
+   * three had to be retyped in proportion to make the same character bigger.
+   */
+  it("reads the current size as a percentage of the default body", () => {
+    const { bubble } = setup();
+    expect(bubble.body.surface.width).toBe(220);
+    expect(screen.getByLabelText(t("look.sizeSlider"))).toHaveProperty(
+      "value",
+      "100",
+    );
+  });
+
+  it("scales width, height and depth by one factor", () => {
+    const { dispatch } = setup();
+    setNumber(t("look.size"), "50");
+    // 220 / 200 / 170 halved, so the character keeps its proportions and its
+    // depth: a body that grew in two dimensions only would flatten as it grew.
+    expect(lastOf(dispatch, "surface/patch")?.patch).toEqual({
+      width: 110,
+      height: 100,
+      depth: 85,
+    });
+  });
+
+  it("scales a body that was never the default size", () => {
+    const bubble = createBubble("Look");
+    bubble.body.surface = {
+      ...bubble.body.surface,
+      width: 300,
+      height: 150,
+      depth: 90,
+    };
+    const { dispatch } = setup(bubble);
+    // 300 of a 220 default reads as 136%; asking for 68% halves all three and
+    // leaves the 2:1 body 2:1.
+    expect(screen.getByLabelText(t("look.sizeSlider"))).toHaveProperty(
+      "value",
+      "136",
+    );
+    fireEvent.change(screen.getByLabelText(t("look.sizeSlider")), {
+      target: { value: "68" },
+    });
+    expect(lastOf(dispatch, "surface/patch")?.patch).toEqual({
+      width: 150,
+      height: 75,
+      depth: 45,
+    });
+  });
+
+  it("commits one patch, so the three never land apart", () => {
+    const { dispatch } = setup();
+    fireEvent.change(screen.getByLabelText(t("look.sizeSlider")), {
+      target: { value: "125" },
+    });
+    const patches = (dispatch.mock.calls as [Action][])
+      .map(([a]) => a)
+      .filter((a) => a.type === "surface/patch");
+    expect(patches).toHaveLength(1);
+  });
+});
+
 describe("Look panel · shape family (FR-2.6, FR-2.7)", () => {
   it("picks a shape family", async () => {
     const { dispatch, user } = setup();

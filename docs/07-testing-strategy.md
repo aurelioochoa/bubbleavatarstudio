@@ -71,12 +71,12 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of the two-defect pass (F8): **36 Vitest files, 646 tests**, plus **1
+As of the two-defect pass (F8): **36 Vitest files, 650 tests**, plus **1
 Playwright spec** of **11 scenarios** — boot, panels, a playing loop and the
 rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720
 check that the track's first row and the inspector do not clip. Production
-bundle 347.14 kB JS / 37.87 kB CSS (103.93 / 7.49 gzipped).
+bundle 347.81 kB JS / 37.96 kB CSS (104.13 / 7.51 gzipped).
 
 Two of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not
