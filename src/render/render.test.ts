@@ -547,6 +547,7 @@ describe("volume: extras sit on the surface too (FR-8.2)", () => {
     kind: "circle",
     width: 40,
     height: 40,
+    depth: 40,
     roundness: 1,
     x,
     y: 0,
@@ -605,10 +606,42 @@ describe("volume: extras sit on the surface too (FR-8.2)", () => {
     expect(xOf(of(turned, far))).not.toBeCloseTo(60, 1);
   });
 
-  it("foreshortens an extra as its part of the surface turns away", () => {
+  // These extras are 40 wide, 40 tall and 40 deep — spheres. A sphere stuck to
+  // a turning head keeps a circular outline however far it turns, so the right
+  // behaviour here is that nothing about its shape changes. The old assertion
+  // said the opposite, because an extra used to be scaled by the surface's
+  // foreshortening at its anchor rather than by its own turn.
+  it("leaves a spherical extra's outline alone however far the head turns", () => {
     const facing = of(at({ x: 0, y: 0, z: 0 }), far);
-    const turned = of(at({ x: 0, y: 45, z: 0 }), far);
-    expect(turned.path.length).toBeGreaterThan(0);
+    for (const y of [20, 45, 90, 140]) {
+      expect(of(at({ x: 0, y, z: 0 }), far).path).toBe(facing.path);
+    }
+  });
+
+  it("foreshortens a shallow extra, which is the one that has something to lose", () => {
+    const disc: Bubble = {
+      ...bubble,
+      body: {
+        ...bubble.body,
+        extras: bubble.body.extras.map((e) => ({ ...e, depth: 6 })),
+      },
+    };
+    const scene = (rotation: { x: number; y: number; z: number }) =>
+      buildScene(disc, {
+        tAbsMs: 0,
+        mood: { left: ZERO_EYE, right: ZERO_EYE, colorOverride: null },
+        blink: 0,
+        ambient: {
+          bodyY: 0,
+          bodyRotationDeg: 0,
+          eyeY: 0,
+          eyeX: 0,
+          bodyScale: 1,
+        },
+        headRotation: rotation,
+      });
+    const facing = of(scene({ x: 0, y: 0, z: 0 }), far);
+    const turned = of(scene({ x: 0, y: 75, z: 0 }), far);
     expect(turned.path).not.toBe(facing.path);
   });
 
@@ -814,6 +847,7 @@ describe("volume: body-coloured extras share the body's volume", () => {
         kind: "circle",
         width: 90,
         height: 90,
+        depth: 90,
         roundness: 1,
         x: -70,
         y: -40,
@@ -895,5 +929,67 @@ describe("the wireframe follows the solid it is drawn on", () => {
       // A cage that pokes out of the character is not a cage.
       expect(reach(arc)).toBeLessThanOrEqual(body * 1.02);
     }
+  });
+});
+
+// FR-2.3: an extra is a solid assembled around the body, not a decal stuck on
+// it. Before this it was scaled by the *body surface's* local foreshortening
+// at its anchor — a fact about the surface under it, not about its own volume
+// — so a lobe squashed because of where it sat rather than because it turned.
+describe("volume: extras are solids with a depth of their own", () => {
+  const withLobes = (depth: number, at: { x: number; y: number }): Bubble => {
+    const b = structuredClone(doc.bubbles[0]);
+    b.body.extras = [
+      {
+        id: "prim_lobe",
+        kind: "circle",
+        width: 80,
+        height: 80,
+        depth,
+        roundness: 1,
+        x: at.x,
+        y: at.y,
+        rotationDeg: 0,
+        z: 0,
+        colorRole: "accent",
+        color: "#ffffff",
+      },
+    ];
+    return b;
+  };
+
+  const reach = (d: string): number =>
+    Math.max(
+      ...[...d.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((m) =>
+        Math.abs(Number(m[1])),
+      ),
+    );
+
+  it("keeps a deep lobe wide on a turn and narrows a shallow one", () => {
+    const turn = { x: 0, y: 70, z: 0 };
+    const deep = restingScene(withLobes(200, { x: 0, y: 0 }), 0, turn);
+    const flat = restingScene(withLobes(8, { x: 0, y: 0 }), 0, turn);
+    expect(reach(deep.extras[0]?.path ?? "")).toBeGreaterThan(
+      reach(flat.extras[0]?.path ?? "") * 1.5,
+    );
+  });
+
+  it("shapes a lobe by its own turn, not by where it sits", () => {
+    // A sphere stuck to a turning head keeps its outline wherever it is stuck.
+    // The old scaling made it depend on the anchor, which is a property of the
+    // surface beneath rather than of the lobe.
+    const turn = { x: 10, y: 45, z: 0 };
+    const middle = restingScene(withLobes(80, { x: 0, y: 0 }), 0, turn);
+    const edge = restingScene(withLobes(80, { x: 85, y: 0 }), 0, turn);
+    expect(edge.extras[0]?.path).toBe(middle.extras[0]?.path);
+  });
+
+  it("leaves an unturned character exactly as it was", () => {
+    const rest = restingScene(withLobes(68, { x: -60, y: 20 }), 0);
+    expect(rest.extras[0]?.path).toBe(
+      restingScene(withLobes(68, { x: -60, y: 20 }), 0).extras[0]?.path,
+    );
+    // 80 wide at rest is 80 wide: no turn, no foreshortening.
+    expect(reach(rest.extras[0]?.path ?? "")).toBeCloseTo(40, 5);
   });
 });

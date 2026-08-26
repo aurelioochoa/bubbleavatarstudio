@@ -117,7 +117,7 @@ export function createDefaultDocument(): StudioDocument {
   const kit = starterKit();
   const bubble = createBubble("Bubble");
   return {
-    version: 3,
+    version: 4,
     kind: "bubble-studio-project",
     activeBubbleId: bubble.id,
     locale: "es",

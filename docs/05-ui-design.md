@@ -106,7 +106,9 @@ Sections as collapsible cards:
    rotation slider ±180°.
 2. **Colors** — body / accent / eyes swatch pickers (preset palette + hex input).
 3. **Extras** — list of primitives with kind icon, up/down z buttons, edit
-   expander (same numeric controls), remove; "Add primitive" button.
+   expander (same numeric controls, including a depth of its own since each one
+   is a solid), remove; "Add primitive" button. The card title carries the count
+   against the cap (`0/16`, FR-2.3) and the add control disables at sixteen.
 4. **Eyes** — linked toggle (chain icon); shared: spacing, width, height,
    roundness; per-side (collapses to one when linked): offsetX/Y, rotation,
    scaleX/Y.

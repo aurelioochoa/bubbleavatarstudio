@@ -1,6 +1,7 @@
 // FR-11 validation coverage of all error codes (docs/03 §7).
 import { describe, expect, it } from "vitest";
 import { validateDocument } from "./validate";
+import { createDefaultDocument } from "./create";
 import type { StudioDocument } from "./types";
 import full from "../../test/fixtures/full.json";
 import minimal from "../../test/fixtures/minimal.json";
@@ -32,7 +33,7 @@ describe("validateDocument — valid documents", () => {
 describe("validateDocument — version and kind", () => {
   it("fails E_VERSION on wrong version", () => {
     const doc = clone();
-    (doc as { version: number }).version = 4;
+    (doc as { version: number }).version = 5;
     expect(codes(doc)).toContain("E_VERSION");
   });
 
@@ -220,5 +221,50 @@ describe("invalid fixtures (docs/07 §4)", () => {
       if (r.ok) continue;
       expect([...new Set(r.issues.map((i) => i.code))]).toEqual([c.code]);
     }
+  });
+});
+
+// FR-2.3: a body is a primary shape plus assembled primitives, and the count is
+// bounded so "assembled" stays a construction rather than a scene graph.
+describe("assembled primitives are capped (FR-2.3)", () => {
+  const withExtras = (n: number) => {
+    const doc = createDefaultDocument();
+    const b = doc.bubbles[0];
+    if (!b) throw new Error("fixture needs a bubble");
+    b.body.extras = Array.from({ length: n }, (_, i) => ({
+      id: `ext_${String(i)}`,
+      kind: "circle" as const,
+      width: 40,
+      height: 40,
+      depth: 34,
+      roundness: 1,
+      x: 0,
+      y: 0,
+      rotationDeg: 0,
+      z: i,
+      colorRole: "accent" as const,
+      color: "#8be9ff",
+    }));
+    return doc;
+  };
+
+  it("accepts sixteen", () => {
+    expect(validateDocument(withExtras(16)).ok).toBe(true);
+  });
+
+  it("rejects seventeen with E_RANGE", () => {
+    const r = validateDocument(withExtras(17));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.issues.map((i) => i.code)).toContain("E_RANGE");
+  });
+
+  it("requires a depth on every one of them", () => {
+    const doc = withExtras(1);
+    const extra = doc.bubbles[0]?.body.extras[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    delete extra.depth;
+    expect(validateDocument(doc).ok).toBe(false);
   });
 });

@@ -25,8 +25,12 @@
   computed its own depth radius as `min(width, height) * 0.85`, so every solid
   was as thick as its narrow axis allowed and nothing could be shaped in z.
 - **FR-2.3** Extra primitive kinds: `blob`, `capsule`, `circle`, `ring`; each has
-  its own size, roundness, position, rotation, z-order, and color role
-  (`body` | `accent` | custom hex).
+  its own size (width, height and **depth**), roundness, position, rotation,
+  z-order, and color role (`body` | `accent` | custom hex). An extra is a
+  **solid assembled around the body**, not a decal on it: it foreshortens by
+  its own box and depth as the head turns, so a sphere keeps its outline
+  wherever it is stuck and a shallow disc flattens. At most **16** may be
+  assembled around the primary shape.
 - **FR-2.4** Extras can be added, edited, reordered (z), and removed.
 - **FR-2.5** The surface carries the **face frame**: eye anchors and mood deltas
   are expressed in it (see FR-4.6).

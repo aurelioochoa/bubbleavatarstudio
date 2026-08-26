@@ -4,13 +4,14 @@ import { sceneToSvg, type SvgOptions } from "../render/svg";
 import type { Bubble, Kit, StudioDocument } from "../domain/document/types";
 
 export const AVATAR_FORMAT = "bubble-avatar";
-export const AVATAR_VERSION = 3;
+export const AVATAR_VERSION = 4;
 
 /**
  * Versions the runtime still reads. v1 predates the shape family (FR-2.6), v2
- * predates the authored depth (FR-2.2).
+ * the surface's authored depth (FR-2.2), v3 the depth every assembled
+ * primitive now carries (FR-2.3).
  */
-export type AvatarFileVersion = 1 | 2 | typeof AVATAR_VERSION;
+export type AvatarFileVersion = 1 | 2 | 3 | typeof AVATAR_VERSION;
 
 export interface PortableAvatar {
   version: AvatarFileVersion;
@@ -47,6 +48,15 @@ export function readPortableAvatar(input: PortableAvatar): PortableAvatar {
     typeof surface.height === "number"
   ) {
     surface.depth = Math.min(surface.width, surface.height) * 0.85;
+  }
+  for (const extra of next.bubble.body.extras as unknown as Record<
+    string,
+    unknown
+  >[]) {
+    if (extra.depth !== undefined) continue;
+    const { width, height } = extra;
+    if (typeof width !== "number" || typeof height !== "number") continue;
+    extra.depth = Math.min(width, height) * 0.85;
   }
   return next;
 }

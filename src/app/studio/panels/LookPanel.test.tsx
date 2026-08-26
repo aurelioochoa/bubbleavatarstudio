@@ -199,6 +199,7 @@ describe("Look panel · extras (FR-2.3, FR-2.4)", () => {
       kind: "circle",
       width: 40,
       height: 40,
+      depth: 40,
       roundness: 1,
       x: 0,
       y: 0,
@@ -212,6 +213,46 @@ describe("Look panel · extras (FR-2.3, FR-2.4)", () => {
       body: { ...base.body, extras: [extra("ex_1", 0), extra("ex_2", 1)] },
     };
   };
+
+  // FR-2.3: an extra is a solid, so it has a depth to author like the body
+  // does. The surface carries a Depth field too, so this reaches for the
+  // second one on the panel — the first belongs to the body.
+  it("edits a primitive's depth", () => {
+    const { dispatch } = setup(withExtras());
+    const fields = screen.getAllByLabelText(t("look.depth"));
+    const first = fields[1];
+    if (!first) throw new Error("extra has no depth field");
+    fireEvent.change(first, { target: { value: "90" } });
+    expect(lastOf(dispatch, "extra/update")?.patch).toEqual({ depth: 90 });
+  });
+
+  it("stops at sixteen assembled primitives", () => {
+    const base = createBubble("Full");
+    const many: Bubble = {
+      ...base,
+      body: {
+        ...base.body,
+        extras: Array.from({ length: 16 }, (_, i) => ({
+          id: `ex_${String(i)}`,
+          kind: "circle" as const,
+          width: 40,
+          height: 40,
+          depth: 34,
+          roundness: 1,
+          x: 0,
+          y: 0,
+          rotationDeg: 0,
+          z: i,
+          colorRole: "accent" as const,
+          color: "#8be9ff",
+        })),
+      },
+    };
+    setup(many);
+    expect(
+      screen.getByLabelText(t("look.addExtra")).hasAttribute("disabled"),
+    ).toBe(true);
+  });
 
   it("adds a primitive of the chosen kind", async () => {
     const { dispatch, user } = setup();

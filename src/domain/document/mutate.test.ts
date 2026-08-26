@@ -146,6 +146,7 @@ describe("FR-2 body, extras, colors", () => {
         kind: "ring",
         width: 40,
         height: 40,
+        depth: 40,
         roundness: 1,
         x: 0,
         y: -60,

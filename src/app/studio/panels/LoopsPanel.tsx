@@ -445,13 +445,14 @@ function LoopSummary({
 }) {
   const s = summarizeLoop(loop);
   const holds =
-    s.holdsMs.length === 0
-      ? "—"
-      : `${s.holdsMs.map(seconds).join(" · ")} s`;
+    s.holdsMs.length === 0 ? "—" : `${s.holdsMs.map(seconds).join(" · ")} s`;
   return (
     <Card title={t("loops.summary")}>
       <dl data-testid="loop-summary" className="space-y-1 text-xs">
-        <Row term={t("loops.steps")} value={`${String(s.steps)} ${t("loops.summarySteps")}`} />
+        <Row
+          term={t("loops.steps")}
+          value={`${String(s.steps)} ${t("loops.summarySteps")}`}
+        />
         <Row term={t("loops.summaryHolds")} value={holds} />
         <Row term={t("loops.summaryCycle")} value={`${seconds(s.totalMs)} s`} />
         <Row

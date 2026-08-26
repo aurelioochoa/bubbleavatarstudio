@@ -49,14 +49,14 @@ describe("studioReducer", () => {
   it("load only accepts valid documents", () => {
     const s = studioReducer(state, {
       type: "load",
-      doc: { version: 4 } as never,
+      doc: { version: 5 } as never,
     });
     expect(s.doc).toBe(state.doc);
     const ok = studioReducer(state, {
       type: "load",
       doc: createDefaultDocument(),
     });
-    expect(ok.doc.version).toBe(3);
+    expect(ok.doc.version).toBe(4);
   });
 
   it("locale switch keeps the document otherwise intact", () => {
@@ -79,6 +79,7 @@ describe("studioReducer", () => {
         kind: "circle",
         width: 24,
         height: 24,
+        depth: 24,
         roundness: 1,
         x: 0,
         y: -70,

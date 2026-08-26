@@ -39,14 +39,19 @@ function smallProject(): StudioDocument {
 
 describe("libraryGap (FR-4.7, FR-5.7)", () => {
   it("is empty for a document created today", () => {
-    expect(libraryGap(createDefaultDocument().starterKit)).toEqual({ moods: 0, loops: 0 });
+    expect(libraryGap(createDefaultDocument().starterKit)).toEqual({
+      moods: 0,
+      loops: 0,
+    });
   });
 
   it("counts what an older project is missing", () => {
     const doc = smallProject();
     const gap = libraryGap(doc.starterKit);
     expect(gap.moods).toBe(starterKit().moods.length - 3);
-    expect(gap.loops).toBe(starterKit().loops.length - doc.starterKit.loops.length);
+    expect(gap.loops).toBe(
+      starterKit().loops.length - doc.starterKit.loops.length,
+    );
   });
 });
 
@@ -107,7 +112,8 @@ describe("topUpKit / topUpLibrary", () => {
     const doc = topUp(smallProject());
     const moodIds = new Set(doc.starterKit.moods.map((m) => m.id));
     for (const loop of doc.starterKit.loops) {
-      for (const step of loop.steps) expect(moodIds.has(step.moodId)).toBe(true);
+      for (const step of loop.steps)
+        expect(moodIds.has(step.moodId)).toBe(true);
     }
     expect(validateDocument(doc).ok).toBe(true);
   });
@@ -147,9 +153,9 @@ describe("topUpKit / topUpLibrary", () => {
     // The first behaviour edit forks the starter kit into ownKit.
     const forked = ok(addMood(two, second.id, "propio"));
     const doc = ok(topUpLibrary(forked, second.id));
-    expect(libraryGap(doc.bubbles[1]?.ownKit ?? { moods: [], loops: [] })).toEqual(
-      { moods: 0, loops: 0 },
-    );
+    expect(
+      libraryGap(doc.bubbles[1]?.ownKit ?? { moods: [], loops: [] }),
+    ).toEqual({ moods: 0, loops: 0 });
     // The shared kit is untouched, so the other bubble is unaffected.
     expect(doc.starterKit).toEqual(forked.starterKit);
   });

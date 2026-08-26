@@ -21,7 +21,11 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
         value={placement.offsetX}
         unit="u"
         onChange={(v) => {
-          dispatch({ type: "eye/placement", side: which, patch: { offsetX: v } });
+          dispatch({
+            type: "eye/placement",
+            side: which,
+            patch: { offsetX: v },
+          });
         }}
       />
       <NumberField
@@ -29,7 +33,11 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
         value={placement.offsetY}
         unit="u"
         onChange={(v) => {
-          dispatch({ type: "eye/placement", side: which, patch: { offsetY: v } });
+          dispatch({
+            type: "eye/placement",
+            side: which,
+            patch: { offsetY: v },
+          });
         }}
       />
       <NumberField
@@ -50,7 +58,11 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
         step={0.05}
         unit="×"
         onChange={(v) => {
-          dispatch({ type: "eye/placement", side: which, patch: { scaleX: v } });
+          dispatch({
+            type: "eye/placement",
+            side: which,
+            patch: { scaleX: v },
+          });
         }}
       />
       <NumberField
@@ -59,7 +71,11 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
         step={0.05}
         unit="×"
         onChange={(v) => {
-          dispatch({ type: "eye/placement", side: which, patch: { scaleY: v } });
+          dispatch({
+            type: "eye/placement",
+            side: which,
+            patch: { scaleY: v },
+          });
         }}
       />
     </fieldset>
@@ -67,7 +83,6 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
 
   return (
     <Card title={t("look.eyes")}>
-
       <NumberField
         label={t("look.eyeWidth")}
         value={face.eye.width}

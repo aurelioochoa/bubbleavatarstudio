@@ -53,6 +53,34 @@ describe("readPortableAvatar", () => {
     expect(s.depth).toBeCloseTo(Math.min(s.width, s.height) * 0.85, 10);
   });
 
+  it("upgrades a v3 file by giving every assembled primitive a depth", () => {
+    const d = createDefaultDocument();
+    const current = buildPortableAvatar(d.bubbles[0], d);
+    const v3 = structuredClone(current) as unknown as Record<string, unknown>;
+    v3.version = 3;
+    const body = (v3.bubble as { body: { extras: Record<string, unknown>[] } })
+      .body;
+    body.extras = [
+      {
+        id: "ext_a",
+        kind: "circle",
+        width: 60,
+        height: 40,
+        roundness: 1,
+        x: 0,
+        y: 0,
+        rotationDeg: 0,
+        z: 0,
+        colorRole: "accent",
+        color: "#8be9ff",
+      },
+    ];
+
+    const read = readPortableAvatar(v3 as never);
+    expect(read.version).toBe(AVATAR_VERSION);
+    expect(read.bubble.body.extras[0]?.depth).toBeCloseTo(40 * 0.85, 10);
+  });
+
   it("leaves a current-version file alone", () => {
     const d = createDefaultDocument();
     const v2 = buildPortableAvatar(d.bubbles[0], d);
@@ -116,7 +144,7 @@ describe("export integrity", () => {
   it("projected document from a portable avatar validates", () => {
     const avatar = buildPortableAvatar(doc.bubbles[0], doc);
     const projected = {
-      version: 3 as const,
+      version: 4 as const,
       kind: "bubble-studio-project" as const,
       activeBubbleId: avatar.bubble.id,
       locale: "es" as const,

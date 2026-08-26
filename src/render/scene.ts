@@ -512,7 +512,20 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
     .sort((a, b) => a.z - b.z)
     .map((e) => {
       const anchor = projection.project(e.x, e.y);
-      const local = surfaceScale(projection, e.x, e.y);
+      // An extra turns because it is a solid, not because of what the surface
+      // beneath it is doing. It used to be scaled by the body's own local
+      // foreshortening at its anchor, which is a fact about the surface there:
+      // a lobe squashed for sitting near the rim rather than for having
+      // turned, and two identical lobes in different places drew differently.
+      // A solid stuck to a turning head keeps its own outline wherever it is
+      // stuck, so the foreshortening comes from its own box and depth.
+      const local = projectFace({
+        width: e.width,
+        height: e.height,
+        depth: e.depth,
+        perspective: surface.perspective,
+        rotation: live.headRotation,
+      });
       return {
         // How far the turn has carried this anchor toward or away from the
         // viewer. Authored z stays the order at rest — it is a control the
@@ -520,7 +533,11 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
         // which is zero for every extra while the head faces front.
         travel: anchor.depth - rest.project(e.x, e.y).depth,
         render: {
-          path: extraPath(e.kind, e.width * local.x, e.height * local.y),
+          path: extraPath(
+            e.kind,
+            e.width * local.scaleX,
+            e.height * local.scaleY,
+          ),
           fill:
             e.colorRole === "body"
               ? bodyFill
@@ -534,8 +551,8 @@ export function buildScene(bubble: Bubble, live: LiveInput): Scene {
                 shading: extraShading(bodyShading, surface, {
                   x: e.x,
                   y: e.y,
-                  width: e.width * local.x,
-                  height: e.height * local.y,
+                  width: e.width * local.scaleX,
+                  height: e.height * local.scaleY,
                   rotationDeg: e.rotationDeg,
                 }),
               }

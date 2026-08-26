@@ -8,7 +8,8 @@ interface Rgb {
   b: number;
 }
 
-const clamp255 = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
+const clamp255 = (v: number): number =>
+  Math.max(0, Math.min(255, Math.round(v)));
 
 /** Parses #rgb or #rrggbb; anything unreadable falls back to mid grey. */
 export function parseHex(hex: string): Rgb {

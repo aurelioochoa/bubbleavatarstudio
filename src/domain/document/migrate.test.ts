@@ -30,7 +30,7 @@ describe("migrate", () => {
     const r = migrate(v1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(3);
+    expect(r.doc.version).toBe(4);
     for (const b of r.doc.bubbles) {
       expect(b.body.surface.shape).toBe("round");
     }
@@ -50,7 +50,7 @@ describe("migrate", () => {
   });
 
   it("rejects future versions with E_VERSION", () => {
-    const r = migrate({ version: 4 });
+    const r = migrate({ version: 5 });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.code).toBe("E_VERSION");
   });
@@ -82,7 +82,7 @@ describe("migrate", () => {
     const r = migrate(v2);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(3);
+    expect(r.doc.version).toBe(4);
     for (const b of r.doc.bubbles) {
       const s = b.body.surface;
       expect(s.depth).toBeCloseTo(Math.min(s.width, s.height) * 0.85, 10);
@@ -104,7 +104,7 @@ describe("migrate", () => {
     if (r.ok) expect(r.doc.bubbles[0]?.body.surface.depth).toBe(42);
   });
 
-  it("still migrates a v1 document all the way to v3", () => {
+  it("still migrates a v1 document all the way to v4", () => {
     const doc = createDefaultDocument() as unknown as Record<string, unknown>;
     const v1 = structuredClone(doc);
     v1.version = 1;
@@ -118,8 +118,42 @@ describe("migrate", () => {
     const r = migrate(v1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.doc.version).toBe(3);
+    expect(r.doc.version).toBe(4);
     expect(r.doc.bubbles[0]?.body.surface.shape).toBe("round");
     expect(r.doc.bubbles[0]?.body.surface.depth).toBeGreaterThan(0);
+  });
+  // FR-2.3 gave every assembled primitive a depth in v4. A v3 extra predates
+  // it, so it joins v4 on the thickness the renderer effectively assumed when
+  // it drew extras as flat shapes riding the surface.
+  it("migrates a v3 document by giving every extra a depth", () => {
+    const doc = createDefaultDocument() as unknown as Record<string, unknown>;
+    const v3 = structuredClone(doc);
+    v3.version = 3;
+    const bubbles = v3.bubbles as {
+      body: { extras: Record<string, unknown>[] };
+    }[];
+    const first = bubbles[0];
+    if (!first) throw new Error("fixture needs a bubble");
+    first.body.extras = [
+      {
+        id: "ext_a",
+        kind: "circle",
+        width: 60,
+        height: 40,
+        roundness: 1,
+        x: 0,
+        y: 0,
+        rotationDeg: 0,
+        z: 0,
+        colorRole: "accent",
+        color: "#8be9ff",
+      },
+    ];
+
+    const r = migrate(v3);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.doc.version).toBe(4);
+    expect(r.doc.bubbles[0]?.body.extras[0]?.depth).toBeCloseTo(40 * 0.85, 10);
   });
 });

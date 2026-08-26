@@ -1,4 +1,4 @@
-# 03 · Data Model — Bubble Avatar v3
+# 03 · Data Model — Bubble Avatar v4
 
 > Original schema designed for this project. No compatibility with any external
 > format is intended. IDs are opaque strings with prefixes: `bbl_`, `mood_`,
@@ -253,6 +253,20 @@ The portable `*.bubble-avatar.json` bumps to 2 on the same rule. It is a public
 embed surface, so `readPortableAvatar()` in `export/avatar.ts` still accepts a
 v1 file and upgrades it the same way; the runtime reads every definition
 through it.
+
+### v3 → v4 (a depth for every assembled primitive, FR-2.3) — **landed**
+
+v4 gives each `body.extras` entry a `depth`, because an extra is a solid
+assembled around the body rather than a decal riding its surface. A v3 extra
+predates it, so the migration writes `min(width, height) * 0.85` — the same
+rule the surface took at v3, and the thickness the renderer effectively assumed
+while it was scaling extras by the surface's own foreshortening.
+
+The render goldens did not move: at rest an extra's own foreshortening is 1 in
+both axes, exactly as the surface Jacobian it replaced was.
+
+The same version also caps `extras` at 16 (`MAX_EXTRAS`), so "assembled" stays
+a construction rather than a scene graph.
 
 ### v2 → v3 (authored depth, FR-2.2) — **landed**
 

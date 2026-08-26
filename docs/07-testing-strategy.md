@@ -69,18 +69,19 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of the solid-body work: **32 Vitest files, 435 tests**, plus **1 Playwright
+As of the solid-body work: **32 Vitest files, 451 tests**, plus **1 Playwright
 spec** of **10 scenarios** — boot, panels, a playing loop and the rail menu,
 joined by the mood editor's focus behaviour, the gizmo, the wireframe, the
-Share preview, drag-to-scrub and drag-to-reorder. Production bundle 301.59 kB
-JS / 30.02 kB CSS (92.03 / 6.29 gzipped).
+Share preview, drag-to-scrub and drag-to-reorder. Production bundle 302.54 kB
+JS / 30.05 kB CSS (92.07 / 6.29 gzipped).
 
-The 75 tests over F5's 360 are the solid body's: `solid.test.ts` is the new
+The 91 tests over F5's 360 are the solid body's: `solid.test.ts` is the new
 file (the turned silhouette, its agreement with the analytic ellipsoid, the
 memo, and the assertion that an organic body's lumps travel), and the rest are
 spread across authored depth and its v3 migration, the radial wobble, the
 wireframe mesh, the face clip, the rim light, extras sharing the body's volume,
-and the cube family. The bundle moved 6.9 kB, almost all of it `solid.ts`.
+the cube family, and the depth every assembled primitive now carries. The
+bundle moved 7.9 kB, almost all of it `solid.ts`.
 
 Earlier, the 17 tests over P4's 343 were F5's own: the library top-up through
 the store and its Moods-panel row, and the nine `invalid/` fixtures with the

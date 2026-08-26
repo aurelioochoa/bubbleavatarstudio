@@ -51,13 +51,62 @@ const MOOD_FIELDS: {
   step: number;
   unit: string;
 }[] = [
-  { key: "rotationXDeg", label: "common.rotationX", min: -30, max: 30, step: 1, unit: "°" },
-  { key: "rotationYDeg", label: "common.rotationY", min: -30, max: 30, step: 1, unit: "°" },
-  { key: "rotationZDeg", label: "common.rotationZ", min: -30, max: 30, step: 1, unit: "°" },
-  { key: "scaleX", label: "look.scaleX", min: 0.3, max: 2, step: 0.05, unit: "×" },
-  { key: "scaleY", label: "look.scaleY", min: 0.3, max: 2, step: 0.05, unit: "×" },
-  { key: "offsetX", label: "look.offsetX", min: -40, max: 40, step: 1, unit: "u" },
-  { key: "offsetY", label: "look.offsetY", min: -40, max: 40, step: 1, unit: "u" },
+  {
+    key: "rotationXDeg",
+    label: "common.rotationX",
+    min: -30,
+    max: 30,
+    step: 1,
+    unit: "°",
+  },
+  {
+    key: "rotationYDeg",
+    label: "common.rotationY",
+    min: -30,
+    max: 30,
+    step: 1,
+    unit: "°",
+  },
+  {
+    key: "rotationZDeg",
+    label: "common.rotationZ",
+    min: -30,
+    max: 30,
+    step: 1,
+    unit: "°",
+  },
+  {
+    key: "scaleX",
+    label: "look.scaleX",
+    min: 0.3,
+    max: 2,
+    step: 0.05,
+    unit: "×",
+  },
+  {
+    key: "scaleY",
+    label: "look.scaleY",
+    min: 0.3,
+    max: 2,
+    step: 0.05,
+    unit: "×",
+  },
+  {
+    key: "offsetX",
+    label: "look.offsetX",
+    min: -40,
+    max: 40,
+    step: 1,
+    unit: "u",
+  },
+  {
+    key: "offsetY",
+    label: "look.offsetY",
+    min: -40,
+    max: 40,
+    step: 1,
+    unit: "u",
+  },
 ];
 
 /** Fallback swatch when a channel is switched on and has nothing to show yet. */
@@ -436,7 +485,10 @@ function MoodEditor({
           fallback={bubble.colors.body}
           onToggle={(on) => {
             setOverride(
-              withChannel("body", on ? (override?.body ?? DEFAULT_OVERRIDE) : undefined),
+              withChannel(
+                "body",
+                on ? (override?.body ?? DEFAULT_OVERRIDE) : undefined,
+              ),
             );
           }}
           onColor={(v) => {
@@ -450,7 +502,10 @@ function MoodEditor({
           fallback={bubble.colors.eyes}
           onToggle={(on) => {
             setOverride(
-              withChannel("eyes", on ? (override?.eyes ?? DEFAULT_OVERRIDE) : undefined),
+              withChannel(
+                "eyes",
+                on ? (override?.eyes ?? DEFAULT_OVERRIDE) : undefined,
+              ),
             );
           }}
           onColor={(v) => {

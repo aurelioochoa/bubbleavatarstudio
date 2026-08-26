@@ -29,6 +29,9 @@ const TRANSITIONS = new Set(["linear", "ease", "spring", "step"]);
 const MODES = new Set(["loop", "once", "pingpong"]);
 const SHAPES = new Set<string>(SHAPE_FAMILIES);
 
+/** FR-2.3. How many primitives may be assembled around the primary shape. */
+export const MAX_EXTRAS = 16;
+
 class Ctx {
   readonly issues: ValidationIssue[] = [];
 
@@ -293,6 +296,13 @@ function validateBubble(
     ctx.fail("E_SHAPE", `${path}.body.extras`);
     return;
   }
+  // FR-2.3: a body is a primary shape plus assembled primitives, and the count
+  // is bounded so "assembled" stays a construction rather than a scene graph.
+  ctx.check(
+    (bodyRec.extras as unknown[]).length <= MAX_EXTRAS,
+    "E_RANGE",
+    `${path}.body.extras`,
+  );
   (bodyRec.extras as unknown[]).forEach((e, i) => {
     const p = `${path}.body.extras[${String(i)}]`;
     if (typeof e !== "object" || e === null) {
@@ -304,6 +314,7 @@ function validateBubble(
     oneOf(ctx, extra.kind, EXTRA_KINDS, `${p}.kind`);
     pos(ctx, extra.width, `${p}.width`);
     pos(ctx, extra.height, `${p}.height`);
+    pos(ctx, extra.depth, `${p}.depth`);
     num(ctx, extra.roundness, `${p}.roundness`, 0, 1);
     int(ctx, extra.z, `${p}.z`);
     oneOf(ctx, extra.colorRole, COLOR_ROLES, `${p}.colorRole`);
@@ -409,7 +420,7 @@ export function validateDocument(doc: unknown): ValidateResult {
     return { ok: false, issues: [{ code: "E_SHAPE", path: "$" }] };
   }
   const d = doc as Record<string, unknown>;
-  ctx.check(d.version === 3, "E_VERSION", "$.version");
+  ctx.check(d.version === 4, "E_VERSION", "$.version");
   ctx.check(d.kind === "bubble-studio-project", "E_KIND", "$.kind");
   if (!Array.isArray(d.bubbles)) {
     ctx.fail("E_SHAPE", "$.bubbles");

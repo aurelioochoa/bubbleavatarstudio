@@ -88,8 +88,18 @@ describe("loop summary (FR-5.8)", () => {
       if (!l) throw new Error("fixture missing loop");
       l.mode = "loop";
       l.steps = [
-        { id: "s1", moodId: l.steps[0]?.moodId ?? "", holdMs: 400, transition: "ease" },
-        { id: "s2", moodId: l.steps[0]?.moodId ?? "", holdMs: 1600, transition: "ease" },
+        {
+          id: "s1",
+          moodId: l.steps[0]?.moodId ?? "",
+          holdMs: 400,
+          transition: "ease",
+        },
+        {
+          id: "s2",
+          moodId: l.steps[0]?.moodId ?? "",
+          holdMs: 1600,
+          transition: "ease",
+        },
       ];
       return k;
     });
@@ -105,8 +115,18 @@ describe("loop summary (FR-5.8)", () => {
       if (!l) throw new Error("fixture missing loop");
       l.mode = "pingpong";
       l.steps = [
-        { id: "s1", moodId: l.steps[0]?.moodId ?? "", holdMs: 400, transition: "ease" },
-        { id: "s2", moodId: l.steps[0]?.moodId ?? "", holdMs: 1600, transition: "ease" },
+        {
+          id: "s1",
+          moodId: l.steps[0]?.moodId ?? "",
+          holdMs: 400,
+          transition: "ease",
+        },
+        {
+          id: "s2",
+          moodId: l.steps[0]?.moodId ?? "",
+          holdMs: 1600,
+          transition: "ease",
+        },
       ];
       return k;
     });
@@ -196,8 +216,9 @@ const rowOf = (el: Element): Element => {
 describe("step reorder by drag (FR-5.2, docs/05 §2)", () => {
   it("keeps the ↑ ↓ fallback alongside the drag", () => {
     setup();
-    expect(screen.getAllByRole("button", { name: /Subir paso/ }).length)
-      .toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("button", { name: /Subir paso/ }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("moves a step without changing which mood it references", () => {

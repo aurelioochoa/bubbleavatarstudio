@@ -86,18 +86,14 @@ describe("SharePanel project import (FR-9.3)", () => {
 
   it("keeps the document when the summary is dismissed", async () => {
     const user = await upload(projectJsonNamed("Rechazado"));
-    await user.click(
-      await screen.findByRole("button", { name: "Cancelar" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Cancelar" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByRole("button", { name: "Rechazado" })).toBeNull();
   });
 
   it("replaces the document once the summary is accepted", async () => {
     const user = await upload(projectJsonNamed("Importado"));
-    await user.click(
-      await screen.findByRole("button", { name: "Reemplazar" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Reemplazar" }));
     // The rail identifies a bubble by its render, so assert on its name.
     expect(
       await screen.findByRole("button", { name: "Importado" }),

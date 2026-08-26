@@ -246,7 +246,10 @@ are editing". Separate from the projection guide, which draws the surface.
 
 7. Six primary shape families rather than three.
 8. An authored depth for the body, rather than a derived one.
-9. Assembled primitives as part of body construction, capped at 16.
+9. ~~Assembled primitives as part of body construction, capped at 16.~~
+   **Closed.** Extras carry their own depth and foreshorten by their own solid
+   rather than by the surface beneath them, and the count is capped at 16 and
+   shown against the cap.
 10. A silhouette highlight while a body is being edited.
 
 ## Session 2026-08-25 (b) — how their 3D is actually made

@@ -46,7 +46,10 @@ function setup() {
   return { kit, dispatch, onPreview, first, second };
 }
 
-const openMenu = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+const openMenu = async (
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) => {
   await user.click(screen.getByRole("button", { name: `Acciones · ${name}` }));
   return screen.getByRole("menu", { name });
 };
@@ -102,19 +105,27 @@ describe("mood menu (FR-4.2)", () => {
     const { first } = setup();
     const menu = await openMenu(user, first.name);
     expect(
-      within(menu).getByRole("menuitem", { name: "Subir" }).hasAttribute("disabled"),
+      within(menu)
+        .getByRole("menuitem", { name: "Subir" })
+        .hasAttribute("disabled"),
     ).toBe(true);
   });
 
   it("confirms before deleting, and does nothing when refused (docs/05 §3)", async () => {
     const user = userEvent.setup();
     const { dispatch, first } = setup();
-    vi.stubGlobal("confirm", vi.fn(() => false));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => false),
+    );
     const menu = await openMenu(user, first.name);
     await user.click(within(menu).getByRole("menuitem", { name: "Eliminar" }));
     expect(dispatch).not.toHaveBeenCalled();
 
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     const again = await openMenu(user, first.name);
     await user.click(within(again).getByRole("menuitem", { name: "Eliminar" }));
     expect(dispatch).toHaveBeenCalledWith({
@@ -170,9 +181,12 @@ describe("mood editor (FR-4.1, FR-4.3, FR-4.4)", () => {
     fireEvent.change(screen.getByLabelText("Ojo izquierdo · Rotación X"), {
       target: { value: "9" },
     });
-    fireEvent.change(screen.getByLabelText("Ojo izquierdo · Desplazamiento X"), {
-      target: { value: "7" },
-    });
+    fireEvent.change(
+      screen.getByLabelText("Ojo izquierdo · Desplazamiento X"),
+      {
+        target: { value: "7" },
+      },
+    );
     await user.click(
       screen.getByRole("button", { name: "Reflejar izquierdo → derecho" }),
     );

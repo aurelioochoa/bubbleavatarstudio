@@ -1,4 +1,4 @@
-// Domain types — Bubble Avatar v3 schema (docs/03). Pure TS, no React/DOM.
+// Domain types — Bubble Avatar v4 schema (docs/03). Pure TS, no React/DOM.
 import type { ShapeFamily } from "../geometry/shapes";
 
 export type { ShapeFamily };
@@ -42,6 +42,13 @@ export interface ExtraPrimitive {
   kind: ExtraKind;
   width: number;
   height: number;
+  /**
+   * FR-2.3. Front-to-back size, in the same units as width and height. An
+   * extra is a solid assembled around the body, so it has a volume of its own
+   * and turns with the head instead of being scaled by whatever the surface
+   * beneath it happens to be doing.
+   */
+  depth: number;
   roundness: number;
   x: number;
   y: number;
@@ -158,7 +165,7 @@ export interface Bubble {
 export type Locale = "es" | "en";
 
 export interface StudioDocument {
-  version: 3;
+  version: 4;
   kind: "bubble-studio-project";
   activeBubbleId: string | null;
   locale: Locale;

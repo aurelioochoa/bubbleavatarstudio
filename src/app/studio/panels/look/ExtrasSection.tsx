@@ -6,6 +6,7 @@ import type {
   ExtraKind,
   ExtraPrimitive,
 } from "../../../../domain/document/types";
+import { MAX_EXTRAS } from "../../../../domain/document/validate";
 
 const KINDS: ExtraKind[] = ["blob", "capsule", "circle", "ring"];
 const ROLES: ColorRole[] = ["body", "accent", "custom"];
@@ -16,6 +17,7 @@ function newExtra(kind: ExtraKind, z: number): Omit<ExtraPrimitive, "id"> {
     kind,
     width: 48,
     height: 48,
+    depth: 41,
     roundness: 0.9,
     x: 0,
     y: 0,
@@ -48,16 +50,19 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
   };
 
   return (
-    <Card title={t("look.extras")}>
-
+    <Card
+      title={`${t("look.extras")} ${String(extras.length)}/${String(MAX_EXTRAS)}`}
+    >
       <label className="flex items-center justify-between text-xs text-ink-dim">
         {t("look.addExtra")}
         <select
           value=""
           aria-label={t("look.addExtra")}
+          disabled={extras.length >= MAX_EXTRAS}
           onChange={(e) => {
             const kind = e.target.value as ExtraKind | "";
             if (!kind) return;
+            if (extras.length >= MAX_EXTRAS) return;
             const topZ = extras.at(-1)?.z ?? -1;
             dispatch({ type: "extra/add", extra: newExtra(kind, topZ + 1) });
           }}
@@ -140,6 +145,19 @@ export function ExtrasSection({ bubble, dispatch, t }: SectionProps) {
                 type: "extra/update",
                 extraId: extra.id,
                 patch: { height: v },
+              });
+            }}
+          />
+          <NumberField
+            label={t("look.depth")}
+            value={extra.depth}
+            min={1}
+            unit="u"
+            onChange={(v) => {
+              dispatch({
+                type: "extra/update",
+                extraId: extra.id,
+                patch: { depth: v },
               });
             }}
           />
