@@ -8,8 +8,10 @@ import { MoodsPanel } from "./panels/MoodsPanel";
 import { LoopsPanel } from "./panels/LoopsPanel";
 import { SharePanel } from "./panels/SharePanel";
 import { useStudio } from "./store";
-import { Modal, PanelScroll } from "./ui";
+import { PanelScroll } from "./ui";
 import { BubbleRail } from "./BubbleRail";
+import { BubbleMark } from "./BubbleMark";
+import { HelpSheet } from "./help/HelpSheet";
 import { Track } from "./Track";
 import { createStageClock } from "../stage/clock";
 import type { StageMode } from "../stage/StageEngine";
@@ -53,7 +55,7 @@ export function StudioView() {
   const [saveState, setSaveState] = useState<"saved" | "saving" | "failed">(
     "saved",
   );
-  const [shortcuts, setShortcuts] = useState(false);
+  const [help, setHelp] = useState(false);
   const autosaver = useMemo(
     () =>
       createAutosaver(300, (ok) => {
@@ -170,10 +172,7 @@ export function StudioView() {
   return (
     <div className="flex h-dvh flex-col bg-stage text-ink">
       <header className="flex shrink-0 items-center gap-3 border-b border-line bg-panel px-4 py-2.5">
-        <span
-          aria-hidden="true"
-          className="h-4 w-4 rounded-full bg-gradient-to-br from-primary-hi to-primary"
-        />
+        <BubbleMark size={20} />
         <h1 className="text-sm font-semibold tracking-tight">
           {t("app.title")}
         </h1>
@@ -183,12 +182,12 @@ export function StudioView() {
         <button
           type="button"
           onClick={() => {
-            setShortcuts(true);
+            setHelp(true);
           }}
           className="ml-auto flex h-6.5 items-center gap-1.5 rounded-field border border-line px-2.5 text-[11px] text-ink-dim transition-colors duration-150 ease-out hover:border-outline hover:text-ink"
         >
-          <ShortcutsIcon />
-          {t("header.shortcuts")}
+          <HelpIcon />
+          {t("header.help")}
         </button>
 
         <span className="flex items-center gap-1 rounded-field bg-panel-2 p-0.5">
@@ -345,11 +344,11 @@ export function StudioView() {
         </aside>
       </div>
 
-      {shortcuts && (
-        <ShortcutsSheet
+      {help && (
+        <HelpSheet
           t={t}
           onClose={() => {
-            setShortcuts(false);
+            setHelp(false);
           }}
         />
       )}
@@ -415,60 +414,6 @@ function SaveState({
   );
 }
 
-/** FR-9.7: what the studio answers to, written down where it can be found. */
-function ShortcutsSheet({
-  t,
-  onClose,
-}: {
-  t: (k: MessageKey) => string;
-  onClose: () => void;
-}) {
-  const groups: { title: MessageKey; items: MessageKey[] }[] = [
-    {
-      title: "shortcuts.stage",
-      items: ["shortcuts.dragHead", "shortcuts.escUndo"],
-    },
-    {
-      title: "shortcuts.track",
-      items: [
-        "shortcuts.scrubTrack",
-        "shortcuts.retime",
-        "shortcuts.dragMood",
-        "shortcuts.reorderStep",
-      ],
-    },
-    { title: "shortcuts.moods", items: ["shortcuts.openEditor"] },
-    {
-      title: "shortcuts.panels",
-      items: ["shortcuts.scrub", "shortcuts.escClose"],
-    },
-  ];
-  return (
-    <div className="fixed inset-0 z-40 grid place-items-center p-6">
-      <Modal
-        title={t("header.shortcuts")}
-        closeLabel={t("common.close")}
-        onClose={onClose}
-      >
-        {groups.map((g) => (
-          <div key={g.title} className="space-y-1.5">
-            <p className="text-[9px] font-semibold tracking-[0.09em] text-ink-dim uppercase">
-              {t(g.title)}
-            </p>
-            <ul className="space-y-1">
-              {g.items.map((item) => (
-                <li key={item} className="text-xs text-ink">
-                  {t(item)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </Modal>
-    </div>
-  );
-}
-
 function CheckIcon() {
   return (
     <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" aria-hidden="true">
@@ -483,7 +428,6 @@ function CheckIcon() {
     </svg>
   );
 }
-
 function AlertIcon() {
   return (
     <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
@@ -507,16 +451,26 @@ function AlertIcon() {
   );
 }
 
-function ShortcutsIcon() {
+/** The button opens the whole help sheet now, not only the shortcut list. */
+function HelpIcon() {
   return (
     <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" aria-hidden="true">
+      <circle
+        cx="8"
+        cy="8"
+        r="6.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
       <path
-        d="M8 1.6v3M8 11.4v3M1.6 8h3M11.4 8h3M3.5 3.5l2.1 2.1M10.4 10.4l2.1 2.1M12.5 3.5l-2.1 2.1M5.6 10.4l-2.1 2.1"
+        d="M6.1 6.2a1.95 1.95 0 1 1 2.5 1.86c-.4.13-.6.44-.6.85v.4"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.3"
         strokeLinecap="round"
       />
+      <circle cx="8" cy="11.6" r="0.85" fill="currentColor" />
     </svg>
   );
 }

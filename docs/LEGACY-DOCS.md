@@ -290,8 +290,16 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
   label, so values can be dialled in without keyboard round-trips.
 - **FR-9.6** The header states whether the current document is saved — autosave
   is silent by design (FR-9.2), and silence is indistinguishable from failure.
-- **FR-9.7** A keyboard-shortcuts dialog lists the bindings the studio answers
-  to, reachable from the header.
+- **FR-9.7** A help sheet reachable from the header lists the bindings the
+  studio answers to. Each binding states the gesture and its effect as two
+  things, not one sentence, so the list can be read down a column of key caps.
+- **FR-9.8** The studio wears its own character as its mark: the header logo
+  and the browser favicon are the same render, produced by `render/mark.ts`
+  rather than authored as an asset. The mark carries its own face — wider eyes,
+  set further apart than the default template's — because a favicon is
+  rasterized to as few as 16 device pixels and the default pair merges there.
+- **FR-9.9** The same help sheet carries a guide to the studio as a second tab:
+  what a bubble is, and what each surface of the shell is for, in es/en.
 
 ### FR-10 Export & runtime
 
@@ -1459,12 +1467,12 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ### 4b. Current state (re-derive; do not trust)
 
-As of the two-defect pass (F8): **36 Vitest files, 656 tests**, plus **1
-Playwright spec** of **11 scenarios** — boot, panels, a playing loop and the
-rail menu, joined by the mood editor's focus behaviour, the gizmo, the
+As of the help sheet and the mark (F9): **39 Vitest files, 680 tests**, plus
+**1 Playwright spec** of **11 scenarios** — boot, panels, a playing loop and
+the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720
 check that the track's first row and the inspector do not clip. Production
-bundle 349.58 kB JS / 38.60 kB CSS (104.49 / 7.57 gzipped).
+bundle 357.09 kB JS / 38.89 kB CSS (106.91 / 7.72 gzipped).
 
 Two of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not

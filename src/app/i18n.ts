@@ -165,20 +165,48 @@ export type MessageKey =
   | "header.saved"
   | "header.saving"
   | "header.saveFailed"
-  | "header.shortcuts"
+  | "header.help"
   | "shortcuts.stage"
-  | "shortcuts.dragHead"
-  | "shortcuts.escUndo"
   | "shortcuts.panels"
-  | "shortcuts.scrub"
-  | "shortcuts.escClose"
   | "shortcuts.track"
-  | "shortcuts.scrubTrack"
-  | "shortcuts.retime"
-  | "shortcuts.dragMood"
-  | "shortcuts.reorderStep"
   | "shortcuts.moods"
-  | "shortcuts.openEditor"
+  | "shortcuts.dragHead.g"
+  | "shortcuts.dragHead.d"
+  | "shortcuts.escUndo.g"
+  | "shortcuts.escUndo.d"
+  | "shortcuts.scrub.g"
+  | "shortcuts.scrub.d"
+  | "shortcuts.escClose.g"
+  | "shortcuts.escClose.d"
+  | "shortcuts.scrubTrack.g"
+  | "shortcuts.scrubTrack.d"
+  | "shortcuts.retime.g"
+  | "shortcuts.retime.d"
+  | "shortcuts.dragMood.g"
+  | "shortcuts.dragMood.d"
+  | "shortcuts.reorderStep.g"
+  | "shortcuts.reorderStep.d"
+  | "shortcuts.openEditor.g"
+  | "shortcuts.openEditor.d"
+  | "help.title"
+  | "help.tab.shortcuts"
+  | "help.tab.guide"
+  | "guide.bubble.title"
+  | "guide.bubble.body"
+  | "guide.rail.title"
+  | "guide.rail.body"
+  | "guide.stage.title"
+  | "guide.stage.body"
+  | "guide.look.title"
+  | "guide.look.body"
+  | "guide.moods.title"
+  | "guide.moods.body"
+  | "guide.loops.title"
+  | "guide.loops.body"
+  | "guide.share.title"
+  | "guide.share.body"
+  | "guide.saving.title"
+  | "guide.saving.body"
   | "empty.title"
   | "share.photo"
   | "share.runtime"
@@ -389,20 +417,56 @@ const es: Record<MessageKey, string> = {
   "header.saved": "Guardado",
   "header.saving": "Guardando…",
   "header.saveFailed": "No se pudo guardar",
-  "header.shortcuts": "Atajos",
+  "header.help": "Ayuda",
   "shortcuts.stage": "Escenario",
-  "shortcuts.dragHead": "Arrastrar · gira la cabeza",
-  "shortcuts.escUndo": "Esc · deshace el giro",
   "shortcuts.panels": "Paneles",
-  "shortcuts.scrub": "Arrastrar la etiqueta · cambia el número",
-  "shortcuts.escClose": "Esc · cierra un menú o un diálogo",
   "shortcuts.track": "Pista",
-  "shortcuts.scrubTrack": "Pulsar la línea de tiempo · mueve la reproducción",
-  "shortcuts.retime": "Arrastrar el borde de un paso · cambia su duración",
-  "shortcuts.dragMood": "Arrastrar un ánimo de la bandeja · inserta un paso",
-  "shortcuts.reorderStep": "Arrastrar un paso · lo reordena",
   "shortcuts.moods": "Ánimos",
-  "shortcuts.openEditor": "Doble clic en una tarjeta · abre el editor",
+  "shortcuts.dragHead.g": "Arrastrar",
+  "shortcuts.dragHead.d": "gira la cabeza",
+  "shortcuts.escUndo.g": "Esc",
+  "shortcuts.escUndo.d": "deshace el giro",
+  "shortcuts.scrub.g": "Arrastrar la etiqueta",
+  "shortcuts.scrub.d": "cambia el número",
+  "shortcuts.escClose.g": "Esc",
+  "shortcuts.escClose.d": "cierra un menú o un diálogo",
+  "shortcuts.scrubTrack.g": "Pulsar la línea de tiempo",
+  "shortcuts.scrubTrack.d": "mueve la reproducción",
+  "shortcuts.retime.g": "Arrastrar el borde de un paso",
+  "shortcuts.retime.d": "cambia su duración",
+  "shortcuts.dragMood.g": "Arrastrar un ánimo de la bandeja",
+  "shortcuts.dragMood.d": "inserta un paso",
+  "shortcuts.reorderStep.g": "Arrastrar un paso",
+  "shortcuts.reorderStep.d": "lo reordena",
+  "shortcuts.openEditor.g": "Doble clic en una tarjeta",
+  "shortcuts.openEditor.d": "abre el editor",
+  "help.title": "Ayuda",
+  "help.tab.shortcuts": "Atajos",
+  "help.tab.guide": "Guía",
+  "guide.bubble.title": "Qué es una bubble",
+  "guide.bubble.body":
+    "Una bubble es un personaje: un cuerpo con volumen, una cara que mira desde él y una biblioteca propia de ánimos y ciclos. No hay imágenes de por medio — todo se dibuja a partir de esa descripción, así que se ve nítido a cualquier tamaño.",
+  "guide.rail.title": "La columna de personajes",
+  "guide.rail.body":
+    "La columna de la izquierda guarda tus personajes, cada uno como una miniatura viva. Pulsa uno para editarlo, arrástralo para reordenarlo y abre su menú para duplicarlo o borrarlo.",
+  "guide.stage.title": "El escenario",
+  "guide.stage.body":
+    "El escenario muestra el personaje en vivo, siempre. Arrastra sobre él para girarlo en tres ejes, pulsa Esc para deshacer el giro y enciende la guía para ver la superficie sobre la que se apoya la cara.",
+  "guide.look.title": "Aspecto",
+  "guide.look.body":
+    "La pestaña Aspecto define el cuerpo: familia de forma, tamaño, redondez y profundidad, más los colores y la cara en reposo. El cuerpo es un sólido, así que la profundidad cambia lo que se ve al girarlo.",
+  "guide.moods.title": "Ánimos",
+  "guide.moods.body":
+    "Un ánimo es una expresión guardada: la mirada, la postura de la cabeza y, si quieres, un color distinto. Pulsa una tarjeta para verla en el escenario y haz doble clic para editarla.",
+  "guide.loops.title": "Ciclos y la pista",
+  "guide.loops.body":
+    "Un ciclo encadena ánimos en el tiempo. La pista de abajo dibuja cada paso como una ficha del ancho de su duración: arrastra un ánimo desde la bandeja para insertarlo, arrastra el borde de un paso para retimarlo y pulsa la línea para mover la reproducción.",
+  "guide.share.title": "Compartir",
+  "guide.share.body":
+    "Desde Compartir exportas lo que necesites: una instantánea SVG o PNG, el personaje como archivo portátil para tu propia app, o todo junto en un ZIP. El marco dibujado sobre el escenario es el recorte real.",
+  "guide.saving.title": "Dónde queda tu trabajo",
+  "guide.saving.body":
+    "Todo se guarda solo en este navegador, sin cuenta y sin botón de guardar, y la cabecera dice si el documento está a salvo. Para llevártelo a otro sitio, exporta el proyecto desde Compartir.",
   "empty.title": "Crea tu primera bubble",
   // Not "Photo Mode": that is upstream's own name for this card, recorded
   // verbatim in docs/LEGACY-DOCS.md, black-box notes. docs/05 calls ours the
@@ -619,20 +683,56 @@ const en: Record<MessageKey, string> = {
   "header.saved": "Saved",
   "header.saving": "Saving…",
   "header.saveFailed": "Could not save",
-  "header.shortcuts": "Shortcuts",
+  "header.help": "Help",
   "shortcuts.stage": "Stage",
-  "shortcuts.dragHead": "Drag · turns the head",
-  "shortcuts.escUndo": "Esc · undoes the turn",
   "shortcuts.panels": "Panels",
-  "shortcuts.scrub": "Drag the label · changes the number",
-  "shortcuts.escClose": "Esc · closes a menu or a dialog",
   "shortcuts.track": "Track",
-  "shortcuts.scrubTrack": "Press the timeline · moves playback there",
-  "shortcuts.retime": "Drag a step's edge · changes its duration",
-  "shortcuts.dragMood": "Drag a mood from the tray · inserts a step",
-  "shortcuts.reorderStep": "Drag a step · reorders it",
   "shortcuts.moods": "Moods",
-  "shortcuts.openEditor": "Double-click a card · opens the editor",
+  "shortcuts.dragHead.g": "Drag",
+  "shortcuts.dragHead.d": "turns the head",
+  "shortcuts.escUndo.g": "Esc",
+  "shortcuts.escUndo.d": "undoes the turn",
+  "shortcuts.scrub.g": "Drag the label",
+  "shortcuts.scrub.d": "changes the number",
+  "shortcuts.escClose.g": "Esc",
+  "shortcuts.escClose.d": "closes a menu or a dialog",
+  "shortcuts.scrubTrack.g": "Press the timeline",
+  "shortcuts.scrubTrack.d": "moves playback there",
+  "shortcuts.retime.g": "Drag a step's edge",
+  "shortcuts.retime.d": "changes its duration",
+  "shortcuts.dragMood.g": "Drag a mood from the tray",
+  "shortcuts.dragMood.d": "inserts a step",
+  "shortcuts.reorderStep.g": "Drag a step",
+  "shortcuts.reorderStep.d": "reorders it",
+  "shortcuts.openEditor.g": "Double-click a card",
+  "shortcuts.openEditor.d": "opens the editor",
+  "help.title": "Help",
+  "help.tab.shortcuts": "Shortcuts",
+  "help.tab.guide": "Guide",
+  "guide.bubble.title": "What a bubble is",
+  "guide.bubble.body":
+    "A bubble is a character: a body with volume, a face looking out of it, and its own library of moods and loops. No images are involved — everything is drawn from that description, so it stays sharp at any size.",
+  "guide.rail.title": "The character rail",
+  "guide.rail.body":
+    "The column on the left holds your characters, each one a live mini-render. Click one to edit it, drag it to reorder, and open its menu to duplicate or delete it.",
+  "guide.stage.title": "The stage",
+  "guide.stage.body":
+    "The stage shows the character live, always. Drag on it to turn the body on three axes, press Esc to undo the turn, and switch the guide on to see the surface the face is anchored to.",
+  "guide.look.title": "Look",
+  "guide.look.body":
+    "The Look tab defines the body: shape family, size, roundness and depth, plus the colours and the resting face. The body is a solid, so depth changes what you see when you turn it.",
+  "guide.moods.title": "Moods",
+  "guide.moods.body":
+    "A mood is a saved expression: the gaze, the pose of the head and, if you want, a different colour. Click a card to see it on the stage, and double-click to edit it.",
+  "guide.loops.title": "Loops and the track",
+  "guide.loops.body":
+    "A loop chains moods over time. The track below draws every step as a chip as wide as it lasts: drag a mood in from the tray to insert one, drag a step's edge to retime it, and press the timeline to move playback.",
+  "guide.share.title": "Share",
+  "guide.share.body":
+    "Share exports whatever you need: an SVG or PNG snapshot, the character as a portable file for your own app, or all of it in a ZIP. The frame drawn on the stage is the real crop.",
+  "guide.saving.title": "Where your work is kept",
+  "guide.saving.body":
+    "Everything autosaves in this browser — no account and no save button — and the header says whether the document is safe. To take it elsewhere, export the project from Share.",
   "empty.title": "Create your first bubble",
   "share.photo": "Snapshot",
   "share.runtime": "Runtime",

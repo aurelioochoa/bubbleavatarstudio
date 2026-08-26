@@ -446,11 +446,31 @@ describe("StudioView header (FR-9.6, FR-9.7)", () => {
   it("writes down what the studio answers to (FR-9.7)", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
-    await user.click(screen.getByRole("button", { name: /Atajos/ }));
-    const sheet = screen.getByRole("dialog", { name: "Atajos" });
+    await user.click(screen.getByRole("button", { name: /Ayuda/ }));
+    const sheet = screen.getByRole("dialog", { name: "Ayuda" });
     expect(within(sheet).getByText(/gira la cabeza/)).toBeTruthy();
     expect(within(sheet).getByText(/deshace el giro/)).toBeTruthy();
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "Atajos" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Ayuda" })).toBeNull();
+  });
+
+  it("explains the studio in the same sheet (FR-9.9)", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("button", { name: /Ayuda/ }));
+    const sheet = screen.getByRole("dialog", { name: "Ayuda" });
+    await user.click(within(sheet).getByRole("tab", { name: "Guía" }));
+    expect(within(sheet).getByText("Qué es una bubble")).toBeTruthy();
+    expect(
+      within(sheet).getByText(/El escenario muestra el personaje/),
+    ).toBeTruthy();
+  });
+
+  it("wears its own character as the logo (FR-9.8)", () => {
+    render(<StudioView />);
+    const mark = screen.getByTestId("bubble-mark");
+    expect(mark.querySelector("svg")).not.toBeNull();
+    // The banner names the studio; the mark beside it must stay decorative.
+    expect(mark.getAttribute("aria-hidden")).toBe("true");
   });
 });
