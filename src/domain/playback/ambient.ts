@@ -78,7 +78,8 @@ function saccadeAt(amplitude: number, tAbsMs: number): number {
   if (amplitude <= 0 || tAbsMs <= 0) return 0;
   const window = Math.floor(tAbsMs / SACCADE_WINDOW_MS);
   const phase = (tAbsMs % SACCADE_WINDOW_MS) / SACCADE_WINDOW_MS;
-  const target = (n: number) => (hash01(`saccade:${String(n)}`) * 2 - 1) * amplitude;
+  const target = (n: number) =>
+    (hash01(`saccade:${String(n)}`) * 2 - 1) * amplitude;
   const from = window === 0 ? 0 : target(window - 1);
   const to = target(window);
   if (phase >= SACCADE_TRAVEL) return to;

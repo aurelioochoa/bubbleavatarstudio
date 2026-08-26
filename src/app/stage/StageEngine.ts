@@ -119,8 +119,14 @@ export class StageEngine {
       // Manual selection owns the live state while it lasts (FR-6.1).
       scene = moodScene(bubble, preview, this.ambientMs, headRotation, chrome);
     } else if (loopId && mode !== "stopped") {
-      scene = liveFrame(bubble, kit, loopId, this.loopMs, headRotation, chrome)
-        .scene;
+      scene = liveFrame(
+        bubble,
+        kit,
+        loopId,
+        this.loopMs,
+        headRotation,
+        chrome,
+      ).scene;
     } else {
       scene = restingScene(bubble, this.ambientMs, headRotation, chrome);
     }

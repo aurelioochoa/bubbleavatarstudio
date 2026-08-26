@@ -41,7 +41,10 @@ export function createStageClock(): StageClock {
    * runs inside requestAnimationFrame, so an exception here would stop the
    * character animating because a readout failed to format a number.
    */
-  const deliver = (cb: (frame: StageFrame) => void, frame: StageFrame): void => {
+  const deliver = (
+    cb: (frame: StageFrame) => void,
+    frame: StageFrame,
+  ): void => {
     try {
       cb(frame);
     } catch {

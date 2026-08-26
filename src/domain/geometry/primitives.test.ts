@@ -37,13 +37,20 @@ describe("smoothClosedPath", () => {
     const path = smoothClosedPath(pts);
     // Each curve ends on its knot, so every sample appears in the output.
     for (const p of pts.slice(1, 5)) {
-      expect(path).toContain(`${String(Math.round(p.x * 100) / 100)} ${String(Math.round(p.y * 100) / 100)}`);
+      expect(path).toContain(
+        `${String(Math.round(p.x * 100) / 100)} ${String(Math.round(p.y * 100) / 100)}`,
+      );
     }
   });
 
   it("degenerate input yields an empty path rather than nonsense", () => {
     expect(smoothClosedPath([])).toBe("");
-    expect(smoothClosedPath([{ x: 0, y: 0 }, { x: 1, y: 1 }])).toBe("");
+    expect(
+      smoothClosedPath([
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ]),
+    ).toBe("");
   });
 });
 

@@ -49,7 +49,9 @@ export function smoothClosedPath(pts: Point[]): string {
   const at = (i: number): Point => {
     // .at rather than [] so the fallback is honestly typed; the index is
     // wrapped into range, so it never actually fires.
-    return pts.at(((i % pts.length) + pts.length) % pts.length) ?? { x: 0, y: 0 };
+    return (
+      pts.at(((i % pts.length) + pts.length) % pts.length) ?? { x: 0, y: 0 }
+    );
   };
   const first = at(0);
   const out = [`M ${fmt(first.x)} ${fmt(first.y)}`];

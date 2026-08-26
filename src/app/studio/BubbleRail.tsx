@@ -93,9 +93,7 @@ function RailItem({
   onToggleMenu,
   onCloseMenu,
 }: {
-  dragProps: ReturnType<
-    ReturnType<typeof useDragReorder>["itemProps"]
-  >;
+  dragProps: ReturnType<ReturnType<typeof useDragReorder>["itemProps"]>;
   bubble: Bubble;
   active: boolean;
   first: boolean;
@@ -111,8 +109,7 @@ function RailItem({
   // Pure render of the resting pose — the same scene the stage and the
   // snapshots build, so the thumbnail is the character rather than an icon.
   const thumb = useMemo(
-    () =>
-      sceneToSvg(restingScene(bubble), { background: null, size: THUMB }),
+    () => sceneToSvg(restingScene(bubble), { background: null, size: THUMB }),
     [bubble],
   );
 

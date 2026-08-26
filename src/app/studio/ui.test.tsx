@@ -71,9 +71,7 @@ describe("Modal", () => {
     const order = ["Cerrar", "first", "last"];
     for (const name of order) {
       await user.tab();
-      expect(document.activeElement).toBe(
-        screen.getByRole("button", { name }),
-      );
+      expect(document.activeElement).toBe(screen.getByRole("button", { name }));
     }
     // Wrapping rather than escaping to the button behind the dialog.
     await user.tab();

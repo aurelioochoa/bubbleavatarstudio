@@ -267,7 +267,13 @@ describe("solidOutline", () => {
   // starburst — which is what a drop, capsule, cylinder, cone or diamond
   // turned to face the viewer directly used to become.
   it("counts a bin as reached only if a real sample reached it", () => {
-    for (const shape of ["drop", "capsule", "cylinder", "cone", "diamond"] as const) {
+    for (const shape of [
+      "drop",
+      "capsule",
+      "cylinder",
+      "cone",
+      "diamond",
+    ] as const) {
       const r = solidRadii(
         at({ shape, azimuths: 48, rotation: { x: 90, y: 0, z: 0 } }),
       );
@@ -483,10 +489,7 @@ describe("solidRadii · a solid of revolution seen pole-on is its widest ring", 
       const got = solidRadii(opts);
       const want = Float64Array.from(got, (_, k) => {
         const a = (k * 2 * Math.PI) / got.length;
-        return (
-          (rmax * kappa) /
-          Math.hypot(kappa * Math.cos(a), Math.sin(a))
-        );
+        return (rmax * kappa) / Math.hypot(kappa * Math.cos(a), Math.sin(a));
       });
       expect({ shape, off: worstRatio(got, want) }).toMatchObject({
         off: expect.any(Number),

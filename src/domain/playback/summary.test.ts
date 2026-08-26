@@ -1,12 +1,7 @@
 // FR-5.8: a loop can say what it will do — how many steps, how long they hold,
 // how long one whole cycle runs, and how it blinks — without playing it.
 import { describe, expect, it } from "vitest";
-import {
-  cycleSteps,
-  playheadAt,
-  stepBounds,
-  summarizeLoop,
-} from "./summary";
+import { cycleSteps, playheadAt, stepBounds, summarizeLoop } from "./summary";
 import type { BlinkConfig, Loop, LoopStep } from "../document/types";
 
 const blink: BlinkConfig = {
