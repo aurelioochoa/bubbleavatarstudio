@@ -55,7 +55,7 @@ const ZOOM_MAX = 2;
  * Measured off the reference application by hand, driving it as a user and
  * reading the rotation its own pose panel reports: 100px of travel moved the
  * yaw 29 degrees and 200px moved it 58, so the rate is flat at a shade under
- * 0.3 and this rounds it. See docs/research/blackbox-notes.md.
+ * 0.3 and this rounds it. See docs/LEGACY-DOCS.md, black-box notes.
  */
 const DRAG_DEG_PER_PX = 0.3;
 

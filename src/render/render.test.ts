@@ -493,7 +493,7 @@ describe("projection guide (FR-8.4)", () => {
   });
 });
 
-// Defects found probing a full turn (docs/research/3d-bubble-exploration.md).
+// Defects found probing a full turn (docs/LEGACY-DOCS.md, 3D research).
 describe("volume: the light survives a full turn", () => {
   // Upright on purpose. The fixture carries a 4-degree authored tilt, and the
   // light is world-fixed now, so a tilted character's crown is legitimately

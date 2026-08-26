@@ -2,10 +2,52 @@
   <img src="docs/media/banner.webp" alt="Bubble Avatar Studio" width="100%">
 </p>
 
-# Bubble Avatar Studio
+<h1 align="center">Bubble Avatar Studio</h1>
 
-Procedural SVG avatar authoring studio by helpbubble. Original clean-room work —
-see `docs/CLEANROOM.md` before contributing.
+<p align="center">
+  Design an expressive avatar in the browser, animate it, and drop it into your
+  app as a self-contained SVG that weighs nothing.
+</p>
+
+<p align="center">
+  <a href="https://github.com/aurelioochoa/bubbleavatarstudio/actions/workflows/check.yml">
+    <img src="https://github.com/aurelioochoa/bubbleavatarstudio/actions/workflows/check.yml/badge.svg" alt="check">
+  </a>
+  <img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript 5.8">
+  <img src="https://img.shields.io/badge/React-19-61dafb" alt="React 19">
+  <img src="https://img.shields.io/badge/runtime%20deps-react%20only-brightgreen" alt="React is the only runtime dependency">
+</p>
+
+## Highlights
+
+- **No image assets.** A character is a few hundred bytes of JSON. Every frame
+  is drawn from that description, so it stays sharp at any size.
+- **The body is a solid, not a sticker.** Turn the character and it turns —
+  each shape family's outline is revolved into a solid and re-read as a
+  silhouette per angle, so a lumpy avatar shows different lumps side-on.
+- **Alive when idle.** Blink, micro-saccades and breathing run on their own,
+  so a resting avatar never looks like a frozen picture.
+- **A library to start from.** 24 moods across six expressive bands and 20
+  loops, split into life and reaction, in every new project.
+- **Ships as a React component.** `<BubbleAvatar/>` is SSR-safe and renders
+  the resting pose on the server before it ever starts a frame loop.
+- **Export what you need.** A portable `*.bubble-avatar.json`, an SVG or PNG
+  snapshot, or a ZIP with all of it.
+- **Bilingual.** Spanish-first, with full English parity.
+
+## Overview
+
+Bubble Avatar Studio is a browser studio for procedural SVG avatars — round,
+soft characters with a face, a mood and a small repertoire of loops. You shape
+the body, aim the eyes, author moods, sequence them into loops, and watch the
+result on a live stage the whole time you edit.
+
+It is built as pure layers under a thin React shell: the domain (document,
+geometry, playback) and the renderer are plain TypeScript with no DOM in sight,
+which is why the same character produces byte-identical SVG in a test, in the
+studio and on your server.
+
+Original clean-room work by helpbubble — no upstream source was ever read.
 
 ## The studio, running
 
@@ -16,117 +58,77 @@ the stage it crops.
 
 ![The studio in use](docs/media/demo.gif)
 
-> The banner is generated art. Everything in the recording above is the actual
+> The banner is generated art. Everything in the recording is the actual
 > application — `docs/media/demo.mp4` is the same take at full resolution, and
-> `docs/screenshots/` holds the eleven frames `pnpm e2e` archives.
+> `docs/screenshots/` holds the frames `pnpm e2e` archives.
 
-## Docs
+## Quick start
 
-- `docs/01..08` — product overview, functional spec, data model, architecture,
-  UI design, export formats, testing strategy, roadmap.
-- `docs/research/` — provenance notes.
-- `docs/media/` — README banner and the walkthrough capture.
-
-## Commands
+You need [Node](https://nodejs.org) 22+ and [pnpm](https://pnpm.io).
 
 ```bash
+git clone https://github.com/aurelioochoa/bubbleavatarstudio.git
+cd bubbleavatarstudio
 pnpm install
-pnpm dev        # studio at http://localhost:5173
-pnpm check      # format + typecheck + lint + tests + build (required gate, also in CI)
-pnpm e2e        # Playwright visual smoke against the preview build
+pnpm dev
 ```
 
-`make help` lists the same targets if you prefer make; it delegates to these
-scripts, which stay the single source of truth.
+The studio opens at <http://localhost:5173>. Your work autosaves to
+localStorage as you go, so there is nothing to set up and nothing to sign into.
 
-Screenshots of the eleven smoke scenarios are archived under `docs/screenshots/`
-by `pnpm e2e`. They are artifacts for a human to read against
-`docs/05-ui-design.md`, not goldens — the stage animates, so pixels differ
-between runs.
+## Using an avatar in your app
 
-## Status
+Export a character from the studio's Share panel, then render it:
 
-**v0.2.0, plus F8.** Every roadmap phase is closed — the track redesign, the
-mood pose and a two-defect pass over the v0.1.0 that closed F5. See
-`docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **656 tests across 36 files**, plus
-a Playwright smoke of 11 scenarios, on a 349.58 kB / 38.60 kB production bundle
-— re-derive with `pnpm test` and `pnpm build` rather than trusting this line.
+```tsx
+import { BubbleAvatar } from "./runtime/BubbleAvatar";
+import definition from "./mochi.bubble-avatar.json";
 
-Landed so far: the pure domain, render, export and runtime layers; a studio
-shell reaching the whole body model; a projected face that gives the character
-volume; idle behaviour (blink, micro-saccades, breathing) so a resting bubble
-looks alive; seven shape families on a document that migrates every earlier
-version forward; and the starter library — 24 moods across six expressive bands
-and 20 loops split life/reaction, meeting FR-4.7 and FR-5.7, which F5 taught to
-reach saved projects too and not only new ones.
+<BubbleAvatar definition={definition} size={128} loop="idle" />;
+```
 
-**The body is a solid.** Each family's flat outline is the generatrix of a
-solid of revolution, turned and read back as a silhouette per screen angle, so
-a lumpy character shows different lumps as it turns rather than squashing a
-sticker. Depth is authored, the guide is a wireframe, the face clips at the
-limb, and the character stands on a contact shadow. The round family keeps its
-closed form, which is why the goldens never went through the sampler.
+`definition` is the exported file, and it is the only thing the component
+needs. `loop` picks which loop plays (the first, if you leave it out);
+`autoplay`, `paused`, `size` and `ariaLabel` do what they sound like. On the
+server it renders the resting pose and starts no timers.
 
-**F6 gave playback a track.** The transport left the stage for a permanent
-full-width band under all three columns, and took the sequence with it: a step
-is a chip as wide as its hold, the ruler is in seconds, and a transition is
-edited on the seam it happens on. The playhead is written by hand from a clock
-subscription, because FR-11.2 keeps the per-frame path out of the React tree.
-The panels reorganised around it — a searchable, usage-badged mood grid, an
-offset edited as a place on an XY pad, and a Share panel that draws the export
-frame on the stage where framing is decided.
+This is not published to a registry yet, so today you vendor `src/runtime/`
+along with the `src/domain`, `src/render` and `src/export` modules it imports —
+all of it pure TypeScript, React being the only runtime dependency.
 
-**F7 made a mood turn the body.** A mood carries a three-axis pose of the whole
-character (FR-4.10, schema v6), it composes with direct manipulation rather
-than replacing it, and travel between two poses takes the shorter arc per axis.
-All 24 starter moods are posed, deliberately small. The migration is a no-op by
-construction, so no saved character changed and the goldens are byte-identical.
+## How it is built
 
-**F8 closed two defects that tests had never been pointed at.** `springSpeed`
-was authored, validated, exported and read by the player, and changed nothing:
-the speed divided the same duration it multiplied, so every value in the legal
-range returned one curve. It is a curve knob now — higher speed arrives sooner
-and rings more, the transition window untouched, so the loop summary and the
-track's step widths stay out of its reach, and FR-5.4's wording was corrected
-to match. And the mood editor's linked mode mirrored each edit onto the other
-eye, which is the resting face's handedness rule applied to deltas that aim a
-gaze: it put the two pad dots in opposite corners and made a linked mood
-impossible to point. Linked copies now, with a **Separación** slider that moves
-the pair apart or together about its own midpoint; the one-shot mirror action
-stays.
+| Layer          | What lives there                                                                       |
+| -------------- | -------------------------------------------------------------------------------------- |
+| `src/domain/`  | Document types, validation, mutations, geometry, easing, playback, the starter library |
+| `src/render/`  | Scene composition and byte-stable SVG serialization                                    |
+| `src/app/`     | The studio shell: rail, stage, inspector, rAF engine, autosave, i18n                   |
+| `src/export/`  | Portable JSON, SVG/PNG snapshots, ZIP packaging                                        |
+| `src/runtime/` | The SSR-safe `<BubbleAvatar/>` component                                               |
 
-Separately, `docs/research/3d-bubble-exploration.md` records the investigation
-behind the solid, including three rendering defects around a full turn — the
-shading gradient walking off the character past ~140° of yaw, extras that did
-not participate in the projection, and no contact shadow — all three now
-closed. The larger idea it prototypes, a silhouette derived from a radius field
-over the sphere, still needs a decision before it can be scheduled.
+Dependencies point downward only, and the two bottom layers import neither
+React nor the DOM — a lint rule fails the build if they try.
 
-## Architecture
+## Contributing
 
-- `src/domain/` — pure domain: document types, validation, mutations with
-  copy-on-write kits, geometry (superellipse and organic outlines, the solids
-  of revolution they generate, ellipsoid face projection), easing, LoopPlayer,
-  blink, ambient idle motion, and `content/` — the starter library as literal
-  data.
-- `src/render/` — deterministic scene composition + byte-stable SVG output,
-  including colour maths for body shading (golden-tested in `src/render/goldens/`).
-- `src/app/` — studio shell: rail/stage/inspector, panels, rAF StageEngine,
-  reducer store, localStorage autosave, i18n es/en.
-- `src/export/` — portable `*.bubble-avatar.json`, SVG/PNG snapshots, ZIP package.
-- `src/runtime/` — SSR-safe `<BubbleAvatar/>` React runtime.
+Issues and pull requests are welcome. Two things to know before you open one:
 
-`docs/04-architecture.md` §8 carries the full module map.
+```bash
+pnpm check   # format + typecheck + lint + tests + build — the same gate CI runs
+pnpm e2e     # Playwright visual smoke against the production preview build
+```
 
-## Law
+`pnpm check` must be green, and this is a clean-room project — read part C of
+[`docs/LEGACY-DOCS.md`](docs/LEGACY-DOCS.md) before contributing to see what
+that rules out. `make help` lists the same targets if you prefer make; it
+delegates to these scripts, which stay the single source of truth.
 
-1. TDD: no production code without a failing test first (`docs/07`).
-   A regression test seen only passing is not evidence — confirm it fails
-   against the unfixed code.
-2. `src/domain` and `src/render` stay pure TypeScript (lint-enforced).
-3. Never read upstream source code (see `docs/CLEANROOM.md` §3). Behavioural
-   observation of the deployed app is allowed and logged in
-   `docs/research/blackbox-notes.md`; feature parity means matching
-   capabilities, never copying names, artwork or UI copy.
-4. Goldens change only in a diff that states which values moved and why.
+## Further reading
+
+- [`docs/LEGACY-DOCS.md`](docs/LEGACY-DOCS.md) — the entire design record in one
+  file: product overview, functional spec, data model, architecture, UI design,
+  export formats, testing strategy, roadmap, the clean-room protocol and the
+  research notes behind them.
+- `docs/screenshots/` — the smoke scenarios `pnpm e2e` archives. They are
+  artifacts for a human to read against part 05, not goldens; the stage
+  animates, so pixels differ between runs.

@@ -25,13 +25,13 @@ pnpm vitest run src/app/studio/StudioView.test.tsx -t "adds a bubble from the ra
 which stay the single source of truth.
 
 `pnpm e2e` overwrites the archived screenshots in `docs/screenshots/`. They are
-artifacts for manual review against `docs/05-ui-design.md`, **not** goldens —
-the stage runs ambient idle motion, so pixels differ between runs.
+artifacts for manual review against `docs/LEGACY-DOCS.md` part 05, **not**
+goldens — the stage runs ambient idle motion, so pixels differ between runs.
 
 ## Repo law
 
-These are non-negotiable and predate any individual task. `docs/07` and
-`docs/CLEANROOM.md` are the authorities.
+These are non-negotiable and predate any individual task. Parts 07 and C of
+`docs/LEGACY-DOCS.md` are the authorities.
 
 1. **TDD.** No production code without a failing test first. A regression test
    seen only passing is not evidence — confirm it fails against the unfixed
@@ -39,10 +39,10 @@ These are non-negotiable and predate any individual task. `docs/07` and
 2. **`src/domain` and `src/render` stay pure TypeScript** — zero React/DOM
    imports. Enforced by ESLint `import/no-restricted-paths` and by those tests
    running in a bare node environment.
-3. **Cleanroom.** Never read upstream source code (`docs/CLEANROOM.md` §3 lists
-   what is prohibited). Feature parity means matching _capabilities_; never
-   copy names, artwork or UI copy. Behavioural observation of the deployed app
-   is allowed and logged in `docs/research/blackbox-notes.md`.
+3. **Cleanroom.** Never read upstream source code (part C §3 lists what is
+   prohibited). Feature parity means matching _capabilities_; never copy
+   names, artwork or UI copy. Behavioural observation of the deployed app is
+   allowed and logged in the black-box notes at the end of the same file.
 4. **Goldens change only in a diff that states which values moved and why**
    (`src/render/goldens/*.svg`).
 5. Test files reference the FR IDs they encode in their top comment. A roadmap
@@ -50,7 +50,8 @@ These are non-negotiable and predate any individual task. `docs/07` and
 
 ## Architecture
 
-Layers depend downward only (`docs/04-architecture.md` §1 has the full diagram):
+Layers depend downward only (`docs/LEGACY-DOCS.md` part 04 §1 has the full
+diagram):
 
 - **`src/domain/`** — pure: document types, validation, mutations, geometry
   (superellipse/organic outlines, solids of revolution and the silhouettes they
@@ -215,13 +216,19 @@ from ever disagreeing.
 
 ## Docs
 
-`docs/01..08` are product overview, functional spec (the FR-N.N IDs everything
-cites), data model, architecture, UI design, export formats, testing strategy,
-roadmap. `docs/05-ui-design.md` marks each UI item **[built]** or **[target]**
-— it is a target document, so do not read an unmarked sentence as a claim about
-what runs today.
+`docs/LEGACY-DOCS.md` is the whole design record in one file: parts 01..08 are
+product overview, functional spec (the FR-N.N IDs everything cites), data
+model, architecture, UI design, export formats, testing strategy and roadmap;
+part C is the clean-room protocol; the research notes close the file. Comments
+across the repo still cite them in the old shorthand — `docs/05 §1`,
+`docs/03 §7`, `docs/08 F8` — and that resolves to the part of the same number,
+whose own section numbering never changed.
 
-Docs in this repo record measured numbers (test counts, bundle sizes) as
-tripwires and say so. Re-derive them with `pnpm test` / `pnpm build` rather than
-trusting the line; if a fresh run disagrees, the doc is stale and should be
-updated in the same change.
+Part 05 marks each UI item **[built]** or **[target]** — it is a target
+document, so do not read an unmarked sentence as a claim about what runs
+today.
+
+That file records measured numbers (test counts, bundle sizes) as tripwires
+and says so. Re-derive them with `pnpm test` / `pnpm build` rather than trusting
+the line; if a fresh run disagrees, the doc is stale and should be updated in
+the same change.

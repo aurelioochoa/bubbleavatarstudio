@@ -5,8 +5,8 @@
 // Steps name moods by their library key (moods.ts), never by index — the ids
 // only exist once starterKit() has minted them.
 //
-// Cleanroom (docs/CLEANROOM.md §3): the count and the life/reaction split are
-// capability parity; the names, timings and step orders are ours.
+// Cleanroom (docs/LEGACY-DOCS.md, part C §3): the count and the life/reaction
+// split are capability parity; the names, timings and step orders are ours.
 import type {
   BlinkConfig,
   PlaybackMode,

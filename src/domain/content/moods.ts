@@ -6,8 +6,8 @@
 // these records into a Kit, not the other way round, so the library stays
 // readable as a list and the ids stay create.ts's business.
 //
-// Cleanroom (docs/CLEANROOM.md §3): the count and the spread of bands are
-// capability parity; every name and every delta below is ours.
+// Cleanroom (docs/LEGACY-DOCS.md, part C §3): the count and the spread of
+// bands are capability parity; every name and every delta below is ours.
 import type { ColorOverride, HeadPose, MoodEye } from "../document/types";
 
 /** The expressive range FR-4.7 names. Every band carries at least one mood. */

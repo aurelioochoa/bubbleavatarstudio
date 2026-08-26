@@ -405,7 +405,7 @@ const es: Record<MessageKey, string> = {
   "shortcuts.openEditor": "Doble clic en una tarjeta · abre el editor",
   "empty.title": "Crea tu primera bubble",
   // Not "Photo Mode": that is upstream's own name for this card, recorded
-  // verbatim in docs/research/blackbox-notes.md. docs/05 calls ours the
+  // verbatim in docs/LEGACY-DOCS.md, black-box notes. docs/05 calls ours the
   // snapshot card (CLEANROOM §3, §6).
   "share.photo": "Instantánea",
   "share.runtime": "Runtime",
