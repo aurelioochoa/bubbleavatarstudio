@@ -21,57 +21,64 @@ pnpm e2e        # Playwright visual smoke against the preview build
 `make help` lists the same targets if you prefer make; it delegates to these
 scripts, which stay the single source of truth.
 
-Screenshots of the ten smoke scenarios are archived under `docs/screenshots/`
+Screenshots of the eleven smoke scenarios are archived under `docs/screenshots/`
 by `pnpm e2e`. They are artifacts for a human to read against
 `docs/05-ui-design.md`, not goldens — the stage animates, so pixels differ
 between runs.
 
 ## Status
 
-**v0.1.0.** Every roadmap phase is closed, F5 included. See
+**v0.1.0 and two phases past it.** Every roadmap phase is closed, F7 included;
+the tag itself marks F5, so F6 and F7 are on `main` untagged. See
 `docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **360 tests across 31 files**, plus
-a Playwright smoke of 10 scenarios — re-derive with `pnpm test` rather than
-trusting this line.
+requirements each one closes. Current gate: **637 tests across 36 files**, plus
+a Playwright smoke of 11 scenarios, on a 346.25 kB / 37.86 kB production bundle
+— re-derive with `pnpm test` and `pnpm build` rather than trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio
 shell reaching the whole body model; a projected face that gives the character
 volume; idle behaviour (blink, micro-saccades, breathing) so a resting bubble
-looks alive; the shape families (round / organic / drop) reaching the schema,
-the renderer and the Look panel, on a v2 document that migrates v1 forward; and
-the starter library — 24 moods across six expressive bands and 20 loops split
-life/reaction, meeting FR-4.7 and FR-5.7.
+looks alive; seven shape families on a document that migrates every earlier
+version forward; and the starter library — 24 moods across six expressive bands
+and 20 loops split life/reaction, meeting FR-4.7 and FR-5.7, which F5 taught to
+reach saved projects too and not only new ones.
 
-Roadmap **P4 is complete**. The studio now has a 56px rail of live thumbnails
-that reorder by drag or by menu; a stage carrying the status pill, the
-transport dock, a rotation gizmo covering all three axes across ±180° and a
-projection guide drawn from the same projection the eyes use; a Moods modal
-editor with all seven deltas per eye, a mirror action and a colour override on
-body and eyes; a Loops panel with grouping, rename, the blink card and a
-summary that shares its step expansion with the player; a Share panel with a
-live preview, radial backgrounds, a loop checklist and an import confirmation
-that counts what is in the file; and drag-to-scrub on every numeric label.
+**The body is a solid.** Each family's flat outline is the generatrix of a
+solid of revolution, turned and read back as a silhouette per screen angle, so
+a lumpy character shows different lumps as it turns rather than squashing a
+sticker. Depth is authored, the guide is a wireframe, the face clips at the
+limb, and the character stands on a contact shadow. The round family keeps its
+closed form, which is why the goldens never went through the sampler.
 
-**F5 closed it out.** The starter library now reaches saved projects too: the
-Moods panel offers what a kit lacks, and only while it lacks something. The
-smoke grew to ten scenarios, weighted towards what jsdom models loosely —
-modal focus and both drags. The screenshots were re-archived and read against
-`docs/05-ui-design.md`, which found one clipped label. The `invalid/` fixtures
-exist, one per validation rule. The clean-room audit is recorded as
-`docs/CLEANROOM.md` §6; it found one piece of upstream UI copy ("Photo Mode"),
-now our own word.
+**F6 gave playback a track.** The transport left the stage for a permanent
+full-width band under all three columns, and took the sequence with it: a step
+is a chip as wide as its hold, the ruler is in seconds, and a transition is
+edited on the seam it happens on. The playhead is written by hand from a clock
+subscription, because FR-11.2 keeps the per-frame path out of the React tree.
+The panels reorganised around it — a searchable, usage-badged mood grid, an
+offset edited as a place on an XY pad, and a Share panel that draws the export
+frame on the stage where framing is decided.
 
-Separately, `docs/research/3d-bubble-exploration.md` records three real
-rendering defects around a full turn — the shading gradient walking off the
-character past ~140° of yaw, extras that do not participate in the projection,
-and no contact shadow — plus a larger, unscheduled idea for a silhouette that
-actually turns. None of it is on the roadmap yet.
+**F7 made a mood turn the body.** A mood carries a three-axis pose of the whole
+character (FR-4.10, schema v6), it composes with direct manipulation rather
+than replacing it, and travel between two poses takes the shorter arc per axis.
+All 24 starter moods are posed, deliberately small. The migration is a no-op by
+construction, so no saved character changed and the goldens are byte-identical.
+
+Separately, `docs/research/3d-bubble-exploration.md` records the investigation
+behind the solid, including three rendering defects around a full turn — the
+shading gradient walking off the character past ~140° of yaw, extras that did
+not participate in the projection, and no contact shadow — all three now
+closed. The larger idea it prototypes, a silhouette derived from a radius field
+over the sphere, still needs a decision before it can be scheduled.
 
 ## Architecture
 
 - `src/domain/` — pure domain: document types, validation, mutations with
-  copy-on-write kits, geometry (superellipse and organic outlines, ellipsoid
-  face projection), easing, LoopPlayer, blink, ambient idle motion.
+  copy-on-write kits, geometry (superellipse and organic outlines, the solids
+  of revolution they generate, ellipsoid face projection), easing, LoopPlayer,
+  blink, ambient idle motion, and `content/` — the starter library as literal
+  data.
 - `src/render/` — deterministic scene composition + byte-stable SVG output,
   including colour maths for body shading (golden-tested in `src/render/goldens/`).
 - `src/app/` — studio shell: rail/stage/inspector, panels, rAF StageEngine,

@@ -74,12 +74,29 @@ Playwright spec** of **11 scenarios** — boot, panels, a playing loop and the
 rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720
 check that the track's first row and the inspector do not clip. Production
-bundle 343.42 kB JS / 37.86 kB CSS (102.86 / 7.47 gzipped).
+bundle 346.25 kB JS / 37.86 kB CSS (103.65 / 7.47 gzipped).
 
 Two of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not
 that the engine's frames arrive. And the narrow-window case is a layout
 question, which jsdom has no answer to at all.
+
+The 37 tests over F6's 600 are the mood pose's (F7), and they are spread
+rather than gathered into a file of their own, because the pose reaches every
+layer that already read a rotation: the composed value in `render.test.ts`
+(including a loop that turns the character), the shorter-arc travel in
+`playback.test.ts`, the v5 -> v6 migration proving itself a no-op in
+`migrate.test.ts`, the portable format's matching step in `avatar.test.ts`,
+the 24 posed starter records in `content.test.ts`, and the editor's three axes
+in `MoodsPanel.test.tsx`.
+
+Before them, the 134 tests over the 466 were F6's track redesign. Four files
+are new — `Track.test.tsx` (the largest single addition in the suite),
+`stage/clock.test.ts` for the seam the playhead rides,
+`panels/moods/XYPad.test.tsx`, and `persistence.test.ts` for the save state
+the header now reports — joined by a `theme.test.ts` block recording which of
+the new tints sit under the 3:1 non-text bar deliberately. The rest landed as
+rewrites of the panels the track took work away from.
 
 Ten tests over the 456 that preceded them, in two batches.
 
