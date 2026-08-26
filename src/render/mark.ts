@@ -13,39 +13,43 @@ import { sceneToSvg } from "./svg";
 import type { Bubble } from "../domain/document/types";
 
 /**
- * The mark's own proportions, stated rather than scaled off the template.
+ * The mark's own size, stated rather than scaled off the template.
  *
  * The scene is 512 units square whatever the body does, and the template's
  * 220-wide body fills 43% of it. That margin reads right on a stage — it is
  * the room a character turns and bobs in — and reads as a speck in a tab strip
- * or beside a wordmark, where the box is the whole picture. These fill most of
- * the width and stop short of the edge, so the silhouette never looks cropped.
+ * or beside a wordmark, where the box is the whole picture. This fills most of
+ * the box and stops short of the edge, so the silhouette never looks cropped.
  *
- * Width and height are given separately because the ratio is the shape here,
- * not a side effect of it: a capsule needs a long axis to put its caps on, and
- * one scale over the template's near-square 220×200 left a straight run too
- * short to see — the mark came out a circle wearing a capsule's name.
+ * One number, not two: the mark is round, and round is a circle rather than a
+ * squashed one. Giving width and height separately is what made an earlier
+ * mark an oval — 428×340 is a perfectly good body and reads as an ellipse at
+ * icon size, whatever family draws it.
  */
-const MARK_WIDTH = 428;
-const MARK_HEIGHT = 340;
+const MARK_SIZE = 400;
 
 /** The character the mark draws. Deterministic: a fresh one every call. */
 export function markBubble(): Bubble {
   const bubble = createBubble("Bubble", "bbl_mark0000");
   const { surface } = bubble.body;
-  // The capsule's straight run is what survives being shrunk: a round body
-  // loses its silhouette to antialiasing at icon size and reads as a smudge,
-  // where two flat sides and a hard cap still read as a shape. The caps sit on
-  // the *long* axis (see `barrelPoints`), and this body is wider than it is
-  // tall, so the mark is a capsule lying down.
-  surface.shape = "capsule";
-  surface.width = MARK_WIDTH;
-  surface.height = MARK_HEIGHT;
-  // Depth is the mean of the two: the body is a solid (FR-2.8), and one that
-  // grew only across the screen would flatten as it grew.
-  surface.depth = (MARK_WIDTH + MARK_HEIGHT) / 2;
+  surface.shape = "round";
+  surface.width = MARK_SIZE;
+  surface.height = MARK_SIZE;
+  // Depth matches: the body is a solid (FR-2.8), and one that grew only across
+  // the screen would flatten as it grew.
+  surface.depth = MARK_SIZE;
+  // Equal sides are half of being round. The other half is here: `roundness`
+  // is the superellipse exponent, and only at 1 does it reach an actual
+  // ellipse — the template's 0.96 draws the same square body as a rounded
+  // square, which is a different mark entirely.
+  surface.roundness = 1;
   bubble.restingFace.eye = { width: 82, height: 107, roundness: 1 };
-  bubble.restingFace.spacing = 172;
+  // 128 puts each eye's centre 78 units out (spacing/2 plus the nudge below),
+  // leaving a gap of 74 against an 82-wide eye: closer together than they are
+  // themselves wide, which is what reads as a face rather than as two marks
+  // sharing a body. It is still 14.5% of the scene, well clear of the 16px
+  // floor `mark.test.ts` holds the pair above.
+  bubble.restingFace.spacing = 128;
   bubble.restingFace.left.offsetX = -14;
   bubble.restingFace.right.offsetX = 14;
   // A logo does not breathe. Ambient is a function of time, and a mark that
@@ -63,7 +67,7 @@ export function markBubble(): Bubble {
  * uses these to size the hole it leaves rather than guessing at the geometry.
  */
 export function markInkRatio(): { x: number; y: number } {
-  return { x: MARK_WIDTH / SCENE_SIZE, y: MARK_HEIGHT / SCENE_SIZE };
+  return { x: MARK_SIZE / SCENE_SIZE, y: MARK_SIZE / SCENE_SIZE };
 }
 
 /**

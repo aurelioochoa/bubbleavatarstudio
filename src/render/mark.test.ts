@@ -50,6 +50,15 @@ describe("the mark reads at 16px", () => {
     expect(gap / scene.size).toBeGreaterThan(PX_16 * 1.75);
   });
 
+  it("sets the pair closer than their own width apart", () => {
+    // Close-set reads as a face; far-set reads as two marks that happen to
+    // share a body. Stated against the eye rather than as scene units, so it
+    // survives the mark being resized. The floor above is the other side of
+    // this — together they bracket the pair between legible and huddled.
+    const gap = right.x - right.width / 2 - (left.x + left.width / 2);
+    expect(gap).toBeLessThan(left.width);
+  });
+
   it("draws eyes big enough to be more than a pixel each", () => {
     // Same reasoning: the default eye is 1.06 device pixels wide at 16px.
     for (const eye of [left, right]) {
@@ -58,8 +67,14 @@ describe("the mark reads at 16px", () => {
     }
   });
 
-  it("is a capsule — the family whose straight run reads at icon size", () => {
-    expect(markBubble().body.surface.shape).toBe("capsule");
+  it("is round, and round means a circle rather than a squashed one", () => {
+    const { surface } = markBubble().body;
+    expect(surface.shape).toBe("round");
+    // Two independent things have to hold, and each alone reads as an oval:
+    // equal sides, and the roundness that takes a superellipse all the way to
+    // an ellipse. At 0.96 the same square body draws a rounded square.
+    expect(surface.width).toBe(surface.height);
+    expect(surface.roundness).toBe(1);
   });
 
   it("fills its box, so the glyph is not a dot in a field of nothing", () => {

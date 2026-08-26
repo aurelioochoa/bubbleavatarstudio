@@ -296,13 +296,13 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
 - **FR-9.8** The studio wears its own character as its mark: the header logo
   and the browser favicon are the same render, produced by `render/mark.ts`
   rather than authored as an asset. The mark is its own character, not the
-  default template, and every difference is legibility at 16 device pixels:
-  the **capsule** family, whose straight run survives being shrunk where a
-  round body blurs into a smudge; a body filling most of its box rather than
-  the template's 43%; and wider eyes set further apart, because the default
-  pair merges into one bar down there. Its layout height is the height it
-  inks, not the square scene box, so a larger mark does not push the header
-  down over the stage.
+  default template: the **round** family at equal width and height and
+  `roundness` 1, which is what makes it a circle rather than an oval or a
+  rounded square; a body filling most of its box rather than the template's
+  43%; and eyes both larger than the template's and set closer than their own
+  width apart, close enough to read as a face and far enough that a 16-pixel
+  raster still shows two of them. Its layout box is the size it inks, not the
+  scene's, so a larger mark does not push the header down over the stage.
 - **FR-9.9** The same help sheet carries a guide to the studio as a second tab:
   what a bubble is, and what each surface of the shell is for, in es/en.
 
@@ -1472,7 +1472,7 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ### 4b. Current state (re-derive; do not trust)
 
-As of the help sheet and the mark (F9): **39 Vitest files, 684 tests**, plus
+As of the help sheet and the mark (F9): **39 Vitest files, 685 tests**, plus
 **1 Playwright spec** of **12 scenarios** — boot, panels, a playing loop and
 the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, a 1024×720
