@@ -28,11 +28,11 @@ between runs.
 
 ## Status
 
-**v0.2.0.** Every roadmap phase is closed, F7 included — the track redesign
-and the mood pose over the v0.1.0 that closed F5. See `docs/08-roadmap.md` for
-the phases and `docs/02-functional-spec.md` for the requirements each one
-closes. Current gate: **637 tests across 36 files**, plus
-a Playwright smoke of 11 scenarios, on a 346.25 kB / 37.86 kB production bundle
+**v0.2.0, plus F8.** Every roadmap phase is closed — the track redesign, the
+mood pose and a two-defect pass over the v0.1.0 that closed F5. See
+`docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
+requirements each one closes. Current gate: **643 tests across 36 files**, plus
+a Playwright smoke of 11 scenarios, on a 346.27 kB / 37.86 kB production bundle
 — re-derive with `pnpm test` and `pnpm build` rather than trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio
@@ -64,6 +64,17 @@ character (FR-4.10, schema v6), it composes with direct manipulation rather
 than replacing it, and travel between two poses takes the shorter arc per axis.
 All 24 starter moods are posed, deliberately small. The migration is a no-op by
 construction, so no saved character changed and the goldens are byte-identical.
+
+**F8 closed two defects that tests had never been pointed at.** `springSpeed`
+was authored, validated, exported and read by the player, and changed nothing:
+the speed divided the same duration it multiplied, so every value in the legal
+range returned one curve. It is a curve knob now — higher speed arrives sooner
+and rings more, the transition window untouched, so the loop summary and the
+track's step widths stay out of its reach, and FR-5.4's wording was corrected
+to match. And the mood editor's linked mode mirrored each edit onto the other
+eye, which is the resting face's handedness rule applied to deltas that aim a
+gaze: it put the two pad dots in opposite corners and made a linked mood
+impossible to point. Linked copies now; the one-shot mirror action stays.
 
 Separately, `docs/research/3d-bubble-exploration.md` records the investigation
 behind the solid, including three rendering defects around a full turn — the

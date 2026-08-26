@@ -337,16 +337,16 @@ moods, which needs no frame loop at all.
   goldens byte-unchanged against the branch point; the observation logged and
   committed before the implementation, per docs/CLEANROOM.md.
 
-## Open — FR-5.4 has a control, a value and no effect
+## F8 — The knob that did nothing, and the link that squinted (done)
 
-Found while giving every test file the FR ids repo law 5 asks for: FR-5.4 was
-the one requirement no test could honestly be pointed at, because there is no
-behaviour under it to assert.
+Two defects, both found by looking rather than by a failing test: the first by
+trying to cite FR-5.4 on a test, the second reported from the editor with a
+screenshot of two eyes pointing opposite ways.
 
-`springSpeed` is authored (the Loops panel's _Velocidad del muelle_ / _Spring
-speed_), range-checked by `validate.ts` at 0.1–3, copied by `create.ts`,
-carried by the portable avatar, and read by `LoopPlayer` — which hands it to
-`spring(speed)` in `easing.ts`, where it cancels out exactly:
+**FR-5.4 · `springSpeed` reached the renderer and changed nothing.** It is
+authored in the Loops panel, range-checked at 0.1–3, migrated, exported, and
+read by `LoopPlayer` — which handed it to `spring(speed)`, where
+`durationSec = 0.9 / s` divided by the same `s` that multiplied both terms:
 
 ```
 k             = t * 0.9 / s
@@ -354,28 +354,40 @@ k             = t * 0.9 / s
 2π * 1.2s * k = 2π * 1.08 * t     <- s gone
 ```
 
-Both places the parameter appears are divided by the duration it also scales,
-so `spring(0.1)` and `spring(3)` return the same value at every `t` — checked
-numerically across the range, agreeing to twelve decimals. The slider moves a
-number that reaches the renderer and changes nothing. The docstring above
-`spring()` claims "higher speed = snappier settle", which is the intent rather
-than what the arithmetic does.
+Every speed in the legal range returned one identical curve, to twelve
+decimals.
 
-Fixing it needs a decision first, because the spec and the code mean different
-things by the word:
+The word meant two different things, and the choice was **curve, not timing**.
+The spec said "scales transition durations globally", which would have widened
+or narrowed the transition window — and the window is the final 40% of a hold,
+which `summarizeLoop()` reports and the track draws step widths from, so timing
+would have moved arithmetic that is already on screen. As a curve knob the
+window is untouched and only the travel through it changes: higher speed
+arrives sooner and rings more. FR-5.4's wording was corrected to match rather
+than the other way round.
 
-- **FR-5.4 as written** — "scales transition durations globally" — makes it a
-  _timing_ knob: the transition window (today a fixed final 40% of the hold)
-  would widen or narrow with it, which changes what `summarizeLoop()` reports
-  and therefore how wide the track draws a step.
-- **`easing.ts` as built** treats it as a _curve_ knob: the hold is untouched
-  and only the settle is snappier or looser. That is the smaller fix — drop the
-  `/ s` from `durationSec` so the decay and frequency terms survive — and it
-  leaves the track's arithmetic alone.
+Dropping the `/ s` was not enough on its own, and the test says so: it left the
+slow end short, `spring(0.1)` reaching 0.54 at t=0.999 before the `c >= 1`
+branch snapped it to 1. The residual is therefore detrended by its own end
+value — `1 - r(t) + t·r(1)` — which lands every speed on 1 with no jump and
+moves s=1 by at most 0.004, so the starter library animates as authored. The
+goldens are resting and ambient frames and came out byte-identical.
 
-Either way it visibly changes how every existing loop animates, which is why it
-is written down here rather than fixed in the citation pass. The goldens are
-resting and ambient frames, so neither option moves them.
+**FR-4.1 · linked eyes were mirrored, not copied.** The editor's
+`Vinculados` mode ran each edit through `mirrorEye`, the handedness rule
+FR-3.3 applies to the **resting face** — where the two eyes are geometry, and
+handed. A mood's deltas are not geometry; they aim a gaze, and both eyes of a
+face looking left are turned left. Mirroring put the two pad dots in opposite
+corners, so a linked mood could not be pointed anywhere: the reported symptom
+was a character that squints at itself whenever the two sides are in step.
+Linked now copies. The one-shot `Reflejar izquierdo → derecho` action keeps
+`mirrorEye`, which is the case it was written for.
+
+- **AC:** all gates green — **643 tests / 36 files**, 11 e2e scenarios;
+  goldens byte-unchanged; the `springSpeed` test confirmed against a
+  `LoopPlayer` sabotaged to pass 1, and all three eye-link tests watched red
+  before the copy landed; the linked pads read the same X/Y in a real browser,
+  not only in jsdom.
 
 ## Beyond the roadmap — the 3D question
 
