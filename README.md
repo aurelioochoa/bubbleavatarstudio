@@ -53,15 +53,18 @@ Original clean-room work by helpbubble — no upstream source was ever read.
 ## The studio, running
 
 A real capture of the app: playing a loop, swapping shape families and scaling
-the body, previewing moods from the library, posing a mood and aiming its eyes,
-turning the character by hand under the wireframe, and framing the export on
-the stage it crops.
+the body, reading the orientation off the axis triad while turning the
+character by hand under the wireframe, letting it follow the cursor and dialling
+that back, previewing moods from the library and opening one over the stage,
+framing the export on the stage it crops, and the help sheet with its shortcuts
+and guide.
 
 ![The studio in use](docs/media/demo.gif)
 
 > The banner is generated art. Everything in the recording is the actual
-> application — `docs/media/demo.mp4` is the same take at full resolution, and
-> `docs/screenshots/` holds the frames `pnpm e2e` archives.
+> application, driven through Playwright against the production build —
+> `pnpm demo` re-records it, `docs/media/demo.mp4` is the same take at full
+> resolution, and `docs/screenshots/` holds the frames `pnpm e2e` archives.
 
 ## Quick start
 
@@ -117,6 +120,7 @@ Issues and pull requests are welcome. Two things to know before you open one:
 ```bash
 pnpm check   # format + typecheck + lint + tests + build — the same gate CI runs
 pnpm e2e     # Playwright visual smoke against the production preview build
+pnpm demo    # re-records the walkthrough above into docs/media/
 ```
 
 `pnpm check` must be green, and this is a clean-room project — read part C of

@@ -4,6 +4,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // The README walkthrough records video and runs for a minute; it is not a
+  // check and must not run with the smoke suite. `pnpm demo` runs it by name.
+  testIgnore: "demo.spec.ts",
   timeout: 30_000,
   fullyParallel: true,
   reporter: [["list"]],

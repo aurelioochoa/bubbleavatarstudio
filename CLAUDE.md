@@ -11,6 +11,7 @@ pnpm check                  # REQUIRED GATE: format + typecheck + lint + tests +
 pnpm test                   # vitest run (once)
 pnpm test:watch             # vitest watch
 pnpm e2e                    # build, then Playwright visual smoke against the preview build
+pnpm demo                   # re-records the README walkthrough into docs/media/
 pnpm format                 # prettier --write .
 ```
 
@@ -23,6 +24,12 @@ pnpm vitest run src/app/studio/StudioView.test.tsx -t "adds a bubble from the ra
 
 `make help` lists equivalent targets; every one delegates to the pnpm scripts,
 which stay the single source of truth.
+
+`pnpm demo` drives `e2e/demo.spec.ts` under its own config
+(`playwright.demo.config.ts`, video on) and overwrites `docs/media/demo.gif`
+and `demo.mp4`. It is excluded from `pnpm e2e` by `testIgnore` — it records for
+half a minute and is a capture, not a check, though it still asserts each beat
+so a broken studio can never be filmed and published as the product.
 
 `pnpm e2e` overwrites the archived screenshots in `docs/screenshots/`. They are
 artifacts for manual review against `docs/LEGACY-DOCS.md` part 05, **not**
