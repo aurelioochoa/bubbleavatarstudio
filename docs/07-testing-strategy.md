@@ -69,11 +69,17 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of schema v5: **32 Vitest files, 466 tests**, plus **1
-Playwright spec** of **10 scenarios** — boot, panels, a playing loop and the
+As of the track redesign (F6): **36 Vitest files, 600 tests**, plus **1
+Playwright spec** of **11 scenarios** — boot, panels, a playing loop and the
 rail menu, joined by the mood editor's focus behaviour, the gizmo, the
-wireframe, the Share preview, drag-to-scrub and drag-to-reorder. Production
-bundle 303.16 kB JS / 30.05 kB CSS (92.29 / 6.29 gzipped).
+wireframe, the Share preview, drag-to-scrub, drag-to-reorder, and a 1024×720
+check that the track's first row and the inspector do not clip. Production
+bundle 343.42 kB JS / 37.86 kB CSS (102.86 / 7.47 gzipped).
+
+Two of those scenarios exist because jsdom cannot decide them. The playing
+loop asserts the **playhead has moved**: jsdom can prove the writer runs, not
+that the engine's frames arrive. And the narrow-window case is a layout
+question, which jsdom has no answer to at all.
 
 Ten tests over the 456 that preceded them, in two batches.
 

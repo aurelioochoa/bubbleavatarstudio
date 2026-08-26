@@ -32,6 +32,14 @@
 > against this document is F5 work, against fresh `pnpm e2e` screenshots.
 > Where the built shape differs from the sketch below, the **[built]**
 > paragraph is the description and the bullets are the original target.
+>
+> **The track redesign (F6) rewrote most of §1 and §2.** Playback left the
+> stage for a full-width track that carries the sequence with it, and the
+> panels were rebuilt around what that took off them. Where a bullet list
+> below still describes the older shape it is marked as the original target
+> and the prose above it is what runs. The one item that could _not_ ship as
+> the design canvas drew it is recorded in §4: its tertiary text colour did
+> not clear the contrast bar §3 sets, and the token is the lifted value.
 
 ## 1. Layout
 
@@ -95,6 +103,7 @@
   bottom-centre, saying the stage can be dragged — which retires itself the
   first time the head is turned, because an affordance hint that outlives the
   affordance is clutter.
+
 - **Header:** the app's name, whether the document is saved (FR-9.6) and a
   shortcuts sheet (FR-9.7). Autosave is silent by design, and silence is
   indistinguishable from a storage that refused the write, so the header
@@ -182,7 +191,7 @@ badged with how many loops play it (FR-4.8). Click previews on the stage
 (FR-4.4); double-click opens the editor.
 
 **Card actions live on a bar at the foot of the column, not on a kebab.** One
-of them has to say *why* it is unavailable: every one of the 24 starter moods
+of them has to say _why_ it is unavailable: every one of the 24 starter moods
 is in at least one starter loop, so deleting any of them used to be offered,
 confirmed, and only then refused by the reducer with E_REF. The bar disables
 the control and names the reason (FR-4.8); FR-5.6 is unchanged and still the
@@ -297,7 +306,6 @@ definition that is weighed, not the ZIP: the README and the example are fixed
 overhead that no choice in this panel moves.
 
 Downloads are rows that say what each artifact is and what is inside it.
-
 
 **[built]** all of the above. Resolution choice; transparent, solid, linear and
 radial backgrounds with configurable stops; a live preview of the framed result

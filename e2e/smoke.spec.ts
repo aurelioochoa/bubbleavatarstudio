@@ -22,10 +22,15 @@ test("boot: studio shell renders with a starter bubble", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByLabel("bubble stage")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Aspecto" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Nueva burbuja" })).toBeVisible();
-  // Transport lives on the stage dock now (docs/05 §1).
-  await expect(page.getByRole("button", { name: "Reproducir" })).toBeVisible();
-  await expect(page.getByRole("status")).toContainText("En reposo");
+  await expect(
+    page.getByRole("button", { name: "Nueva burbuja" }),
+  ).toBeVisible();
+  // Transport lives on the full-width track below all three columns (FR-6.6).
+  const track = page.getByRole("region", { name: "Pista" });
+  await expect(track.getByRole("button", { name: "Reproducir" })).toBeVisible();
+  await expect(page.getByTestId("stage-status")).toContainText("En reposo");
+  // FR-6.7: the sequence is on it, one chip per step.
+  await expect(track.getByTestId("step-chip").first()).toBeVisible();
   await shoot(page, "boot");
 });
 
@@ -39,13 +44,13 @@ test("panels: look, moods, loops and share tabs expose their controls", async ({
   await shoot(page, "panel-look");
 
   await page.getByRole("tab", { name: "Ánimos" }).click();
-  await expect(
-    page.getByRole("button", { name: "Nuevo ánimo" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nuevo ánimo" })).toBeVisible();
   await shoot(page, "panel-moods");
 
   await page.getByRole("tab", { name: "Ciclos" }).click();
-  await expect(page.getByRole("button", { name: "+ Nuevo ciclo" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "+ Nuevo ciclo" }),
+  ).toBeVisible();
   await shoot(page, "panel-loops");
 
   await page.getByRole("tab", { name: "Compartir" }).click();
@@ -65,10 +70,17 @@ test("playing loop: transport toggles playback and the stage animates", async ({
   await expect(play).toBeVisible();
   await play.click();
   await expect(page.getByRole("button", { name: "Pausar" })).toBeVisible();
-  await expect(page.getByRole("status")).toContainText("Reproduciendo");
+  await expect(page.getByTestId("stage-status")).toContainText("Reproduciendo");
 
   // Let the StageEngine advance a few frames so the capture shows motion.
   await page.waitForTimeout(600);
+
+  // FR-6.7/FR-11.2: the playhead is written straight to the DOM from the
+  // engine's frame loop, so it only moves in a real browser — jsdom can prove
+  // the writer runs, not that the frames arrive.
+  const playhead = page.getByTestId("playhead");
+  await expect(playhead).not.toHaveAttribute("style", /left:\s*0%/);
+  await expect(page.getByTestId("track-elapsed")).not.toContainText("0.00 s");
   await shoot(page, "playing-loop");
 });
 
@@ -88,7 +100,7 @@ test("rail: the context menu carries rename, reorder and delete", async ({
  * `li`s, and would otherwise share every selector here.
  */
 const moodCards = (page: import("@playwright/test").Page) =>
-  page.locator("aside ul li").filter({ has: page.locator("[aria-haspopup]") });
+  page.getByTestId("mood-card");
 
 test("mood editor: opens over the stage, traps focus and cancels on Esc", async ({
   page,
@@ -96,11 +108,13 @@ test("mood editor: opens over the stage, traps focus and cancels on Esc", async 
   await page.goto("/");
   await page.getByRole("tab", { name: "Ánimos" }).click();
 
-  // The card grid renders true mini-previews; the ⋯ opens the card's menu.
-  const firstCard = moodCards(page).first();
-  const name = (await firstCard.getByRole("button").first().innerText()).trim();
-  await firstCard.getByRole("button", { name: `Acciones · ${name}` }).click();
-  await page.getByRole("menuitem", { name: "Editar" }).click();
+  // The card grid renders true mini-previews; the bar at the foot of the
+  // column acts on whichever card is in hand (FR-4.8).
+  await moodCards(page).first().getByRole("button").first().click();
+  await page
+    .getByTestId("mood-selection")
+    .getByRole("button", { name: "Editar" })
+    .click();
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
@@ -136,7 +150,8 @@ test("gizmo: the rotation pad poses the head and survives a frame", async ({
   await expect(pad).toBeVisible();
   await shoot(page, "stage-gizmo");
 
-  await pad.getByRole("button", { name: "Restablecer" }).click();
+  // One reset, and it lives beside the toggles rather than inside the pad.
+  await page.getByRole("button", { name: "Restablecer" }).click();
   await expect(pad).toContainText("0°");
 });
 
@@ -195,8 +210,7 @@ test("drag-to-reorder: a mood card dropped on another moves it (FR-1.4)", async 
   await page.goto("/");
   await page.getByRole("tab", { name: "Ánimos" }).click();
 
-  const names = () =>
-    moodCards(page).locator("button:not([aria-haspopup])").allInnerTexts();
+  const names = () => moodCards(page).locator("button").allInnerTexts();
   const before = await names();
   const [first, , third] = before;
   if (!first || !third) throw new Error("fixture needs three moods");
@@ -206,4 +220,39 @@ test("drag-to-reorder: a mood card dropped on another moves it (FR-1.4)", async 
   const after = await names();
   expect(after).not.toEqual(before);
   expect(after.indexOf(first)).toBeGreaterThan(after.indexOf(third));
+});
+
+/**
+ * The track crosses the whole width and its first row is a lot of controls in
+ * a line, so a narrow window is where it would break first. 1024×720 is the
+ * smallest the studio claims to work at (docs/05 §1: a 56px rail and a 360px
+ * inspector leave ~600px of stage).
+ */
+test("narrow window: the shell holds together at 1024×720", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 720 });
+  await page.goto("/");
+
+  const overflows = await page.evaluate(() => {
+    const d = document.documentElement;
+    return {
+      page: d.scrollWidth > d.clientWidth + 1,
+      // Row one of the track: play/pause through to the fold toggle.
+      row: (() => {
+        const r = document.querySelector('[aria-label="Pista"] > div');
+        return r ? r.scrollWidth > r.clientWidth + 1 : true;
+      })(),
+      inspector: (() => {
+        const a = document.querySelector("aside");
+        return a ? a.scrollWidth > a.clientWidth + 1 : true;
+      })(),
+    };
+  });
+
+  expect(overflows).toEqual({ page: false, row: false, inspector: false });
+  // And the stage still has room to be a stage.
+  const stage = await page.getByLabel("bubble stage").boundingBox();
+  expect(stage?.width ?? 0).toBeGreaterThan(500);
+  await shoot(page, "narrow-1024");
 });

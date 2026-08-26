@@ -231,6 +231,65 @@ All five items closed, in the order they are listed.
 - **AC:** all gates green (360 tests / 31 files, 10 e2e scenarios); eleven
   screenshots archived under `docs/screenshots/`; audit clean and recorded.
 
+## F6 — The track redesign (done)
+
+Direction A of a two-direction design canvas, built in nine steps, each
+green on `pnpm check` before the next began.
+
+**The thesis, in one move.** Playback was a pill floating over the character.
+It is a permanent full-width band under all three columns now (FR-6.6), and
+it carries the sequence with it (FR-6.7): a step is a chip exactly as wide as
+its hold, the ruler is in seconds, and a transition is edited on the seam it
+happens on. Three things follow from that and are worth stating.
+
+_The playhead is not React state._ FR-11.2 keeps the per-frame path out of the
+tree, so `StageEngine` publishes elapsed time into `app/stage/clock.ts` and
+the track writes `style.left` by hand. `Track.test.tsx` counts renders across
+a published frame; the e2e suite asserts the playhead has actually moved,
+because jsdom can prove the writer runs but not that the frames arrive.
+
+_Two totals, and they differ._ The ruler spans the authored strip; the readout
+states the cycle playback takes, which for a pingpong includes the leg back.
+The playhead walks the strip in both directions rather than the sequence
+growing a second row for the return.
+
+_A scrub rides the same seam backwards._ `clock.seek` moves the loop clock
+from the UI rather than leaking the engine instance up into the shell, and a
+scrub on a stopped stage pauses it there — stopped rewinds on every update,
+so a scrub that left it stopped would do nothing visible.
+
+**What the panels became.** The Loops panel lost half of itself to the track
+and kept the catalogue, the loop's own settings and an editor for the step in
+hand, pinned so it cannot scroll its own subject away. The Moods grid became
+searchable (FR-4.9) and badged with usage (FR-4.8), and its card actions left
+the kebab for a bar that can say _why_ a delete is unavailable — every one of
+the 24 starter moods is in a starter loop, so the old path was offer,
+confirm, refuse. The mood editor's fourteen stacked sliders became two XY
+pads: an offset is two numbers that mean one place. Look laid its fields two
+to a row. Share draws the export frame on the stage, where framing is decided,
+and states what the package will weigh before it is built (FR-10.6).
+
+**One thing the canvas drew that could not ship as drawn.** Its tertiary text
+colour, `#6f759b`, measures 4.04:1 on `panel` — under the 4.5:1 docs/05 §3
+requires. `--color-ink-mute` is the lifted value that clears the bar on all
+four surfaces, and `theme.test.ts` now also records which of the new tints
+sit under the 3:1 non-text bar deliberately, so the choice does not read as
+an oversight later.
+
+**Two habits that paid.** Every regression test was checked against a
+sabotaged build before being trusted — which is how the drag scale, the
+pad's Y direction, the loop-id guard on the playhead and the pre-empted
+delete all earned their tests. And Testing Library's drag helpers turned out
+not to carry `clientX` into React's synthetic event, silently landing every
+drop at the end of the sequence; the drag tests build their events by hand,
+and the real path was confirmed in Chrome with a genuine `DragEvent`.
+
+- **AC:** all gates green — **600 tests / 36 files**, **11 e2e scenarios**
+  (the eleventh is a 1024×720 check that the track's first row and the
+  inspector do not clip); goldens byte-unchanged, verified by diffing
+  `src/render/` and `src/domain/geometry/` against the branch point; every
+  screen read against its artboard in a real browser at 1440px.
+
 ## Beyond the roadmap — the 3D question
 
 `docs/research/3d-bubble-exploration.md` is an investigation, not a committed

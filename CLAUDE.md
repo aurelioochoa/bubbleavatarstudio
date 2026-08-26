@@ -110,11 +110,21 @@ mood a loop still references, FR-5.6). Mutations never throw.
 **The stage bypasses React per frame.** `StageEngine` owns the rAF loop and
 writes SVG straight into its host element via `innerHTML`; React never
 re-renders per frame (FR-11.2). Consequences: any stage overlay (status pill,
-transport dock, gizmo pad, guide toggle) must be a _sibling_ of the engine's
-host element, never a child — a child is wiped on the next frame, and
-`Stage.test.tsx` asserts that directly. The engine also skips the DOM write when
-the serialized SVG is byte-identical to the last frame, which is what makes a
-paused stage cheap.
+orientation readout, gizmo pad, guide toggle, the Share panel's export frame)
+must be a _sibling_ of the engine's host element, never a child — a child is
+wiped on the next frame, and `Stage.test.tsx` asserts that directly. The engine
+also skips the DOM write when the serialized SVG is byte-identical to the last
+frame, which is what makes a paused stage cheap.
+
+**The same rule reaches the track, through a clock.** The playhead moves every
+frame and must not re-render the tree either, so the engine publishes
+`{ loopId, loopMs }` into `app/stage/clock.ts` and `Track` subscribes and
+writes `style.left` and `textContent` by hand. Nothing in `clock.ts` touches
+React or the DOM, which is what makes the seam testable. It carries traffic
+both ways: `seek` is a scrub moving the loop clock from the UI, so the shell
+never has to hold the engine instance. A subscriber that throws is swallowed —
+`publish` runs inside `requestAnimationFrame`, and an exception there would
+freeze the character because a readout failed to format a number.
 
 **The starter library reaches new documents only.** `starterKit()` runs inside
 `createDefaultDocument()`, so a document already in localStorage keeps whatever
@@ -159,9 +169,20 @@ drawn _before_ the head group — inside it, it would inherit the roll and the
 bob, and a shadow that tilts with the character is not a shadow.
 
 **Three-state transport.** `playing | paused | stopped` (FR-6.2), owned by
-`StudioView` and rendered by the stage dock. `stopped` rewinds the loop clock
-but keeps ambient breathing; `paused` freezes everything. Picking a mood in the
-Moods panel takes over the live state and pauses playback (FR-6.1/FR-4.4).
+`StudioView` and rendered by the track (FR-6.6 — it was a dock floating on the
+stage until the track redesign). `stopped` rewinds the loop clock but keeps
+ambient breathing; `paused` freezes everything. Picking a mood in the Moods
+panel takes over the live state and pauses playback (FR-6.1/FR-4.4).
+
+**The timeline has two totals, and they are not the same number.** The strip
+the chips are laid on is the _authored_ steps end to end (`stepBounds`); the
+cycle a loop plays is what `summarizeLoop().totalMs` reports, which for a
+pingpong includes the mirrored leg back. The ruler spans the strip, the
+readout states the cycle, and `playheadAt` maps elapsed time onto the strip so
+the return leg walks back over the chips it already crossed. Both come from
+`domain/playback/summary.ts`, which shares its step expansion with
+`LoopPlayer` — which is what stops the drawn position and the played position
+from ever disagreeing.
 
 ## Conventions
 
