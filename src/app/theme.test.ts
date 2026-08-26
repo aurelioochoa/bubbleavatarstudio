@@ -50,6 +50,25 @@ const T = tokens();
 const WHITE = "#ffffff";
 
 /** Reads a token, failing loudly if the palette dropped it. */
+/** Hue in degrees, for judging whether two marks read as different colours. */
+function hue(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d === 0) return 0;
+  const h =
+    max === r
+      ? ((g - b) / d) % 6
+      : max === g
+        ? (b - r) / d + 2
+        : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+}
+
 function tok(name: string): string {
   const v = T[name];
   if (!v) throw new Error(`--color-${name} missing from styles.css`);
@@ -152,6 +171,51 @@ describe("contrast: non-text UI (WCAG 1.4.11, >= 3:1)", () => {
   it("keeps the structural tints out of the 3:1 bar on purpose", () => {
     for (const name of ["track", "line-soft", "line-hi", "outline"]) {
       expect(contrast(tok(name), tok("panel"))).toBeLessThan(3);
+    }
+  });
+});
+
+// FR-8.7: the triad names three axes by colour, so it needs three that are
+// distinguishable from each other and legible on the stage. They are marks,
+// not text, so the 3:1 non-text bar applies — and the letter riding inside
+// each dot is text, held to 4.5:1 against the dot it sits on.
+describe("the orientation triad's three axes (FR-8.7)", () => {
+  const AXES = ["axis-x", "axis-y", "axis-z"] as const;
+
+  it("declares one colour per axis", () => {
+    for (const name of AXES) expect(tok(name)).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("holds each to the 3:1 bar against the stage it is drawn on", () => {
+    for (const name of AXES) {
+      expect(contrast(tok(name), tok("stage"))).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("keeps the letter readable inside its own dot", () => {
+    for (const name of AXES) {
+      expect(contrast(tok("axis-label"), tok(name))).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    }
+  });
+
+  it("keeps the three tellable apart by hue, not by brightness", () => {
+    // Contrast ratio is the wrong instrument here: it measures luminance, and
+    // a red and a blue of equal luminance score ~1.0 while being obvious to
+    // any eye. What must hold is that the three sit far apart on the wheel.
+    // (The letter in each dot is what serves a colour-blind reader; this is
+    // about nobody else having to squint.)
+    const hues = (["axis-x", "axis-y", "axis-z"] as const).map((n) =>
+      hue(tok(n)),
+    );
+    for (const [a, b] of [
+      [hues[0], hues[1]],
+      [hues[1], hues[2]],
+      [hues[0], hues[2]],
+    ] as const) {
+      const apart = Math.abs(a - b);
+      expect(Math.min(apart, 360 - apart)).toBeGreaterThanOrEqual(60);
     }
   });
 });

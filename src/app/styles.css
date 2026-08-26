@@ -48,6 +48,17 @@
   --color-ink-mute: #848bb4;
   --color-danger: #ff5d73;
 
+  /* FR-8.7: the orientation triad names its axes by colour, in the red/green/
+     blue order every 3D tool uses — a convention worth matching, because the
+     reader already knows it. Marks rather than text, so the 3:1 bar applies
+     against the stage; the letter inside each dot is text and takes the near
+     black below, which is what holds it to 4.5:1 on all three. Guarded by
+     theme.test.ts. */
+  --color-axis-x: #ff6b7a;
+  --color-axis-y: #5ddc8a;
+  --color-axis-z: #7d93ff;
+  --color-axis-label: #0b0d16;
+
   --radius-card: 14px;
   --radius-field: 8px;
 

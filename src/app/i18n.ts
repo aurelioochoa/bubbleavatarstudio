@@ -16,6 +16,8 @@ export type MessageKey =
   | "stage.dragHint"
   | "stage.gizmo"
   | "stage.follow"
+  | "stage.axes"
+  | "stage.intensity"
   | "stage.zoom"
   | "stage.zoomSlider"
   | "stage.guide"
@@ -268,6 +270,8 @@ const es: Record<MessageKey, string> = {
   "stage.dragHint": "Arrastra para girar la cabeza · Esc para deshacer el giro",
   "stage.gizmo": "Rotar cabeza",
   "stage.follow": "Seguir el cursor",
+  "stage.axes": "Ejes",
+  "stage.intensity": "Intensidad",
   "stage.zoom": "Zoom",
   "stage.zoomSlider": "Zoom (deslizador)",
   "stage.guide": "Guía de proyección",
@@ -535,6 +539,8 @@ const en: Record<MessageKey, string> = {
   "stage.dragHint": "Drag to turn the head · Esc undoes the turn",
   "stage.gizmo": "Rotate head",
   "stage.follow": "Follow the cursor",
+  "stage.axes": "Axes",
+  "stage.intensity": "Strength",
   "stage.zoom": "Zoom",
   "stage.zoomSlider": "Zoom (slider)",
   "stage.guide": "Projection guide",

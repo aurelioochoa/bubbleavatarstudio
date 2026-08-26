@@ -531,3 +531,77 @@ describe("orientation readout during a follow (FR-8.6)", () => {
     expect(screen.getByTestId("readout-y").textContent).toBe("5°");
   });
 });
+
+/**
+ * FR-8.7 the corner triad, and FR-8.6's intensity slider.
+ *
+ * The triad's arithmetic and its bytes are tested in node; what matters here
+ * is that it hangs off the clock rather than off a render, for the same reason
+ * the degrees beside it do — the pose moves every frame while a follow runs.
+ */
+describe("orientation triad (FR-8.7)", () => {
+  const toggle = () => screen.getByRole("button", { name: "Ejes" });
+
+  it("is off until asked for, like every other overlay", () => {
+    setupStage();
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByTestId("stage-triad")).toBeNull();
+  });
+
+  it("appears on, and draws three axes", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(toggle());
+    const triad = screen.getByTestId("stage-triad");
+    expect(triad.querySelectorAll("line")).toHaveLength(3);
+  });
+
+  it("redraws from the clock, without a render (FR-11.2)", async () => {
+    const user = userEvent.setup();
+    const clock = createStageClock();
+    const { renders } = setupStage({ clock });
+    await user.click(toggle());
+    const before = renders();
+    const first = screen.getByTestId("stage-triad").innerHTML;
+
+    act(() => {
+      clock.publish({ loopId: null, loopMs: 0, head: { x: 12, y: 44, z: 0 } });
+    });
+
+    expect(screen.getByTestId("stage-triad").innerHTML).not.toBe(first);
+    expect(renders()).toBe(before);
+  });
+});
+
+describe("follow intensity (FR-8.6)", () => {
+  const followToggle = () =>
+    screen.getByRole("button", { name: "Seguir el cursor" });
+
+  it("offers no slider until the follow is on", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    expect(screen.queryByLabelText("Intensidad")).toBeNull();
+    await user.click(followToggle());
+    expect(screen.getByLabelText("Intensidad")).toBeTruthy();
+  });
+
+  it("goes away again when the follow does", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(followToggle());
+    await user.click(followToggle());
+    expect(screen.queryByLabelText("Intensidad")).toBeNull();
+  });
+
+  it("starts at full strength and can be turned down", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(followToggle());
+    const slider = screen.getByLabelText("Intensidad");
+    expect(slider.getAttribute("value")).toBe("100");
+    fireEvent.change(slider, { target: { value: "40" } });
+    expect(screen.getByLabelText("Intensidad").getAttribute("value")).toBe(
+      "40",
+    );
+  });
+});

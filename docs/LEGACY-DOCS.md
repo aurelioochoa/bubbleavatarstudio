@@ -279,7 +279,17 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
   head turning to look rather than as a cursor dragging it. Direct
   manipulation wins: starting a drag switches the follow off (FR-8.1), and the
   pose the character settled in is handed back rather than snapping away. The
-  roll is left alone; following aims a head, it does not tilt one.
+  roll is left alone; following aims a head, it does not tilt one. A slider appears
+  beside the toggle while it runs and scales how far the head reaches, from a
+  tenth of the full turn to all of it — strength is amplitude here, not speed.
+- **FR-8.7** A stage toggle shows an orientation triad in the corner: three
+  axes carried through the same rotation the character is, sorted back to
+  front, each named by a letter as well as a colour so the reading never rests
+  on colour alone. It is a corner widget rather than chrome inside the scene,
+  which is what keeps it clear of the silhouette it describes and leaves
+  `Scene` and all three goldens untouched by it. The rear hemisphere fades
+  with depth; the front does not, because an axis edge-on to the viewer is at
+  its longest on screen and fully legible.
 
 ### FR-9 Studio shell & persistence
 
@@ -1479,22 +1489,25 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ### 4b. Current state (re-derive; do not trust)
 
-As of the help sheet and the mark (F9): **41 Vitest files, 708 tests**, plus
-**1 Playwright spec** of **13 scenarios** — boot, panels, a playing loop and
+As of the help sheet and the mark (F9): **44 Vitest files, 737 tests**, plus
+**1 Playwright spec** of **14 scenarios** — boot, panels, a playing loop and
 the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, a 1024×720
 check that the track's first row and the inspector do not clip, and the help
-sheet's backdrop reaching every window edge. Production bundle 359.27 kB JS /
-38.88 kB CSS (107.77 / 7.73 gzipped).
+sheet's backdrop reaching every window edge. Production bundle 361.87 kB JS /
+39.35 kB CSS (108.56 / 7.80 gzipped).
 
-Four of those scenarios exist because jsdom cannot decide them. The playing
+Five of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not
 that the engine's frames arrive. The narrow-window case is a layout question,
 which jsdom has no answer to at all. So is the help sheet's backdrop: it is
 `absolute inset-0`, so what it actually covers depends on which ancestor is
 positioned, and only a real box model can say. And so is the cursor follow:
 jsdom lays nothing out, so the stage box the pointer is measured against is
-0×0 there and the aim never leaves dead centre.
+0×0 there and the aim never leaves dead centre. And so are the triad's
+colours: they are `var(--color-axis-*)` written into an SVG through
+`innerHTML`, and whether a custom property resolves across that boundary is
+something only a real style engine reports.
 
 The nine tests over F7's 637 are F8's: four pin what `springSpeed` does to a
 `spring()` curve and one that the loop's own value reaches `LoopPlayer`

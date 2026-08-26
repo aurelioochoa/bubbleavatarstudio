@@ -406,3 +406,49 @@ test("follow: the character turns toward the cursor and stops at its limit", asy
   ).toHaveAttribute("aria-pressed", "false");
   await shoot(page, "stage-follow");
 });
+
+/**
+ * FR-8.7 / FR-8.6: the triad's colours and the strength dial.
+ *
+ * Both are browser questions. The triad's axis colours are written as
+ * `var(--color-axis-*)` into an SVG set through `innerHTML`, and whether a
+ * custom property resolves across that boundary is not something jsdom can
+ * answer — it reports the literal string either way. And the strength dial
+ * only shows its work as a difference in how far a real pointer turns a head.
+ */
+test("triad and strength: axis colours resolve, and strength scales the turn", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Ejes" }).click();
+
+  const stroke = await page.evaluate(() => {
+    const line = document.querySelector('[data-testid="stage-triad"] line');
+    return line ? getComputedStyle(line).stroke : null;
+  });
+  // A var() that failed to resolve computes to none/empty, never to a colour.
+  expect(stroke).toMatch(/^rgb\(/);
+
+  await page.getByRole("button", { name: "Seguir el cursor" }).click();
+  const stage = await page.getByLabel("bubble stage").boundingBox();
+  if (!stage) throw new Error("stage not laid out");
+  const edge = stage.x + stage.width - 6;
+  const midY = stage.y + stage.height / 2;
+  const yaw = async () =>
+    Math.abs(
+      Number(
+        (await page.getByTestId("readout-y").textContent())?.replace("°", ""),
+      ),
+    );
+
+  await page.mouse.move(edge, midY);
+  await expect.poll(yaw, { timeout: 4000 }).toBeGreaterThan(20);
+  const atFull = await yaw();
+
+  await page.getByLabel("Intensidad").fill("20");
+  // Nudge, so the aim is recomputed against the new strength.
+  await page.mouse.move(edge - 1, midY);
+  await expect.poll(yaw, { timeout: 4000 }).toBeLessThan(atFull / 2);
+
+  await shoot(page, "stage-triad");
+});

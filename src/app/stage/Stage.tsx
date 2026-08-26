@@ -16,6 +16,7 @@ import type { StageClock } from "./clock";
 import { RangeInput } from "../studio/ui";
 import { wrapDeg } from "../../domain/geometry/angles";
 import { followTarget } from "../../domain/geometry/follow";
+import { triadSvg } from "../../render/axes";
 
 export interface StageProps {
   bubble: Bubble;
@@ -96,6 +97,15 @@ export function Stage({
   // event and only the engine reads it, so putting it in state would re-render
   // the tree for a value React does not draw (FR-11.2).
   const [follow, setFollow] = useState(false);
+  // FR-8.6: how pronounced the turn is, as a percentage of the full reach.
+  // Only the aim reads it, and the aim is rebuilt on every pointer event, so
+  // changing it takes effect on the next move without touching the engine.
+  const [intensity, setIntensity] = useState(100);
+  const intensityRef = useRef(intensity);
+  intensityRef.current = intensity;
+  // FR-8.7: the corner triad, off until asked for like every other overlay.
+  const [axes, setAxes] = useState(false);
+  const triadRef = useRef<HTMLDivElement>(null);
   const aimRef = useRef<{ x: number; y: number } | null>(null);
   // FR-11.2: the pose moves every frame while following, and these three
   // numbers move with it. React renders them once from the prop; after that
@@ -140,6 +150,28 @@ export function Stage({
     };
   }, []);
 
+  // FR-8.7 / FR-11.2: the triad is redrawn from the frame, not from a render.
+  // It reads the same pose the readout does and for the same reason — a
+  // follow moves it sixty times a second.
+  useEffect(() => {
+    const paint = (rot: { x: number; y: number; z: number }) => {
+      const node = triadRef.current;
+      if (!node) return;
+      const next = triadSvg(rot, { colors: TRIAD_COLORS });
+      // Byte-identical output means nothing to repaint, the same check the
+      // engine makes before writing its own SVG.
+      if (node.innerHTML !== next) node.innerHTML = next;
+    };
+    if (!axes) return;
+    paint(clock?.last()?.head ?? head);
+    if (!clock) return;
+    return clock.subscribe((frame) => {
+      paint(frame.head);
+    });
+    // `head` seeds the first paint only; after that the clock drives it, which
+    // is the whole point — a follow moves the pose faster than React renders.
+  }, [axes, clock]);
+
   useEffect(() => {
     if (!clock) return;
     return clock.subscribe((frame) => {
@@ -176,7 +208,7 @@ export function Stage({
         // turn saturates, which keeps the reach proportional to the room the
         // character actually has rather than to the size of the monitor.
         reach: Math.hypot(box.width, box.height) / 2,
-        limits: FOLLOW_LIMITS,
+        limits: scaleLimits(intensityRef.current),
       });
     };
     window.addEventListener("pointermove", onMove);
@@ -329,6 +361,15 @@ export function Stage({
             <FollowIcon />
           </OverlayToggle>
           <OverlayToggle
+            label={t("stage.axes")}
+            pressed={axes}
+            onClick={() => {
+              setAxes((v) => !v);
+            }}
+          >
+            <AxesIcon />
+          </OverlayToggle>
+          <OverlayToggle
             label={t("stage.gizmo")}
             pressed={gizmo}
             onClick={() => {
@@ -386,6 +427,38 @@ export function Stage({
         />
         <span className="pr-1">%</span>
       </div>
+
+      {/* FR-8.6: only while the follow runs — a strength dial for something
+          switched off is a control with nothing to do. Sits under the toggles
+          that opened it, clear of the pose readout. */}
+      {follow && (
+        <div className="absolute top-14 right-4 flex h-7 items-center gap-2 rounded-full border border-line bg-panel/80 pr-3 pl-3 text-[10.5px] text-ink-dim backdrop-blur-md">
+          <span>{t("stage.intensity")}</span>
+          <RangeInput
+            label={t("stage.intensity")}
+            value={intensity}
+            min={10}
+            max={100}
+            step={5}
+            onChange={setIntensity}
+            className="w-20"
+          />
+          <span className="w-7 text-right tabular-nums text-ink">
+            {intensity}%
+          </span>
+        </div>
+      )}
+
+      {/* FR-8.7: bottom-left, opposite the zoom and clear of the character. */}
+      {axes && (
+        <div
+          ref={triadRef}
+          data-testid="stage-triad"
+          role="img"
+          aria-label={t("stage.axes")}
+          className="absolute bottom-4 left-4 h-16 w-16 rounded-full border border-line bg-panel/70 backdrop-blur-md"
+        />
+      )}
 
       {gizmo && (
         <div
@@ -603,9 +676,6 @@ function StatusPill({
   );
 }
 
-/** FR-8.6: how far the head turns when the cursor is at the far corner. */
-const FOLLOW_LIMITS = { yaw: 32, pitch: 20 };
-
 /** An eye with its pupil off to one side: the character looking at something. */
 function FollowIcon() {
   return (
@@ -618,6 +688,45 @@ function FollowIcon() {
         strokeLinejoin="round"
       />
       <circle cx="9.5" cy="8" r="1.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * FR-8.6: the widest the head turns, at full intensity. The slider scales
+ * these rather than the easing, because what "more pronounced" describes is
+ * how far the character goes, not how fast it gets there.
+ */
+const FOLLOW_LIMITS = { yaw: 32, pitch: 20 };
+
+function scaleLimits(percent: number): { yaw: number; pitch: number } {
+  const k = percent / 100;
+  return { yaw: FOLLOW_LIMITS.yaw * k, pitch: FOLLOW_LIMITS.pitch * k };
+}
+
+/**
+ * FR-8.7: the axis colours, read from the tokens here so the pure render layer
+ * never learns a palette value — the same rule the guide follows by taking
+ * `currentColor`, which three axes cannot share.
+ */
+const TRIAD_COLORS = {
+  x: "var(--color-axis-x)",
+  y: "var(--color-axis-y)",
+  z: "var(--color-axis-z)",
+  origin: "var(--color-axis-label)",
+};
+
+/** Three strokes meeting at a corner: the triad, in miniature. */
+function AxesIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
+      <path
+        d="M8 9.4V2.6M8 9.4l5.2 3M8 9.4l-5.2 3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
