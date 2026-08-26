@@ -26,6 +26,43 @@ describe("easing", () => {
     expect(spring(1)(0.99)).toBeGreaterThan(0.9);
   });
 
+  /**
+   * FR-5.4: `springSpeed` shapes the curve — the transition window is a fixed
+   * share of the hold, so the knob decides how the travel is spent, not how
+   * long it lasts. It used to decide nothing at all: the speed divided the
+   * duration it also multiplied, so it cancelled out of both terms exactly.
+   */
+  it("a slow spring and a fast one are different curves", () => {
+    expect(spring(0.5)(0.25)).not.toBeCloseTo(spring(3)(0.25), 3);
+  });
+
+  it("a faster spring is nearer its destination sooner", () => {
+    const near = (s: number) => Math.abs(1 - spring(s)(0.3));
+    expect(near(3)).toBeLessThan(near(1));
+    expect(near(1)).toBeLessThan(near(0.5));
+    expect(near(0.5)).toBeLessThan(near(0.1));
+  });
+
+  it("starts at 0 and lands on 1 at every speed, with no jump", () => {
+    // The naive fix — dropping the `/ s` and nothing else — leaves the slow
+    // end short: spring(0.1) reached 0.54 and then snapped to 1.
+    for (const s of [0.1, 0.5, 1, 2, 3]) {
+      expect(spring(s)(0)).toBeCloseTo(0, 6);
+      expect(spring(s)(1)).toBe(1);
+      expect(spring(s)(0.999)).toBeCloseTo(1, 2);
+    }
+  });
+
+  it("keeps the default speed's curve where it was", () => {
+    // s = 1 is what every starter loop plays at, so the fix must not restyle
+    // the library on its way past. The old curve, verbatim:
+    const before = (t: number) =>
+      1 - Math.exp(-5.4 * t) * Math.cos(2 * Math.PI * 1.08 * t);
+    for (const t of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+      expect(spring(1)(t)).toBeCloseTo(before(t), 2);
+    }
+  });
+
   it("transitionFn maps styles", () => {
     expect(transitionFn("linear")(0.5)).toBe(0.5);
     expect(transitionFn("step")(0.5)).toBe(0);
@@ -153,6 +190,20 @@ describe("LoopPlayer", () => {
     // Past the total it wraps to the start again.
     expect(p.advance(2600).moodId).toBe("m1");
     expect(p.advance(2600).finished).toBe(false);
+  });
+
+  it("plays a step at the loop's own spring speed (FR-5.4)", () => {
+    // The knob is on the loop, so the proof it works is a difference two loops
+    // apart, not a difference two `spring()` calls apart.
+    const springy = (springSpeed: number): Loop => ({
+      ...loop,
+      springSpeed,
+      steps: loop.steps.map((st) => ({ ...st, transition: "spring" as const })),
+    });
+    // 700ms into a 1000ms hold is a quarter through its final 40%.
+    const slow = new LoopPlayer(springy(0.5), kit, 0).advance(700).t;
+    const fast = new LoopPlayer(springy(3), kit, 0).advance(700).t;
+    expect(fast).toBeGreaterThan(slow + 0.1);
   });
 
   it("rejects loops with no steps", () => {

@@ -103,7 +103,12 @@
   list), remove, reorder; reordering never changes which mood a step references.
 - **FR-5.3** Playback modes: `loop` (repeat), `once` (stop at end), `pingpong`
   (forward then reverse).
-- **FR-5.4** `springSpeed` (0.1–3) scales transition durations globally.
+- **FR-5.4** `springSpeed` (0.1–3) shapes the `spring` transition curve: a
+  higher speed arrives sooner and rings more on the way. It does **not** move
+  any duration — a step's transition is the final 40% of its hold at every
+  speed, which is what keeps the loop summary and the track's step widths out
+  of the knob's reach. (Reworded from "scales transition durations globally"
+  once the curve reading was chosen; see docs/08 F8.)
 - **FR-5.5** Blink config: enabled flag, min/max interval, blink duration; blinks
   superimpose on any displayed mood without mutating it.
 - **FR-5.6** Deleting a mood that a step references is blocked while any step in

@@ -1,9 +1,8 @@
 // FR-1..FR-5 mutation semantics incl. kit copy-on-write (docs/03 §5), and
 // with them the one the range would otherwise bury: a duplicate is a deep copy
-// carrying fresh ids (FR-1.3). A loop's mode is committed here too (FR-5.3);
-// what each mode then *does* is playback.test.ts's. `springSpeed` is stored
-// here and has no effect anywhere else — see docs/08 "Open", which is a
-// defect, not a scope line.
+// carrying fresh ids (FR-1.3). A loop's mode and spring speed are committed
+// here too (FR-5.3, FR-5.4); what each of them then *does* to a playing loop
+// is playback.test.ts's.
 import { describe, expect, it } from "vitest";
 import { createDefaultDocument } from "./create";
 import {
