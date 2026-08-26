@@ -6,6 +6,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -153,7 +154,9 @@ describe("StudioView", () => {
 
   it("a scrub on a stopped stage pauses it where it was pressed (FR-6.7)", () => {
     render(<StudioView />);
-    expect(screen.getByRole("status").textContent).toContain("En reposo");
+    expect(screen.getByTestId("stage-status").textContent).toContain(
+      "En reposo",
+    );
 
     const strip = screen.getByTestId("track-strip");
     strip.getBoundingClientRect = () =>
@@ -174,7 +177,9 @@ describe("StudioView", () => {
 
     // Stopped rewinds on every engine update and shows the resting face, so a
     // scrub that left it stopped would do nothing the user can see.
-    expect(screen.getByRole("status").textContent).toContain("En pausa");
+    expect(screen.getByTestId("stage-status").textContent).toContain(
+      "En pausa",
+    );
   });
 
   it("transport plays, pauses and stops the selected loop (FR-6.2)", async () => {
@@ -402,5 +407,49 @@ describe("StudioView", () => {
     );
     await remove();
     expect(screen.queryByRole("button", { name: added })).toBeNull();
+  });
+});
+
+describe("StudioView header (FR-9.6, FR-9.7)", () => {
+  it("says the document is saved once the autosave lands", async () => {
+    render(<StudioView />);
+    // The first render pushes the restored document, so it starts in flight.
+    expect(screen.getByTestId("save-state").textContent).toContain("Guardando");
+    await waitFor(() => {
+      expect(screen.getByTestId("save-state").textContent).toContain(
+        "Guardado",
+      );
+    });
+  });
+
+  it("says so when storage refuses the write, rather than looking saved", async () => {
+    // Autosave is silent by design (FR-9.2); silence and failure look the
+    // same, which is the whole reason FR-9.6 exists.
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+      removeItem: () => {},
+      clear: () => {},
+    });
+    render(<StudioView />);
+    await waitFor(() => {
+      expect(screen.getByTestId("save-state").textContent).toContain(
+        "No se pudo guardar",
+      );
+    });
+    vi.unstubAllGlobals();
+  });
+
+  it("writes down what the studio answers to (FR-9.7)", async () => {
+    const user = userEvent.setup();
+    render(<StudioView />);
+    await user.click(screen.getByRole("button", { name: /Atajos/ }));
+    const sheet = screen.getByRole("dialog", { name: "Atajos" });
+    expect(within(sheet).getByText(/gira la cabeza/)).toBeTruthy();
+    expect(within(sheet).getByText(/deshace el giro/)).toBeTruthy();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Atajos" })).toBeNull();
   });
 });

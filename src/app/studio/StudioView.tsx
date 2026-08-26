@@ -1,6 +1,6 @@
 // StudioView: rail / stage / inspector shell (docs/05).
 import { useEffect, useMemo, useState } from "react";
-import { translator } from "../i18n";
+import { translator, type MessageKey } from "../i18n";
 import { effectiveKit } from "../../domain/document/mutate";
 import { Stage } from "../stage/Stage";
 import { LookPanel } from "./panels/LookPanel";
@@ -8,7 +8,7 @@ import { MoodsPanel } from "./panels/MoodsPanel";
 import { LoopsPanel } from "./panels/LoopsPanel";
 import { SharePanel } from "./panels/SharePanel";
 import { useStudio } from "./store";
-import { PanelScroll } from "./ui";
+import { Modal, PanelScroll } from "./ui";
 import { BubbleRail } from "./BubbleRail";
 import { Track } from "./Track";
 import { createStageClock } from "../stage/clock";
@@ -38,7 +38,19 @@ export function StudioView() {
   // single row there — kept as state rather than derived from the tab, so a
   // user who opens it back up gets to keep it open.
   const [trackCollapsed, setTrackCollapsed] = useState(false);
-  const autosaver = useMemo(() => createAutosaver(300), []);
+  // FR-9.6: autosave is silent, and silence is indistinguishable from
+  // failure — so the header says which of the three it is.
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "failed">(
+    "saved",
+  );
+  const [shortcuts, setShortcuts] = useState(false);
+  const autosaver = useMemo(
+    () =>
+      createAutosaver(300, (ok) => {
+        setSaveState(ok ? "saved" : "failed");
+      }),
+    [],
+  );
   // FR-6.7 / FR-11.2: the engine publishes elapsed time here and the track
   // subscribes; neither the clock nor what rides on it re-renders React.
   const clock = useMemo(() => createStageClock(), []);
@@ -53,6 +65,7 @@ export function StudioView() {
 
   useEffect(() => {
     autosaver.push(state.doc);
+    setSaveState("saving");
   }, [state.doc, autosaver]);
 
   // FR-9.2: a reload racing the 300ms debounce must not lose the last edit.
@@ -154,7 +167,21 @@ export function StudioView() {
         <h1 className="text-sm font-semibold tracking-tight">
           {t("app.title")}
         </h1>
-        <span className="ml-auto flex items-center gap-1 rounded-field bg-panel-2 p-0.5">
+        <span aria-hidden="true" className="mx-1 h-4.5 w-px bg-line" />
+        <SaveState state={saveState} t={t} />
+
+        <button
+          type="button"
+          onClick={() => {
+            setShortcuts(true);
+          }}
+          className="ml-auto flex h-6.5 items-center gap-1.5 rounded-field border border-line px-2.5 text-[11px] text-ink-dim transition-colors duration-150 ease-out hover:border-outline hover:text-ink"
+        >
+          <ShortcutsIcon />
+          {t("header.shortcuts")}
+        </button>
+
+        <span className="flex items-center gap-1 rounded-field bg-panel-2 p-0.5">
           {(["es", "en"] as const).map((l) => (
             <button
               key={l}
@@ -293,6 +320,15 @@ export function StudioView() {
         </aside>
       </div>
 
+      {shortcuts && (
+        <ShortcutsSheet
+          t={t}
+          onClose={() => {
+            setShortcuts(false);
+          }}
+        />
+      )}
+
       {/* FR-6.6: below all three columns, not floating over one of them. */}
       <Track
         bubble={bubble}
@@ -316,5 +352,146 @@ export function StudioView() {
         onSelectLoop={selectLoop}
       />
     </div>
+  );
+}
+
+/**
+ * FR-9.6: whether the work is on disk.
+ *
+ * The dot never carries the state alone (docs/05 §3) — the word beside it
+ * does, which matters most in the one case worth surfacing: a storage that
+ * refuses the write looks exactly like a storage that took it.
+ */
+function SaveState({
+  state,
+  t,
+}: {
+  state: "saved" | "saving" | "failed";
+  t: (k: MessageKey) => string;
+}) {
+  const failed = state === "failed";
+  return (
+    <span
+      role="status"
+      data-testid="save-state"
+      className={`flex items-center gap-1.5 text-[11px] ${
+        failed ? "text-danger" : "text-ink-dim"
+      }`}
+    >
+      {failed ? <AlertIcon /> : <CheckIcon />}
+      {t(
+        failed
+          ? "header.saveFailed"
+          : state === "saving"
+            ? "header.saving"
+            : "header.saved",
+      )}
+    </span>
+  );
+}
+
+/** FR-9.7: what the studio answers to, written down where it can be found. */
+function ShortcutsSheet({
+  t,
+  onClose,
+}: {
+  t: (k: MessageKey) => string;
+  onClose: () => void;
+}) {
+  const groups: { title: MessageKey; items: MessageKey[] }[] = [
+    {
+      title: "shortcuts.stage",
+      items: ["shortcuts.dragHead", "shortcuts.escUndo"],
+    },
+    {
+      title: "shortcuts.track",
+      items: [
+        "shortcuts.scrubTrack",
+        "shortcuts.retime",
+        "shortcuts.dragMood",
+        "shortcuts.reorderStep",
+      ],
+    },
+    { title: "shortcuts.moods", items: ["shortcuts.openEditor"] },
+    {
+      title: "shortcuts.panels",
+      items: ["shortcuts.scrub", "shortcuts.escClose"],
+    },
+  ];
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center p-6">
+      <Modal
+        title={t("header.shortcuts")}
+        closeLabel={t("common.close")}
+        onClose={onClose}
+      >
+        {groups.map((g) => (
+          <div key={g.title} className="space-y-1.5">
+            <p className="text-[9px] font-semibold tracking-[0.09em] text-ink-dim uppercase">
+              {t(g.title)}
+            </p>
+            <ul className="space-y-1">
+              {g.items.map((item) => (
+                <li key={item} className="text-xs text-ink">
+                  {t(item)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </Modal>
+    </div>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" aria-hidden="true">
+      <path
+        d="M3 8.4 6.2 11.4 13 4.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
+      <circle
+        cx="8"
+        cy="8"
+        r="6.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M8 4.8v3.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="11" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ShortcutsIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" aria-hidden="true">
+      <path
+        d="M8 1.6v3M8 11.4v3M1.6 8h3M11.4 8h3M3.5 3.5l2.1 2.1M10.4 10.4l2.1 2.1M12.5 3.5l-2.1 2.1M5.6 10.4l-2.1 2.1"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

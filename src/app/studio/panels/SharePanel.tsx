@@ -530,7 +530,9 @@ function ExportFrame({
           </span>
         </div>
       </div>
-      <p className="pointer-events-none absolute bottom-4.5 left-1/2 -translate-x-1/2 text-[10.5px] text-ink-dim opacity-70">
+      {/* Above the stage's own drag hint rather than on top of it: the hint
+          retires after the first turn, but on a first visit both are true. */}
+      <p className="pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 text-[10.5px] text-ink-dim opacity-70">
         {note}
       </p>
     </>

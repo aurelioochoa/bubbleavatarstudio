@@ -12,6 +12,8 @@ export type MessageKey =
   | "stage.resting"
   | "stage.transport"
   | "stage.loop"
+  | "stage.orientation"
+  | "stage.dragHint"
   | "stage.gizmo"
   | "stage.guide"
   | "look.surface"
@@ -150,6 +152,23 @@ export type MessageKey =
   | "rail.menu"
   | "rail.moveUp"
   | "rail.moveDown"
+  | "header.saved"
+  | "header.saving"
+  | "header.saveFailed"
+  | "header.shortcuts"
+  | "shortcuts.stage"
+  | "shortcuts.dragHead"
+  | "shortcuts.escUndo"
+  | "shortcuts.panels"
+  | "shortcuts.scrub"
+  | "shortcuts.escClose"
+  | "shortcuts.track"
+  | "shortcuts.scrubTrack"
+  | "shortcuts.retime"
+  | "shortcuts.dragMood"
+  | "shortcuts.reorderStep"
+  | "shortcuts.moods"
+  | "shortcuts.openEditor"
   | "empty.title"
   | "share.photo"
   | "share.runtime"
@@ -206,6 +225,8 @@ const es: Record<MessageKey, string> = {
   "stage.resting": "En reposo",
   "stage.transport": "Transporte",
   "stage.loop": "Ciclo",
+  "stage.orientation": "Orientación de la cabeza",
+  "stage.dragHint": "Arrastra para girar la cabeza · Esc para deshacer el giro",
   "stage.gizmo": "Rotar cabeza",
   "stage.guide": "Guía de proyección",
   "look.surface": "Cuerpo",
@@ -345,6 +366,23 @@ const es: Record<MessageKey, string> = {
   "rail.menu": "Acciones de la burbuja",
   "rail.moveUp": "Subir burbuja",
   "rail.moveDown": "Bajar burbuja",
+  "header.saved": "Guardado",
+  "header.saving": "Guardando…",
+  "header.saveFailed": "No se pudo guardar",
+  "header.shortcuts": "Atajos",
+  "shortcuts.stage": "Escenario",
+  "shortcuts.dragHead": "Arrastrar · gira la cabeza",
+  "shortcuts.escUndo": "Esc · deshace el giro",
+  "shortcuts.panels": "Paneles",
+  "shortcuts.scrub": "Arrastrar la etiqueta · cambia el número",
+  "shortcuts.escClose": "Esc · cierra un menú o un diálogo",
+  "shortcuts.track": "Pista",
+  "shortcuts.scrubTrack": "Pulsar la línea de tiempo · mueve la reproducción",
+  "shortcuts.retime": "Arrastrar el borde de un paso · cambia su duración",
+  "shortcuts.dragMood": "Arrastrar un ánimo de la bandeja · inserta un paso",
+  "shortcuts.reorderStep": "Arrastrar un paso · lo reordena",
+  "shortcuts.moods": "Ánimos",
+  "shortcuts.openEditor": "Doble clic en una tarjeta · abre el editor",
   "empty.title": "Crea tu primera bubble",
   // Not "Photo Mode": that is upstream's own name for this card, recorded
   // verbatim in docs/research/blackbox-notes.md. docs/05 calls ours the
@@ -407,6 +445,8 @@ const en: Record<MessageKey, string> = {
   "stage.resting": "Resting",
   "stage.transport": "Transport",
   "stage.loop": "Loop",
+  "stage.orientation": "Head orientation",
+  "stage.dragHint": "Drag to turn the head · Esc undoes the turn",
   "stage.gizmo": "Rotate head",
   "stage.guide": "Projection guide",
   "look.surface": "Body",
@@ -546,6 +586,23 @@ const en: Record<MessageKey, string> = {
   "rail.menu": "Bubble actions",
   "rail.moveUp": "Move bubble up",
   "rail.moveDown": "Move bubble down",
+  "header.saved": "Saved",
+  "header.saving": "Saving…",
+  "header.saveFailed": "Could not save",
+  "header.shortcuts": "Shortcuts",
+  "shortcuts.stage": "Stage",
+  "shortcuts.dragHead": "Drag · turns the head",
+  "shortcuts.escUndo": "Esc · undoes the turn",
+  "shortcuts.panels": "Panels",
+  "shortcuts.scrub": "Drag the label · changes the number",
+  "shortcuts.escClose": "Esc · closes a menu or a dialog",
+  "shortcuts.track": "Track",
+  "shortcuts.scrubTrack": "Press the timeline · moves playback there",
+  "shortcuts.retime": "Drag a step's edge · changes its duration",
+  "shortcuts.dragMood": "Drag a mood from the tray · inserts a step",
+  "shortcuts.reorderStep": "Drag a step · reorders it",
+  "shortcuts.moods": "Moods",
+  "shortcuts.openEditor": "Double-click a card · opens the editor",
   "empty.title": "Create your first bubble",
   "share.photo": "Snapshot",
   "share.runtime": "Runtime",

@@ -86,6 +86,21 @@
   avatar dropped into someone else's page has no ground to cast onto. Every
   overlay is a sibling of the engine's host element, never a child, or the next
   frame's `innerHTML` write erases it.
+
+  The redesign added three things to that corner. A readout of the head's
+  three angles, so a pose can be read without opening the pad that authored
+  it. A reset beside the two toggles — undoing a pose is what is most often
+  wanted right after setting one, and it used to live inside the pad, which
+  had to be opened to reach it; there is one reset now, not two. And a hint,
+  bottom-centre, saying the stage can be dragged — which retires itself the
+  first time the head is turned, because an affordance hint that outlives the
+  affordance is clutter.
+- **Header:** the app's name, whether the document is saved (FR-9.6) and a
+  shortcuts sheet (FR-9.7). Autosave is silent by design, and silence is
+  indistinguishable from a storage that refused the write, so the header
+  states which of the three it is — with a word beside the mark, never the
+  mark alone (§3). The sheet lists what the studio actually answers to,
+  gestures included; it claims no binding that does not work.
 - **Inspector (360px):** tab strip + scrollable panel.
 - **Track (full width, below all three):** **[built]** the transport, and the
   sequence it drives, as a permanent band rather than an overlay on the stage

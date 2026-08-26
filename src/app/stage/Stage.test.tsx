@@ -218,19 +218,23 @@ describe("Stage drag (FR-8.3)", () => {
 describe("Stage overlays (docs/05 §1)", () => {
   it("status pill names the transport state and the loop on stage", () => {
     const { kit } = setupStage({ mode: "playing" });
-    const pill = screen.getByRole("status");
+    const pill = screen.getByTestId("stage-status");
     expect(pill.textContent).toContain("Reproduciendo");
     expect(pill.textContent).toContain(kit.loops[0]?.name ?? "");
   });
 
   it("status pill reports a resting stage when nothing plays", () => {
     setupStage({ mode: "stopped" });
-    expect(screen.getByRole("status").textContent).toContain("En reposo");
+    expect(screen.getByTestId("stage-status").textContent).toContain(
+      "En reposo",
+    );
   });
 
   it("pill carries a dot alongside the text, not colour alone (docs/05 §3)", () => {
     setupStage({ mode: "playing" });
-    const dot = within(screen.getByRole("status")).getByTestId("status-dot");
+    const dot = within(screen.getByTestId("stage-status")).getByTestId(
+      "status-dot",
+    );
     expect(dot.getAttribute("aria-hidden")).toBe("true");
   });
 
@@ -329,5 +333,34 @@ describe("Stage wireframe on drag (FR-8.4)", () => {
     drag(el, 60, 0);
     // The drag must not switch off something the user asked for.
     expect(lastOpts().guide).toBe(true);
+  });
+});
+
+describe("Stage readout and hint (FR-8.2)", () => {
+  it("reads the head's three angles back without opening the pad", () => {
+    const el = renderStage();
+    drag(el, 100, 0);
+    const readout = screen.getByRole("group", {
+      name: "Orientación de la cabeza",
+    });
+    expect(within(readout).getByTestId("readout-y").textContent).toBe("30°");
+    expect(within(readout).getByTestId("readout-x").textContent).toBe("0°");
+  });
+
+  it("resets the pose from the cluster, not only from inside the pad", () => {
+    const el = renderStage();
+    drag(el, 100, 60);
+    expect(lastHead().y).not.toBe(0);
+    fireEvent.click(screen.getByRole("button", { name: "Restablecer" }));
+    expect(lastHead()).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it("retires the drag hint once the head has been turned", () => {
+    // An affordance hint that stays after the affordance is used is clutter,
+    // and the Share tab draws its own note in that corner.
+    const el = renderStage();
+    expect(screen.getByText(/Arrastra para girar la cabeza/)).toBeTruthy();
+    drag(el, 40, 0);
+    expect(screen.queryByText(/Arrastra para girar la cabeza/)).toBeNull();
   });
 });
