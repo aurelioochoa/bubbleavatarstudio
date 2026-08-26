@@ -33,8 +33,21 @@ export interface StageProps {
    */
   head: { x: number; y: number; z: number };
   onHead: (next: { x: number; y: number; z: number }) => void;
+  /**
+   * How big the character is drawn here, as a factor on the fit-to-column
+   * size. View state and nothing else: a snapshot, the ZIP and the runtime
+   * never see it. It is a prop for the same reason the pose is — the Share
+   * panel's export frame is portalled onto this column and reads the same
+   * factor, so it has to be owned above both (FR-10.6).
+   */
+  zoom: number;
+  onZoom: (next: number) => void;
   onPause: () => void;
 }
+
+/** The zoom the stage opens at, and the range its control offers. */
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 2;
 
 /**
  * Degrees of head rotation per pixel of pointer travel.
@@ -56,6 +69,8 @@ export function Stage({
   clock,
   head,
   onHead,
+  zoom,
+  onZoom,
   onPause,
 }: StageProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -179,7 +194,7 @@ export function Stage({
 
       <div
         ref={hostRef}
-        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:aspect-square [&>svg]:h-[min(94%,40rem)] [&>svg]:w-auto [&>svg]:max-w-[94%] active:cursor-grabbing"
+        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:aspect-square [&>svg]:h-[calc(min(94%,40rem)*var(--stage-zoom,1))] [&>svg]:w-auto [&>svg]:max-w-[calc(94%*var(--stage-zoom,1))] active:cursor-grabbing"
         role="img"
         aria-label="bubble stage"
         tabIndex={0}
@@ -242,6 +257,38 @@ export function Stage({
             <ResetIcon />
           </button>
         </div>
+      </div>
+
+      {/* Bottom-right, out of the way of the pose readout above and the drag
+          hint below. A sibling of the engine host like every other overlay:
+          a child would be gone on the next frame. */}
+      <div className="absolute right-4 bottom-4 flex h-7 items-center gap-2 rounded-full border border-line bg-panel/80 pr-1.5 pl-3 text-[10.5px] text-ink-dim backdrop-blur-md">
+        <span>{t("stage.zoom")}</span>
+        <RangeInput
+          label={t("stage.zoomSlider")}
+          value={Math.round(zoom * 100)}
+          min={ZOOM_MIN * 100}
+          max={ZOOM_MAX * 100}
+          step={5}
+          onChange={(v) => {
+            onZoom(v / 100);
+          }}
+          className="w-24"
+        />
+        <input
+          type="number"
+          aria-label={t("stage.zoom")}
+          value={Math.round(zoom * 100)}
+          min={ZOOM_MIN * 100}
+          max={ZOOM_MAX * 100}
+          step={5}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (Number.isFinite(v) && v > 0) onZoom(v / 100);
+          }}
+          className="w-11 rounded-full bg-panel-2 px-1.5 py-0.5 text-right text-ink tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-primary"
+        />
+        <span className="pr-1">%</span>
       </div>
 
       {gizmo && (

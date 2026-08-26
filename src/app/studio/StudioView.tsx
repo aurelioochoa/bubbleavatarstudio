@@ -34,6 +34,12 @@ export function StudioView() {
   // than inside the scroll box that would clip it (docs/05 §2).
   const [inspector, setInspector] = useState<HTMLElement | null>(null);
   const [stageHost, setStageHost] = useState<HTMLElement | null>(null);
+  /**
+   * View state, deliberately not in the document: it changes how big the
+   * character is drawn on this screen and nothing a snapshot, the ZIP or the
+   * runtime would carry, so it neither autosaves nor survives a reload.
+   */
+  const [zoom, setZoom] = useState(1);
   // FR-8.1's pose lives here rather than inside Stage: FR-10.1's snapshot is
   // "the current stage", and the Share panel has to draw and export the same
   // pose the stage is holding.
@@ -215,8 +221,18 @@ export function StudioView() {
         />
 
         {/* `relative`: the Share panel draws the export frame here, over the
-            stage, as a sibling of the engine's host (docs/05 §1). */}
-        <main ref={setStageHost} className="relative min-w-0 flex-1">
+            stage, as a sibling of the engine's host (docs/05 §1).
+
+            The zoom rides as a CSS variable rather than a prop threaded into
+            both, because the frame is portalled into this element from a panel
+            that knows nothing about the stage: one custom property on their
+            common ancestor is what keeps the two the same size, which is the
+            whole claim the frame makes (FR-10.6). */}
+        <main
+          ref={setStageHost}
+          className="relative min-w-0 flex-1 overflow-hidden"
+          style={{ "--stage-zoom": String(zoom) } as React.CSSProperties}
+        >
           <Stage
             bubble={bubble}
             kit={kit}
@@ -227,6 +243,8 @@ export function StudioView() {
             clock={clock}
             head={head}
             onHead={setHead}
+            zoom={zoom}
+            onZoom={setZoom}
             onPause={pause}
           />
         </main>

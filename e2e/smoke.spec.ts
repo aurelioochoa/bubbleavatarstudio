@@ -216,6 +216,31 @@ test("share: the panel previews the character and lists the loops it ships", asy
   await expect(page.getByRole("img", { name: "Vista previa" })).toBeVisible();
   await expect(page.getByText("Ciclos incluidos")).toBeVisible();
   await shoot(page, "share-preview");
+
+  // The frame is the render's own box, so a zoom scales it too — and a box
+  // twice the column's size has to be clipped by the column rather than drawn
+  // over the header and the inspector.
+  const zoom = page.getByLabel("Zoom (deslizador)");
+  await zoom.fill("200");
+  await zoom.dispatchEvent("change");
+  // Asserted on the column rather than on the frame, because neither of the
+  // obvious probes can see a clip: an overflowing box still reports its whole
+  // rect to `getBoundingClientRect`, and the frame is `pointer-events-none`,
+  // so `elementFromPoint` never returns it either. What can be asked is
+  // whether the column clips at all — and unclipped, a frame at 200% draws its
+  // dashed edges across the header and the inspector.
+  const clipped = await page.evaluate(() => {
+    const main = document.querySelector("main");
+    const frame = document.querySelector('[data-testid="export-frame"]');
+    if (!main || !frame) return null;
+    const box = main.getBoundingClientRect();
+    const drawn = frame.getBoundingClientRect();
+    return {
+      overflows: drawn.width > box.width + 1,
+      overflow: getComputedStyle(main).overflowX,
+    };
+  });
+  expect(clipped).toEqual({ overflows: true, overflow: "hidden" });
 });
 
 test("drag-to-scrub: dragging a field label changes its value (FR-9.5)", async ({

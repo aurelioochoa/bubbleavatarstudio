@@ -17,6 +17,9 @@ export const DEFAULT_COLORS = {
  */
 export const DEFAULT_BODY_WIDTH = 220;
 
+/** The same, for the eye the Eyes card sizes as one shape. */
+export const DEFAULT_EYE_WIDTH = 34;
+
 export function createBubble(name: string, id = newId("bbl")): Bubble {
   return {
     id,
@@ -38,7 +41,7 @@ export function createBubble(name: string, id = newId("bbl")): Bubble {
     },
     colors: { ...DEFAULT_COLORS },
     restingFace: {
-      eye: { width: 34, height: 52, roundness: 1 },
+      eye: { width: DEFAULT_EYE_WIDTH, height: 52, roundness: 1 },
       left: { offsetX: -6, offsetY: 0, rotationDeg: 0, scaleX: 1, scaleY: 1 },
       right: { offsetX: 6, offsetY: 0, rotationDeg: 0, scaleX: 1, scaleY: 1 },
       spacing: 64,

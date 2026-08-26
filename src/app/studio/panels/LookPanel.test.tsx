@@ -136,6 +136,40 @@ describe("Look panel · size (FR-2.2)", () => {
   });
 });
 
+describe("Look panel · eye size (FR-3.1)", () => {
+  it("reads the current eye as a percentage of the default", () => {
+    const { bubble } = setup();
+    expect(bubble.restingFace.eye.width).toBe(34);
+    expect(screen.getByLabelText(t("look.eyeSizeSlider"))).toHaveProperty(
+      "value",
+      "100",
+    );
+  });
+
+  it("scales both eye dimensions by one factor, in one patch", () => {
+    const { dispatch } = setup();
+    setNumber(t("look.eyeSize"), "50");
+    // 34 x 52 halved: an eye is a shape, and halving only its width would
+    // narrow it rather than shrink it.
+    expect(lastOf(dispatch, "eye/shape")?.patch).toEqual({
+      width: 17,
+      height: 26,
+    });
+    const patches = (dispatch.mock.calls as [Action][])
+      .map(([a]) => a)
+      .filter((a) => a.type === "eye/shape");
+    expect(patches).toHaveLength(1);
+  });
+
+  it("leaves roundness alone, which is a shape and not a size", () => {
+    const { dispatch } = setup();
+    setNumber(t("look.eyeSize"), "150");
+    expect(lastOf(dispatch, "eye/shape")?.patch).not.toHaveProperty(
+      "roundness",
+    );
+  });
+});
+
 describe("Look panel · shape family (FR-2.6, FR-2.7)", () => {
   it("picks a shape family", async () => {
     const { dispatch, user } = setup();

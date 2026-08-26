@@ -31,8 +31,8 @@ between runs.
 **v0.2.0, plus F8.** Every roadmap phase is closed — the track redesign, the
 mood pose and a two-defect pass over the v0.1.0 that closed F5. See
 `docs/08-roadmap.md` for the phases and `docs/02-functional-spec.md` for the
-requirements each one closes. Current gate: **650 tests across 36 files**, plus
-a Playwright smoke of 11 scenarios, on a 347.81 kB / 37.96 kB production bundle
+requirements each one closes. Current gate: **656 tests across 36 files**, plus
+a Playwright smoke of 11 scenarios, on a 349.58 kB / 38.60 kB production bundle
 — re-derive with `pnpm test` and `pnpm build` rather than trusting this line.
 
 Landed so far: the pure domain, render, export and runtime layers; a studio

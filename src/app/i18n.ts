@@ -15,6 +15,8 @@ export type MessageKey =
   | "stage.orientation"
   | "stage.dragHint"
   | "stage.gizmo"
+  | "stage.zoom"
+  | "stage.zoomSlider"
   | "stage.guide"
   | "look.surface"
   | "look.size"
@@ -48,6 +50,8 @@ export type MessageKey =
   | "look.y"
   | "look.accentColor"
   | "look.eyeShape"
+  | "look.eyeSize"
+  | "look.eyeSizeSlider"
   | "look.eyeWidth"
   | "look.eyeHeight"
   | "look.eyeRoundness"
@@ -234,6 +238,8 @@ const es: Record<MessageKey, string> = {
   "stage.orientation": "Orientación de la cabeza",
   "stage.dragHint": "Arrastra para girar la cabeza · Esc para deshacer el giro",
   "stage.gizmo": "Rotar cabeza",
+  "stage.zoom": "Zoom",
+  "stage.zoomSlider": "Zoom (deslizador)",
   "stage.guide": "Guía de proyección",
   "look.surface": "Cuerpo",
   "look.size": "Tamaño",
@@ -267,6 +273,8 @@ const es: Record<MessageKey, string> = {
   "look.y": "Y",
   "look.accentColor": "Color de acento",
   "look.eyeShape": "Forma del ojo",
+  "look.eyeSize": "Tamaño del ojo",
+  "look.eyeSizeSlider": "Tamaño del ojo (deslizador)",
   "look.eyeWidth": "Ancho del ojo",
   "look.eyeHeight": "Alto del ojo",
   "look.eyeRoundness": "Redondez del ojo",
@@ -460,6 +468,8 @@ const en: Record<MessageKey, string> = {
   "stage.orientation": "Head orientation",
   "stage.dragHint": "Drag to turn the head · Esc undoes the turn",
   "stage.gizmo": "Rotate head",
+  "stage.zoom": "Zoom",
+  "stage.zoomSlider": "Zoom (slider)",
   "stage.guide": "Projection guide",
   "look.surface": "Body",
   "look.size": "Size",
@@ -493,6 +503,8 @@ const en: Record<MessageKey, string> = {
   "look.y": "Y",
   "look.accentColor": "Accent color",
   "look.eyeShape": "Eye shape",
+  "look.eyeSize": "Eye size",
+  "look.eyeSizeSlider": "Eye size (slider)",
   "look.eyeWidth": "Eye width",
   "look.eyeHeight": "Eye height",
   "look.eyeRoundness": "Eye roundness",

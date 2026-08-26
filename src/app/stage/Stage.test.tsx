@@ -55,6 +55,7 @@ interface StageOverrides {
   mode?: StageMode;
   loopId?: string | null;
   onPause?: () => void;
+  onZoom?: (v: number) => void;
 }
 
 /**
@@ -63,9 +64,26 @@ interface StageOverrides {
  * needs somebody to hold that state, and in the app that is StudioView; here
  * it is this harness, so every case below still drives a real drag.
  */
-function Harness(props: Omit<StageProps, "head" | "onHead">) {
+function Harness({
+  onZoom,
+  ...props
+}: Omit<StageProps, "head" | "onHead" | "zoom" | "onZoom"> & {
+  onZoom?: ((v: number) => void) | undefined;
+}) {
   const [head, setHead] = useState({ x: 0, y: 0, z: 0 });
-  return <Stage {...props} head={head} onHead={setHead} />;
+  const [zoom, setZoom] = useState(1);
+  return (
+    <Stage
+      {...props}
+      head={head}
+      onHead={setHead}
+      zoom={zoom}
+      onZoom={(v) => {
+        setZoom(v);
+        onZoom?.(v);
+      }}
+    />
+  );
 }
 
 function setupStage(overrides: StageOverrides = {}) {
@@ -86,6 +104,7 @@ function setupStage(overrides: StageOverrides = {}) {
       preview={null}
       t={translator("es")}
       onPause={overrides.onPause ?? (() => {})}
+      onZoom={overrides.onZoom}
     />,
   );
   const el = container.querySelector('[aria-label="bubble stage"]');
@@ -261,6 +280,36 @@ describe("Stage overlays (docs/05 §1)", () => {
 });
 
 describe("Stage gizmo and guide (FR-8.2, FR-8.4)", () => {
+  /**
+   * Zoom is a view state, not a document one: it changes how big the character
+   * is drawn on this screen and nothing a snapshot or the runtime would see.
+   * It is a prop for the same reason the pose is — the Share panel's export
+   * frame is portalled onto this column and has to follow it, so the value has
+   * to be owned above both.
+   */
+  it("reports a zoom change upward rather than keeping it", () => {
+    const onZoom = vi.fn();
+    setupStage({ onZoom });
+    fireEvent.change(screen.getByLabelText("Zoom (deslizador)"), {
+      target: { value: "150" },
+    });
+    expect(onZoom).toHaveBeenCalledWith(1.5);
+  });
+
+  it("takes a zoom typed into the field as well as dragged on the slider", () => {
+    const onZoom = vi.fn();
+    setupStage({ onZoom });
+    fireEvent.change(screen.getByLabelText("Zoom"), {
+      target: { value: "75" },
+    });
+    expect(onZoom).toHaveBeenCalledWith(0.75);
+  });
+
+  it("keeps the zoom control out of the element the engine overwrites", () => {
+    const { el } = setupStage();
+    expect(el.contains(screen.getByLabelText("Zoom (deslizador)"))).toBe(false);
+  });
+
   it("keeps its overlays out of the element the engine overwrites", async () => {
     const user = userEvent.setup();
     const { el } = setupStage();

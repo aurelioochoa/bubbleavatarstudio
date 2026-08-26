@@ -78,7 +78,15 @@
   that does not cover exactly the box the render occupies is decorative
   (FR-10.6).
   Overlays: top-left status pill (`● playing idle` / `paused`), top-right gizmo
-  button. The transport was a dock floating here until the track redesign; it
+  button, bottom-right a **zoom** pill — slider and field, 25–200% — that
+  scales how big the character is drawn without touching the document. It is
+  view state: it does not autosave, does not survive a reload, and no snapshot,
+  ZIP or runtime ever sees it. It reaches the render as a `--stage-zoom`
+  custom property on the stage column, which is also how the export frame
+  follows it: the frame is portalled in from a panel that knows nothing about
+  the stage, and one property on their common ancestor is what keeps the two
+  exactly the same size (FR-10.6). The column clips, so a frame zoomed past it
+  stops at its edge instead of drawing over the header and the inspector. The transport was a dock floating here until the track redesign; it
   is the full-width band below all three columns now (FR-6.6, and the bullet
   after this one).
   **Drag turns the head** (FR-8.1, amended — see `docs/02` and the session-2
@@ -201,9 +209,17 @@ Sections as collapsible cards:
    expander (same numeric controls, including a depth of its own since each one
    is a solid), remove; "Add primitive" button. The card title carries the count
    against the cap (`0/16`, FR-2.3) and the add control disables at sixteen.
-4. **Eyes** — linked toggle (chain icon); shared: spacing, width, height,
-   roundness; per-side (collapses to one when linked): offsetX/Y, rotation,
-   scaleX/Y.
+4. **Eyes** — linked toggle (chain icon); shared: a **size** row (slider and
+   field, 25–200%) over spacing, width, height, roundness; per-side (collapses
+   to one when linked): offsetX/Y, rotation, scaleX/Y.
+
+   The size works like the body's — a percentage of the width a new face
+   starts at, derived from the two dimensions and committed as one patch.
+   Roundness is deliberately outside it: that is what shape the eye is rather
+   than how big, and scaling it would turn a rectangle into a capsule on the
+   way up. Its label says _eye_ size where the body's says only size, because
+   two fields called the same thing in one column are ambiguous to a screen
+   reader as surely as to a test.
 
 ### Moods
 
