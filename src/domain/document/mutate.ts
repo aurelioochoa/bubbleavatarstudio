@@ -635,7 +635,7 @@ export function resetKit(
 export function freshDocument(deps?: MutationDeps): StudioDocument {
   const bubble = createBubble("Bubble", newId("bbl", deps?.random));
   return {
-    version: 4,
+    version: 5,
     kind: "bubble-studio-project",
     activeBubbleId: bubble.id,
     locale: "es",

@@ -420,7 +420,7 @@ export function validateDocument(doc: unknown): ValidateResult {
     return { ok: false, issues: [{ code: "E_SHAPE", path: "$" }] };
   }
   const d = doc as Record<string, unknown>;
-  ctx.check(d.version === 4, "E_VERSION", "$.version");
+  ctx.check(d.version === 5, "E_VERSION", "$.version");
   ctx.check(d.kind === "bubble-studio-project", "E_KIND", "$.kind");
   if (!Array.isArray(d.bubbles)) {
     ctx.fail("E_SHAPE", "$.bubbles");

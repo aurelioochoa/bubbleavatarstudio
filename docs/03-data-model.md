@@ -254,6 +254,31 @@ embed surface, so `readPortableAvatar()` in `export/avatar.ts` still accepts a
 v1 file and upgrades it the same way; the runtime reads every definition
 through it.
 
+### v4 → v5 (the starter library reaches saved projects, FR-4.7/FR-5.7) — **landed**
+
+v5 changes no field. It exists to carry content: the starter library grew to 24
+moods and 20 loops, and `starterKit()` runs only inside
+`createDefaultDocument()`, so a project already in storage kept the four-mood
+kit it was saved with. The Moods panel offered the difference as a row the user
+had to press — on every visit, for as long as the project lived. v5 applies
+that top-up once, on the way in.
+
+It is safe to apply unasked because `topUpKit` is additive by construction
+(`document/library.ts`): it appends only what a kit lacks, matches by name, and
+never renames, retunes, reorders or removes. A mood the user renamed keeps its
+name and the library entry returns beside it. Every kit the document reads is
+topped up — the shared one and any a bubble owns — because the panel measures
+whichever kit the active bubble actually reads.
+
+Running it once is the whole point of tying it to the version. A document
+already at v5 has had the top-up, so a starter mood the user has since deleted
+stays deleted instead of returning on the next load. The manual row remains for
+whatever the library gains after v5.
+
+Unlike the migrations around it this one is not shape-only — it needs real
+moods and loops to append — so it runs after the validation pass, on a document
+already known to be well formed.
+
 ### v3 → v4 (a depth for every assembled primitive, FR-2.3) — **landed**
 
 v4 gives each `body.extras` entry a `depth`, because an extra is a solid

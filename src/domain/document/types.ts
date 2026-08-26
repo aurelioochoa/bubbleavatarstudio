@@ -165,7 +165,7 @@ export interface Bubble {
 export type Locale = "es" | "en";
 
 export interface StudioDocument {
-  version: 4;
+  version: 5;
   kind: "bubble-studio-project";
   activeBubbleId: string | null;
   locale: Locale;

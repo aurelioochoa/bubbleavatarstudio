@@ -31,8 +31,8 @@ describe("createBubble", () => {
 describe("createDefaultDocument", () => {
   const doc = createDefaultDocument();
 
-  it("has version 4, kind and locale es", () => {
-    expect(doc.version).toBe(4);
+  it("has version 5, kind and locale es", () => {
+    expect(doc.version).toBe(5);
     expect(doc.kind).toBe("bubble-studio-project");
     expect(doc.locale).toBe("es");
   });

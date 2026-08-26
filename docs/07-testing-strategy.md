@@ -69,22 +69,29 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ## 4b. Current state (re-derive; do not trust)
 
-As of the pole-on silhouette fix: **32 Vitest files, 461 tests**, plus **1
+As of schema v5: **32 Vitest files, 466 tests**, plus **1
 Playwright spec** of **10 scenarios** — boot, panels, a playing loop and the
 rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub and drag-to-reorder. Production
-bundle 302.99 kB JS / 30.05 kB CSS (92.22 / 6.29 gzipped).
+bundle 303.16 kB JS / 30.05 kB CSS (92.29 / 6.29 gzipped).
 
-The last five tests are `solid.test.ts`'s two new blocks, and each failed
-against the sampler as it stood; the reading before them was 456. Three cover
-the pole: a solid of revolution seen down its own axis is the ellipse its
-widest ring projects to, no bin near the pole collapses into a notch, and a bin
-counts as reached only when a real sample reached it. Two cover the sampler's
-convergence, which is the measure that cannot be fooled by real geometry —
-compare a reading against a heavily oversampled reading of the same solid and
-anything the shape really has cancels. That is what caught the shallow-body
-case the pole tests miss, and it is the tool to reach for when a silhouette
-looks wrong and it is not obvious whether the shape or the sampler is at fault.
+Ten tests over the 456 that preceded them, in two batches.
+
+Five are `solid.test.ts`'s pole-on and convergence blocks, and each failed
+against the sampler as it stood. Three cover the pole: a solid of revolution
+seen down its own axis is the ellipse its widest ring projects to, no bin near
+the pole collapses into a notch, and a bin counts as reached only when a real
+sample reached it. Two cover the sampler's convergence, which is the measure
+that cannot be fooled by real geometry — compare a reading against a heavily
+oversampled reading of the same solid and anything the shape really has
+cancels. That is what caught the shallow-body case the pole tests miss, and it
+is the tool to reach for when a silhouette looks wrong and it is not obvious
+whether the shape or the sampler is at fault.
+
+Five more are `migrate.test.ts`'s v4 -> v5 block: the top-up closes the library
+gap, keeps every mood the project already had by id, leaves a renamed mood
+alone, reaches a bubble's own kit as well as the shared one, and does not run
+again on a v5 document — which is what keeps a deleted starter mood deleted.
 
 The 91 tests over F5's 360 are the solid body's: `solid.test.ts` is the new
 file (the turned silhouette, its agreement with the analytic ellipsoid, the

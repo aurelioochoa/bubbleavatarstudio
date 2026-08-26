@@ -144,7 +144,7 @@ describe("export integrity", () => {
   it("projected document from a portable avatar validates", () => {
     const avatar = buildPortableAvatar(doc.bubbles[0], doc);
     const projected = {
-      version: 4 as const,
+      version: 5 as const,
       kind: "bubble-studio-project" as const,
       activeBubbleId: avatar.bubble.id,
       locale: "es" as const,

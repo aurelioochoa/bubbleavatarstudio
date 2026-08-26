@@ -1,12 +1,13 @@
-// Document migration (docs/03 §8). v4 is current; v1..v3 upgrade on the way in.
+// Document migration (docs/03 §8). v5 is current; v1..v4 upgrade on the way in.
 import { validateDocument } from "./validate";
-import type { StudioDocument } from "./types";
+import { topUpKit } from "./library";
+import type { Kit, StudioDocument } from "./types";
 
 export type MigrateResult =
   | { ok: true; doc: StudioDocument }
   | { ok: false; code: "E_VERSION" | "E_INVALID"; detail: string };
 
-const CURRENT = 4;
+const CURRENT = 5;
 
 /**
  * The depth radius the projection derived for itself before v3, as a fraction
@@ -82,12 +83,49 @@ function v3ToV4(doc: Record<string, unknown>): void {
   }
 }
 
+/**
+ * v4 -> v5: FR-4.7/FR-5.7. The starter library grew to 24 moods and 20 loops
+ * after v4 shipped, and `starterKit()` only ever runs for a *new* document, so
+ * a project already in storage kept the four-mood kit it was saved with. The
+ * Moods panel offered the difference as a row the user had to press, on every
+ * visit, forever. v5 simply carries the content in.
+ *
+ * Safe because `topUpKit` is additive by construction (see library.ts): it
+ * appends only what a kit lacks, matches by name, and never renames, retunes,
+ * reorders or removes — so no existing loop can lose its referent, and a mood
+ * the user renamed keeps its name with the library entry returning beside it.
+ *
+ * Every kit the document reads is topped up, the shared one and any a bubble
+ * owns, because the panel shows the row for whichever kit the active bubble
+ * actually reads.
+ *
+ * Unlike the migrations above this one is not shape-only — it needs real
+ * moods and loops to append to — so it runs *after* validation, on a document
+ * already known to be well formed.
+ */
+function v4ToV5(doc: StudioDocument): StudioDocument {
+  const topUp = (kit: Kit): Kit => topUpKit(kit);
+  return {
+    ...doc,
+    starterKit: topUp(doc.starterKit),
+    bubbles: doc.bubbles.map((b) =>
+      b.ownKit ? { ...b, ownKit: topUp(b.ownKit) } : b,
+    ),
+  };
+}
+
 export function migrate(input: unknown): MigrateResult {
   if (typeof input !== "object" || input === null) {
     return { ok: false, code: "E_INVALID", detail: "not an object" };
   }
   const version = (input as { version?: unknown }).version;
-  if (version !== 1 && version !== 2 && version !== 3 && version !== CURRENT) {
+  if (
+    version !== 1 &&
+    version !== 2 &&
+    version !== 3 &&
+    version !== 4 &&
+    version !== CURRENT
+  ) {
     return {
       ok: false,
       code: "E_VERSION",
@@ -107,5 +145,13 @@ export function migrate(input: unknown): MigrateResult {
   const r = validateDocument(doc);
   if (!r.ok)
     return { ok: false, code: "E_INVALID", detail: "validation failed" };
-  return { ok: true, doc: doc as unknown as StudioDocument };
+
+  // The library top-up wants a validated document, so it comes last. A v5
+  // document has had it already; running it again would resurrect a starter
+  // mood the user has since deleted.
+  const migrated = doc as unknown as StudioDocument;
+  return {
+    ok: true,
+    doc: version <= 4 ? v4ToV5(migrated) : migrated,
+  };
 }
