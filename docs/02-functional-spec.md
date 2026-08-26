@@ -82,6 +82,12 @@
 - **FR-4.7** The starter kit ships a **library of at least 24 moods** spanning a
   documented range (alert, calm, warm, negative, sleepy, playful), so a new
   bubble is expressive before the user authors anything.
+- **FR-4.8** A mood card states how many loops use it, and delete is refused
+  _before_ it is attempted — the control is disabled and says why — rather than
+  the reducer rejecting it afterwards with E_REF (FR-5.6, which stays as the
+  backstop for every other path into a deletion).
+- **FR-4.9** The mood grid is filterable by name, so a 24-mood library is
+  reachable without scrolling past what is not wanted.
 
 ## FR-5 Loops (animations)
 
@@ -102,6 +108,11 @@
   and `reaction` (responses to something that just happened).
 - **FR-5.8** A loop shows a **summary** of what it will do: how many steps and
   their durations, and its blink interval and duration.
+- **FR-5.9** A step is retimed by dragging its edge in the timeline; the value
+  it commits is the same `holdMs` a typed field sets.
+- **FR-5.10** Moods are reachable from the track as a tray, and dragging one
+  onto the sequence inserts a step at the drop point — building a loop never
+  requires remembering a thumbnail from another tab.
 
 ## FR-6 Playback
 
@@ -114,6 +125,12 @@
 - **FR-6.4** Switching the active bubble keeps the current loop and its position
   when the target bubble can play it (same kit lineage), otherwise stops cleanly.
 - **FR-6.5** Ambient motion (FR-8) composes with playback output.
+- **FR-6.6** The transport is a permanent full-width **track** below the rail,
+  stage and inspector, not an overlay on the stage. It has three heights:
+  collapsed, normal, and expanded with the mood tray (FR-5.10).
+- **FR-6.7** The track's timeline is **real time**: a step's width is its hold,
+  a playhead tracks elapsed position against the whole cycle, and a step's
+  entry transition is edited at the seam where it happens.
 
 ## FR-7 Ambient idle motion
 
@@ -145,7 +162,9 @@
 ## FR-9 Studio shell & persistence
 
 - **FR-9.1** Layout: bubbles rail (left), stage (center), inspector (right) with
-  tabs **Look / Moods / Loops / Share**; transport dock on the stage.
+  tabs **Look / Moods / Loops / Share**, and the transport track across the
+  full width below all three (FR-6.6; it was a dock floating on the stage
+  until the track redesign).
 - **FR-9.2** Autosave: every committed document mutation persists to local
   storage synchronously (debounce ≤ 300 ms for burst edits); no save button.
 - **FR-9.3** Project backup: export full document as `.bubble-studio.json`;
@@ -154,6 +173,10 @@
 - **FR-9.4** Locale switch es/en; default es; choice persists.
 - **FR-9.5** Numeric fields accept typing, steppers **and drag-to-scrub** on the
   label, so values can be dialled in without keyboard round-trips.
+- **FR-9.6** The header states whether the current document is saved — autosave
+  is silent by design (FR-9.2), and silence is indistinguishable from failure.
+- **FR-9.7** A keyboard-shortcuts dialog lists the bindings the studio answers
+  to, reachable from the header.
 
 ## FR-10 Export & runtime
 
@@ -168,6 +191,11 @@
   identical SVG to the studio stage for the same definition + state.
 - **FR-10.5** Export package (ZIP): definition JSON + README + minimal usage
   example. (Runtime ships as a package, not inlined per export.)
+- **FR-10.6** The export frame is drawn **on the stage**, where the framing
+  decision is made, and the export panel states what the package will contain
+  before it is built: loop and mood counts, how many moods the prune drops
+  (FR-10.2's effective kit is filtered to what the chosen loops reference), and
+  the estimated weight.
 
 ## FR-11 Non-functional
 

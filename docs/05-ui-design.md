@@ -258,6 +258,22 @@ All three bullets are **[built]** as Tailwind v4 `@theme` tokens in
   `--color-panel-3` (card and control grounds), `--color-line` (borders) and
   `--color-ink-dim`.
 
+  **The track redesign adds five more**, and one of them is a correction
+  rather than an addition. `--color-ink-mute` `#848bb4` is a third ink below
+  `ink-dim`, for ruler labels and the one-line note under a card. The design
+  canvas drew that role at `#6f759b`, which measures 4.04:1 on `panel` and
+  3.75:1 on `panel-2` — under §3's 4.5:1, so it could not ship as text. The
+  lifted value clears the bar on all four surfaces the studio paints.
+  `--color-line-soft` `#1c2038` (hairlines dividing lanes inside the track),
+  `--color-line-hi` `#2c3255` (the step chip's edge, which has to read on
+  `panel-2` where `line` disappears), `--color-outline` `#3b4270` (secondary
+  button border) and `--color-track` `#313760` (unselected step-proportion
+  bars) are marks and boundaries, never text. They sit **below** the 3:1
+  non-text bar on purpose: none of them is the only carrier of anything — a
+  proportion bar always sits beside its duration in words, a bordered control
+  always states its own label — and `theme.test.ts` asserts that deliberate
+  choice rather than leaving it to look like an oversight.
+
 - Motion: panel transitions are 150ms ease-out, inside the ≤ 160ms budget;
   stage animation is owned by the engine. A `prefers-reduced-motion` block
   collapses every transition to ~0ms.

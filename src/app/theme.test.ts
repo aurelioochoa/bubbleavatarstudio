@@ -73,6 +73,21 @@ describe("theme tokens", () => {
       expect(tok(name)).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
+
+  // The track redesign (docs/05 §4) adds a tertiary ink and three structural
+  // tints. They are listed separately from the original palette so a future
+  // reader can tell which pass introduced them.
+  it("declares the tints the track redesign adds", () => {
+    for (const name of [
+      "ink-mute",
+      "line-soft",
+      "line-hi",
+      "outline",
+      "track",
+    ]) {
+      expect(tok(name)).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
 });
 
 describe("contrast: text (docs/05 §3, >= 4.5:1)", () => {
@@ -95,6 +110,21 @@ describe("contrast: text (docs/05 §3, >= 4.5:1)", () => {
   ])("%s", (_label, fgToken, bgToken) => {
     expect(contrast(tok(fgToken), tok(bgToken))).toBeGreaterThanOrEqual(4.5);
   });
+
+  // ink-mute is the redesign's tertiary text — ruler labels, "3 pasos", the
+  // explanatory notes under a card. It is small text on every surface the
+  // studio paints, so it is held to the text bar on all four rather than
+  // being waved through as decoration. The design canvas drew this role at
+  // #6f759b, which measures 4.04:1 on panel and 3.75:1 on panel-2; the token
+  // is the lifted value that clears the bar everywhere the role is used.
+  it.each([
+    ["ink-mute on stage", "ink-mute", "stage"],
+    ["ink-mute on panel", "ink-mute", "panel"],
+    ["ink-mute on panel-2", "ink-mute", "panel-2"],
+    ["ink-mute on panel-3", "ink-mute", "panel-3"],
+  ])("%s", (_label, fgToken, bgToken) => {
+    expect(contrast(tok(fgToken), tok(bgToken))).toBeGreaterThanOrEqual(4.5);
+  });
 });
 
 describe("contrast: non-text UI (WCAG 1.4.11, >= 3:1)", () => {
@@ -105,7 +135,23 @@ describe("contrast: non-text UI (WCAG 1.4.11, >= 3:1)", () => {
     ["brand ring on panel", "brand", "panel"],
     ["brand thumb on slider track", "brand", "panel-3"],
     ["accent focus ring on stage", "accent", "stage"],
+    ["accent playhead on panel", "accent", "panel"],
   ])("%s", (_label, fgToken, bgToken) => {
     expect(contrast(tok(fgToken), tok(bgToken))).toBeGreaterThanOrEqual(3);
+  });
+
+  // Deliberately not held to 3:1, and the reason is the point of writing them
+  // down: `track` paints the unselected step-proportion bars in a loop row,
+  // `line-soft` and `line-hi` are hairlines and chip borders, `outline` is a
+  // secondary button's edge. None of them is the only carrier of anything —
+  // every proportion bar sits beside its duration in words ("2.80 s"), every
+  // bordered control states its own label, and every hairline separates two
+  // surfaces that already differ. 1.4.11 asks for 3:1 where the boundary is
+  // what tells you the component is there; here it never is. Raising them to
+  // clear 3:1 would turn quiet structure into a second row of emphasis.
+  it("keeps the structural tints out of the 3:1 bar on purpose", () => {
+    for (const name of ["track", "line-soft", "line-hi", "outline"]) {
+      expect(contrast(tok(name), tok("panel"))).toBeLessThan(3);
+    }
   });
 });
