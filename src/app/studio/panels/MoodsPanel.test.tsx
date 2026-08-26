@@ -250,6 +250,8 @@ describe("mood editor linking (FR-4.1)", () => {
   it("brings the eyes into step the moment linking is turned on", async () => {
     // Not on the next edit: a control that says "linked" while the two sides
     // visibly differ is lying until something happens to touch one of them.
+    // In step means the *same* place, not the opposite one — see the copy test
+    // below for why linked gaze is not mirrored gaze.
     const user = userEvent.setup();
     const { dispatch, first } = setup();
     await openEditor(user, first.name);
@@ -258,10 +260,10 @@ describe("mood editor linking (FR-4.1)", () => {
     const call = dispatch.mock.calls.at(-1)?.[0] as {
       patch: { left: { offsetX: number }; right: { offsetX: number } };
     };
-    expect(call.patch.right.offsetX).toBe(-call.patch.left.offsetX);
+    expect(call.patch.right.offsetX).toBe(call.patch.left.offsetX);
   });
 
-  it("mirrors each edit onto the other side while linked", async () => {
+  it("copies each edit onto the other side while linked", async () => {
     const user = userEvent.setup();
     const { onPreview, first } = setup();
     await openEditor(user, first.name);
@@ -273,9 +275,33 @@ describe("mood editor linking (FR-4.1)", () => {
       left: { rotationZDeg: number };
       right: { rotationZDeg: number };
     };
-    // Roll is handed, so the mirror negates it (the same rule as FR-3.3).
+    // Copied, not mirrored. Linking two eyes is how a gaze is aimed, and both
+    // eyes of a face looking left are turned left; negating one side is what
+    // FR-3.3 does to the *resting face's* geometry, and the one-shot mirror
+    // action below is where that still lives.
     expect(last.left.rotationZDeg).toBe(12);
-    expect(last.right.rotationZDeg).toBe(-12);
+    expect(last.right.rotationZDeg).toBe(12);
+  });
+
+  it("aims both eyes at the same point on the pad while linked", async () => {
+    // The reported defect: linking put the two dots at opposite corners, so a
+    // mood could not be pointed anywhere without unlinking first.
+    const user = userEvent.setup();
+    const { onPreview, first } = setup();
+    await openEditor(user, first.name);
+    await user.click(screen.getByRole("radio", { name: "Vinculados" }));
+    fireEvent.change(
+      screen.getByLabelText("Ojo izquierdo · Desplazamiento X"),
+      {
+        target: { value: "-25" },
+      },
+    );
+    const last = onPreview.mock.calls.at(-1)?.[0] as {
+      left: { offsetX: number; offsetY: number };
+      right: { offsetX: number; offsetY: number };
+    };
+    expect(last.right.offsetX).toBe(-25);
+    expect(last.right.offsetY).toBe(last.left.offsetY);
   });
 
   it("leaves the other side alone while independent", async () => {

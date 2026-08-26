@@ -213,12 +213,15 @@ that states the ±40u it spans; scale and rotation are one compact row each.
 The pad is a pointer affordance only — each axis also has a real range input,
 visually hidden, because a div that swallows arrow keys is not a control. A
 `Vinculados / Independientes` segmented control makes linking an editing
-mode: while it is on, every edit mirrors onto the other side as it is made,
+mode: while it is on, every edit **copies** onto the other side as it is made,
 and turning it on brings the two into step at once rather than waiting for
-the next edit to touch one. Independent is the default, because two eyes that
-differ are most of what a mood is. The one-shot mirror action remains for the
-independent case, applying FR-3.3's handedness rule — roll and yaw flip sign,
-pitch and the scales do not. Rename, the colour override covering body and
+the next edit to touch one. Copies, not mirrors — a mood's deltas aim a gaze,
+and both eyes of a face looking left are turned left. Mirroring linked eyes
+sent the two pad dots to opposite corners, which is a squint, and left no way
+to point a mood anywhere without unlinking first. Independent is the default,
+because two eyes that differ are most of what a mood is. The one-shot mirror
+action remains, and is where FR-3.3's handedness rule still lives — roll and
+yaw flip sign, pitch and the scales do not. Rename, the colour override covering body and
 eyes independently with a clear action (FR-4.3), and Save / Cancel, where
 Cancel discards the draft and puts the saved mood back on the stage (FR-4.4).
 

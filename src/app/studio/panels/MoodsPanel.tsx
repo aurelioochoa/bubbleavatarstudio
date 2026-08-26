@@ -557,10 +557,14 @@ function MoodEditor({
         ))}
       </div>
 
-      {/* Linked is an editing mode, not something the mood stores: it mirrors
-          each edit onto the other eye as it is made, which is the same rule
-          FR-3.3 applies to the resting face. `mirrorEye` is the one function
-          that knows which axes are handed, so both paths ask it. */}
+      {/* Linked is an editing mode, not something the mood stores: it copies
+          each edit onto the other eye as it is made, so the two sides hold the
+          same deltas. It is deliberately *not* FR-3.3's mirror — that rule is
+          about the resting face's geometry, where the two eyes are handed. A
+          mood's deltas aim a gaze, and both eyes of a face looking left are
+          turned left, so mirroring here sent them to opposite corners of the
+          pad and no mood could be pointed anywhere while linked. Mirroring is
+          still one click away, on the action below. */}
       <Segmented<"linked" | "free">
         label={t("moods.eyeLink")}
         value={linked ? "linked" : "free"}
@@ -573,7 +577,7 @@ function MoodEditor({
           setLinked(on);
           // Turning it on brings the two sides into step at once, rather than
           // leaving them apart until the next edit happens to touch one.
-          if (on) onChange({ ...draft, right: mirrorEye(draft.left) });
+          if (on) onChange({ ...draft, right: { ...draft.left } });
         }}
       />
 
@@ -586,7 +590,7 @@ function MoodEditor({
             onChange({
               ...draft,
               left,
-              ...(linked ? { right: mirrorEye(left) } : {}),
+              ...(linked ? { right: { ...left } } : {}),
             });
           }}
         />
@@ -598,7 +602,7 @@ function MoodEditor({
             onChange({
               ...draft,
               right,
-              ...(linked ? { left: mirrorEye(right) } : {}),
+              ...(linked ? { left: { ...right } } : {}),
             });
           }}
         />
