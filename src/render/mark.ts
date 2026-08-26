@@ -26,7 +26,7 @@ import type { Bubble } from "../domain/document/types";
  * mark an oval — 428×340 is a perfectly good body and reads as an ellipse at
  * icon size, whatever family draws it.
  */
-const MARK_SIZE = 400;
+const MARK_SIZE = 440;
 
 /** The character the mark draws. Deterministic: a fresh one every call. */
 export function markBubble(): Bubble {
@@ -43,15 +43,23 @@ export function markBubble(): Bubble {
   // ellipse — the template's 0.96 draws the same square body as a rounded
   // square, which is a different mark entirely.
   surface.roundness = 1;
-  bubble.restingFace.eye = { width: 82, height: 107, roundness: 1 };
-  // 128 puts each eye's centre 78 units out (spacing/2 plus the nudge below),
-  // leaving a gap of 74 against an 82-wide eye: closer together than they are
-  // themselves wide, which is what reads as a face rather than as two marks
-  // sharing a body. It is still 14.5% of the scene, well clear of the 16px
-  // floor `mark.test.ts` holds the pair above.
-  bubble.restingFace.spacing = 128;
-  bubble.restingFace.left.offsetX = -14;
-  bubble.restingFace.right.offsetX = 14;
+  // Every face number is a fraction of the body, so growing the mark grows the
+  // face with it. Held apart as constants, a bigger body would quietly leave a
+  // smaller-looking face — which is the same class of bug as an oval drawn by
+  // a round family: nothing is wrong with any one number.
+  bubble.restingFace.eye = {
+    width: MARK_SIZE * 0.205,
+    height: MARK_SIZE * 0.2675,
+    roundness: 1,
+  };
+  // 0.32 of the body puts each eye's centre 0.195 of it out from the middle
+  // (spacing/2 plus the nudge below), leaving them closer together than they
+  // are themselves wide — which is what reads as a face rather than as two
+  // marks sharing a body. It stays well clear of the 16px floor
+  // `mark.test.ts` holds the pair above.
+  bubble.restingFace.spacing = MARK_SIZE * 0.32;
+  bubble.restingFace.left.offsetX = -MARK_SIZE * 0.035;
+  bubble.restingFace.right.offsetX = MARK_SIZE * 0.035;
   // A logo does not breathe. Ambient is a function of time, and a mark that
   // depends on the clock is a mark that cannot be a golden.
   bubble.ambient = { ...bubble.ambient, enabled: false };

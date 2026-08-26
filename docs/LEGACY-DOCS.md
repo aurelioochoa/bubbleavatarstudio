@@ -1477,8 +1477,8 @@ As of the help sheet and the mark (F9): **39 Vitest files, 685 tests**, plus
 the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, a 1024×720
 check that the track's first row and the inspector do not clip, and the help
-sheet's backdrop reaching every window edge. Production bundle 357.39 kB JS /
-38.88 kB CSS (107.06 / 7.73 gzipped).
+sheet's backdrop reaching every window edge. Production bundle 357.41 kB JS /
+38.88 kB CSS (107.09 / 7.73 gzipped).
 
 Three of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not

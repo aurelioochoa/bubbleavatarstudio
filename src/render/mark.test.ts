@@ -77,21 +77,26 @@ describe("the mark reads at 16px", () => {
     expect(surface.roundness).toBe(1);
   });
 
-  it("fills its box, so the glyph is not a dot in a field of nothing", () => {
-    // The scene is 512 wide whatever the character does, and the default
-    // template's 220 fills 43% of it — legible on a stage, a speck in a tab
-    // strip or beside a wordmark. An icon wants most of its own box.
+  it("leaves an icon's margin — not a field of nothing, not a crop", () => {
+    // Stated as the margin rather than the fill, because the margin is what is
+    // judged at both ends. The default template's 220 leaves 27% on each side,
+    // which is right on a stage — that gap is the room a character turns and
+    // bobs in — and reads as a speck in a tab strip.
     const width = markBubble().body.surface.width;
-    expect(width / scene.size).toBeGreaterThan(0.75);
-    // Not so far that the silhouette touches the edge and looks cropped.
-    expect(width / scene.size).toBeLessThan(0.85);
+    const margin = (scene.size - width) / 2 / scene.size;
+    expect(margin).toBeLessThan(0.09);
+    // And enough that the circle never looks pressed against the edge.
+    expect(margin).toBeGreaterThan(0.04);
   });
 
   it("keeps the face in proportion as the body grows", () => {
-    // Scaling the body alone would leave two pinpricks on a large head.
+    // Scaling the body alone would leave two pinpricks on a large head, which
+    // is why every face number is a fraction of the body rather than a
+    // constant sitting beside it.
     const bubble = markBubble();
     const eye = bubble.restingFace.eye.width;
     expect(eye / bubble.body.surface.width).toBeGreaterThan(0.15);
+    expect(eye / bubble.body.surface.width).toBeLessThan(0.28);
   });
 
   it("sits the character upright and centred, so no crop is needed", () => {
