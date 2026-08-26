@@ -4,6 +4,7 @@ import { liveFrame, moodScene, restingScene } from "../../render/scene";
 import type { MoodSample } from "../../domain/playback/LoopPlayer";
 import { sceneToSvg } from "../../render/svg";
 import type { Bubble, Kit } from "../../domain/document/types";
+import type { StageClock } from "./clock";
 
 /**
  * Transport state (FR-6.2). `paused` freezes the frame in place; `stopped`
@@ -22,6 +23,12 @@ export interface StageEngineOptions {
   preview: MoodSample | null;
   /** Draw the projection guide over the character (FR-8.4). */
   guide: boolean;
+  /**
+   * Where elapsed playback time is published for the track's playhead
+   * (FR-6.7). Optional: the engine renders the same frames without one, and
+   * every test that only cares about the SVG leaves it out.
+   */
+  clock?: StageClock | undefined;
 }
 
 /** A frame longer than this means the tab slept; charge a nominal frame instead. */
@@ -107,6 +114,14 @@ export class StageEngine {
     } else {
       scene = restingScene(bubble, this.ambientMs, headRotation, chrome);
     }
+    // Published before the write, and whatever the scene turned out to be: a
+    // paused stage skips the DOM write below, and its playhead must still hold
+    // its position rather than going quiet. `stopped` carries no loop, which
+    // is what parks the playhead at the origin.
+    this.opts.clock?.publish({
+      loopId: mode === "stopped" ? null : loopId,
+      loopMs: this.loopMs,
+    });
     const svg = sceneToSvg(scene);
     // A paused stage re-serializes to the same bytes every frame; skip the write.
     if (svg === this.lastSvg) return;

@@ -68,23 +68,34 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-/** Radio-group segmented control; the documented shape for small enum picks. */
+/**
+ * Radio-group segmented control; the documented shape for small enum picks.
+ *
+ * An option may carry an `icon`, in which case the glyph is what is drawn and
+ * the label becomes the control's accessible name rather than its caption —
+ * the track's playback-mode picker has room for three glyphs and not for
+ * "Ida y vuelta". `compact` swaps the text sizing for fixed cells to match.
+ */
 export function Segmented<T extends string>({
   label,
   value,
   options,
   onChange,
+  compact = false,
 }: {
   label: string;
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; icon?: React.ReactNode }[];
   onChange: (v: T) => void;
+  compact?: boolean;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex flex-wrap gap-0.5 rounded-field bg-panel p-0.5"
+      className={`flex gap-0.5 rounded-field bg-panel p-0.5 ${
+        compact ? "" : "flex-wrap"
+      }`}
     >
       {options.map((o) => (
         <button
@@ -92,16 +103,22 @@ export function Segmented<T extends string>({
           type="button"
           role="radio"
           aria-checked={value === o.value}
+          aria-label={o.icon ? o.label : undefined}
+          title={o.icon ? o.label : undefined}
           onClick={() => {
             onChange(o.value);
           }}
-          className={`min-w-0 flex-1 basis-[4.5rem] truncate rounded-[6px] px-2 py-1 text-xs transition-colors duration-150 ease-out ${
+          className={`rounded-[6px] transition-colors duration-150 ease-out ${
+            compact
+              ? "grid h-5.5 w-7.5 place-items-center"
+              : "min-w-0 flex-1 basis-[4.5rem] truncate px-2 py-1 text-xs"
+          } ${
             value === o.value
               ? "bg-primary text-white"
               : "text-ink-dim hover:bg-white/6 hover:text-ink"
           }`}
         >
-          {o.label}
+          {o.icon ?? o.label}
         </button>
       ))}
     </div>

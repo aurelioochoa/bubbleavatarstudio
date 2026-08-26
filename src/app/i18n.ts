@@ -110,6 +110,14 @@ export type MessageKey =
   | "loops.summaryCycle"
   | "loops.summaryBlink"
   | "loops.blinkOff"
+  | "loops.modeLoop"
+  | "loops.modeOnce"
+  | "loops.modePingpong"
+  | "track.title"
+  | "track.timeline"
+  | "track.elapsed"
+  | "track.expand"
+  | "track.collapse"
   | "rail.rename"
   | "rail.menu"
   | "rail.moveUp"
@@ -258,6 +266,14 @@ const es: Record<MessageKey, string> = {
   "loops.summaryCycle": "Ciclo completo",
   "loops.summaryBlink": "Parpadeo",
   "loops.blinkOff": "Sin parpadeo",
+  "loops.modeLoop": "En bucle",
+  "loops.modeOnce": "Una vez",
+  "loops.modePingpong": "Ida y vuelta",
+  "track.title": "Pista",
+  "track.timeline": "Línea de tiempo",
+  "track.elapsed": "Tiempo transcurrido",
+  "track.expand": "Ampliar secuencia",
+  "track.collapse": "Plegar secuencia",
   "rail.rename": "Renombrar",
   "rail.menu": "Acciones de la burbuja",
   "rail.moveUp": "Subir burbuja",
@@ -412,6 +428,14 @@ const en: Record<MessageKey, string> = {
   "loops.summaryCycle": "Full cycle",
   "loops.summaryBlink": "Blink",
   "loops.blinkOff": "No blinking",
+  "loops.modeLoop": "Looping",
+  "loops.modeOnce": "Once",
+  "loops.modePingpong": "Ping-pong",
+  "track.title": "Track",
+  "track.timeline": "Timeline",
+  "track.elapsed": "Elapsed",
+  "track.expand": "Expand sequence",
+  "track.collapse": "Collapse sequence",
   "rail.rename": "Rename",
   "rail.menu": "Bubble actions",
   "rail.moveUp": "Move bubble up",

@@ -9,6 +9,8 @@ import { LoopsPanel } from "./panels/LoopsPanel";
 import { SharePanel } from "./panels/SharePanel";
 import { useStudio } from "./store";
 import { BubbleRail } from "./BubbleRail";
+import { Track } from "./Track";
+import { createStageClock } from "../stage/clock";
 import type { StageMode } from "../stage/StageEngine";
 import { createAutosaver, loadDocument } from "../persistence";
 import type { MoodSample } from "../../domain/playback/LoopPlayer";
@@ -28,7 +30,14 @@ export function StudioView() {
   // The inspector column, so the mood editor can mount over all of it rather
   // than inside the scroll box that would clip it (docs/05 §2).
   const [inspector, setInspector] = useState<HTMLElement | null>(null);
+  // FR-6.6: the Share tab is not editing a sequence, so the track folds to a
+  // single row there — kept as state rather than derived from the tab, so a
+  // user who opens it back up gets to keep it open.
+  const [trackCollapsed, setTrackCollapsed] = useState(false);
   const autosaver = useMemo(() => createAutosaver(300), []);
+  // FR-6.7 / FR-11.2: the engine publishes elapsed time here and the track
+  // subscribes; neither the clock nor what rides on it re-renders React.
+  const clock = useMemo(() => createStageClock(), []);
 
   // FR-9: restore on boot, autosave (≤300ms debounce) on change.
   useEffect(() => {
@@ -162,10 +171,8 @@ export function StudioView() {
             mode={transport.mode}
             preview={preview}
             t={t}
-            onPlay={play}
+            clock={clock}
             onPause={pause}
-            onStop={stop}
-            onSelectLoop={selectLoop}
           />
         </main>
 
@@ -188,6 +195,7 @@ export function StudioView() {
                 onClick={() => {
                   if (x.id !== "moods") setPreview(null);
                   setTab(x.id);
+                  setTrackCollapsed(x.id === "share");
                 }}
                 className={`min-w-0 flex-1 truncate rounded-field px-2 py-1.5 text-xs transition-colors duration-150 ease-out ${
                   tab === x.id
@@ -255,6 +263,25 @@ export function StudioView() {
           </div>
         </aside>
       </div>
+
+      {/* FR-6.6: below all three columns, not floating over one of them. */}
+      <Track
+        bubble={bubble}
+        kit={kit}
+        loopId={selectedLoopId}
+        mode={transport.mode}
+        clock={clock}
+        dispatch={dispatch}
+        t={t}
+        collapsed={trackCollapsed}
+        onToggleCollapsed={() => {
+          setTrackCollapsed((v) => !v);
+        }}
+        onPlay={play}
+        onPause={pause}
+        onStop={stop}
+        onSelectLoop={selectLoop}
+      />
     </div>
   );
 }

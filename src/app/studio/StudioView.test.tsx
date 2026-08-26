@@ -10,7 +10,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StudioView } from "./StudioView";
-import { createDefaultDocument, starterKit } from "../../domain/document/create";
+import {
+  createDefaultDocument,
+  starterKit,
+} from "../../domain/document/create";
 import { STORAGE_KEY } from "../persistence";
 import full from "../../test/fixtures/full.json";
 
@@ -71,9 +74,7 @@ describe("StudioView", () => {
     render(<StudioView />);
     await user.click(screen.getByRole("button", { name: "Nueva burbuja" }));
     globalThis.dispatchEvent(new Event("pagehide"));
-    const raw = globalThis.localStorage.getItem(
-      "bubble-studio.document.v1",
-    );
+    const raw = globalThis.localStorage.getItem("bubble-studio.document.v1");
     expect(raw).toBeTruthy();
     expect(JSON.parse(raw as string).bubbles).toHaveLength(2);
   });
@@ -83,12 +84,18 @@ describe("StudioView", () => {
     render(<StudioView />);
     await user.click(screen.getByRole("button", { name: "Nueva burbuja" }));
 
-    vi.stubGlobal("confirm", vi.fn(() => false));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => false),
+    );
     await openRailMenu(user, 1);
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     expect(screen.getAllByRole("button", { name: "Bubble" })).toHaveLength(2);
 
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     await openRailMenu(user, 1);
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     expect(screen.getAllByRole("button", { name: "Bubble" })).toHaveLength(1);
@@ -123,13 +130,23 @@ describe("StudioView", () => {
     expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
   });
 
-  it("transport sits on the stage dock, reachable from every tab (docs/05 §1)", async () => {
+  it("transport sits on the track, reachable from every tab (FR-6.6)", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
-    // Look is the default tab and the dock is already there.
-    expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
+    // Look is the default tab and the track is already there, below all three
+    // columns rather than over the stage.
+    const track = screen.getByRole("region", { name: "Pista" });
+    expect(
+      within(track).getByRole("button", { name: "Reproducir" }),
+    ).toBeTruthy();
     await user.click(screen.getByRole("tab", { name: "Compartir" }));
-    expect(screen.getByRole("button", { name: "Reproducir" })).toBeTruthy();
+    // Share folds the strip away; the transport is still one gesture off.
+    expect(
+      within(track).getByRole("button", { name: "Reproducir" }),
+    ).toBeTruthy();
+    expect(within(track).queryByTestId("step-chip")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Ampliar secuencia" }));
+    expect(within(track).getAllByTestId("step-chip").length).toBeGreaterThan(0);
   });
 
   it("transport plays, pauses and stops the selected loop (FR-6.2)", async () => {
@@ -255,7 +272,10 @@ describe("StudioView", () => {
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ánimos" }));
     // Confirm first (docs/05 §3); the reducer is what refuses afterwards.
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     await user.click(screen.getByRole("button", { name: "Acciones · happy" }));
     await user.click(
       within(screen.getByRole("menu", { name: "happy" })).getByRole(
@@ -275,11 +295,17 @@ describe("StudioView", () => {
     await user.click(screen.getByRole("tab", { name: "Ciclos" }));
     expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
 
-    vi.stubGlobal("confirm", vi.fn(() => false));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => false),
+    );
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
     expect(screen.getByRole("button", { name: "idle" })).toBeTruthy();
 
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
     expect(screen.queryByRole("button", { name: "idle" })).toBeNull();
   });
@@ -341,11 +367,17 @@ describe("StudioView", () => {
       );
     };
 
-    vi.stubGlobal("confirm", vi.fn(() => false));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => false),
+    );
     await remove();
     expect(screen.getByRole("button", { name: added })).toBeTruthy();
 
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     await remove();
     expect(screen.queryByRole("button", { name: added })).toBeNull();
   });

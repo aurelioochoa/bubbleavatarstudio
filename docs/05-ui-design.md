@@ -38,13 +38,16 @@
 ```
 ┌─────┬───────────────────────────────┬───────────────────────────┐
 │ rail│  STAGE (canvas)               │  INSPECTOR                │
-│     │                               │  ┌─────────────────────┐  │
-│ [B] │        (bubble render)        │  │ Look|Moods|Loops|Share │
-│ [B] │                               │  └─────────────────────┘  │
-│ [B] │  ┌─────────────────────────┐  │  ─────────────────────────│
-│ [+] │  │ ▶ ⏸ ⏹   ● playing: idle │  │  (panel content,          │
-│     │  └─────────────────────────┘  │   scrollable)             │
-└─────┴───────────────────────────────┴───────────────────────────┘
+│     │  ● resting                    │  ┌─────────────────────┐  │
+│ [B] │                               │  │ Look|Moods|Loops|Share │
+│ [B] │        (bubble render)        │  └─────────────────────┘  │
+│ [B] │                               │  (panel content,          │
+│ [+] │                               │   scrollable)             │
+├─────┴───────────────────────────────┴───────────────────────────┤
+│ ▶ ⏸  idle VIDA  1.62 s / 2.90 s      parpadeo · muelle · 4 pasos │
+│ 0        1.0 s        2.0 s                                     │
+│ ▐ happy 1.20 s ⌇ curious 0.90 s ⌇ sleepy 0.70 s              [+]│
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 - **Rail (56px):** vertical bubble thumbnails (live mini-renders), active
@@ -56,7 +59,9 @@
   closes on Escape or an outside click.
 - **Stage:** soft radial gradient backdrop (indigo-950→black), bubble centered.
   Overlays: top-left status pill (`● playing idle` / `paused`), top-right gizmo
-  button, bottom transport dock (play/pause/stop + loop selector dropdown).
+  button. The transport was a dock floating here until the track redesign; it
+  is the full-width band below all three columns now (FR-6.6, and the bullet
+  after this one).
   **Drag turns the head** (FR-8.1, amended — see `docs/02` and the session-2
   recon notes); position is set numerically in the Look panel. Esc restores the
   pre-drag rotation.
@@ -64,10 +69,11 @@
   the pose held when the drag began, not the resting pose, which is what
   FR-8.3 asks for and what the code did _not_ do until the P4 completion pass.
   The projected surface the face is anchored to, the radial backdrop, the
-  top-left status pill (dot + words, so state never rests on colour alone) and
-  the bottom transport dock with its loop selector. The dock owns playback for
-  the whole app and is reachable from every tab; it hides itself when the kit
-  has no loops (FR-5.2). Top-right, the gizmo button opens a rotation pad
+  top-left status pill (dot + words, so state never rests on colour alone).
+  Playback is not here any more: the track below owns it for the whole app and
+  is reachable from every tab, and where the dock hid itself on a kit with no
+  loops (FR-5.2), the track offers to make the first one — it is structure, so
+  it stays. Top-right, the gizmo button opens a rotation pad
   covering X, Y and Z across ±180° — a drag reaches X and Y across that same
   full turn, so the roll is what remains reachable only here — and the guide toggle
   draws the wireframe: a lat/long mesh over the solid, both hemispheres, with a
@@ -81,6 +87,32 @@
   overlay is a sibling of the engine's host element, never a child, or the next
   frame's `innerHTML` write erases it.
 - **Inspector (360px):** tab strip + scrollable panel.
+- **Track (full width, below all three):** **[built]** the transport, and the
+  sequence it drives, as a permanent band rather than an overlay on the stage
+  (FR-6.6). Row one is play/pause, stop, the loop picker with its group badge,
+  the elapsed readout, and the loop's own settings — blink schedule, spring
+  speed, playback mode, and how many steps make how long a cycle. Row two is
+  the timeline (FR-6.7): a ruler in seconds, and one chip per step **as wide as
+  that step's hold**, with the entry transition drawn on the seam it belongs
+  to rather than in a row that can be scrolled away from the pair it joins.
+
+  Three heights. Normal is 152px; the Share tab folds it to a 44px row, since
+  nothing there is editing a sequence and playback should still be one gesture
+  away; the Moods tab opens it to 212px for the mood tray. The height is fixed
+  rather than content-driven, so the stage does not resize as steps come and
+  go.
+
+  **The playhead is the one thing here React does not draw.** FR-11.2 keeps the
+  per-frame path out of the tree, so `StageEngine` publishes elapsed time into
+  a `StageClock` (`app/stage/clock.ts`) and the track writes `style.left` by
+  hand from a subscription. A playhead on React state would re-render every
+  chip — and every mini-render on them — sixty times a second.
+
+  Two numbers on this band describe different things and only coincide in
+  `loop` mode. The ruler spans the **strip**: the authored steps end to end.
+  The readout states the **cycle**: what playback takes, which for a pingpong
+  includes the leg back. The playhead walks the strip in both directions
+  rather than the sequence growing a second row for the return.
 
 ## 2. Panels
 

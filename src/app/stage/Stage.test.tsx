@@ -2,8 +2,10 @@
 // and Escape restores the pose held before it. Engine is mocked; we assert on
 // the opts StageEngine.update receives.
 //
-// Also covers the stage overlays of docs/05 §1: the status pill and the
-// transport dock, which own playback now that it has left the Loops panel.
+// Also covers the stage overlays of docs/05 §1: the status pill, the gizmo and
+// the guide. Playback is not among them any more — the dock that used to float
+// here is a full-width track below the whole shell (FR-6.6), and its cases
+// moved with it to studio/Track.test.tsx.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   cleanup,
@@ -51,10 +53,7 @@ beforeEach(() => {
 interface StageOverrides {
   mode?: StageMode;
   loopId?: string | null;
-  onPlay?: (loopId: string) => void;
   onPause?: () => void;
-  onStop?: () => void;
-  onSelectLoop?: (loopId: string) => void;
 }
 
 function setupStage(overrides: StageOverrides = {}) {
@@ -75,9 +74,6 @@ function setupStage(overrides: StageOverrides = {}) {
       preview={null}
       t={translator("es")}
       onPause={overrides.onPause ?? (() => {})}
-      onPlay={overrides.onPlay ?? (() => {})}
-      onStop={overrides.onStop ?? (() => {})}
-      onSelectLoop={overrides.onSelectLoop ?? (() => {})}
     />,
   );
   const el = container.querySelector('[aria-label="bubble stage"]');
@@ -238,63 +234,13 @@ describe("Stage overlays (docs/05 §1)", () => {
     expect(dot.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("dock plays the selected loop and pauses once it is playing", async () => {
-    const user = userEvent.setup();
-    const onPlay = vi.fn();
-    const { kit } = setupStage({ mode: "stopped", onPlay });
-    await user.click(screen.getByRole("button", { name: "Reproducir" }));
-    expect(onPlay).toHaveBeenCalledWith(kit.loops[0]?.id);
-
-    cleanup();
-    const onPause = vi.fn();
-    setupStage({ mode: "playing", onPause });
-    await user.click(screen.getByRole("button", { name: "Pausar" }));
-    expect(onPause).toHaveBeenCalled();
-  });
-
-  it("dock stop is disabled on an already stopped stage", async () => {
-    const user = userEvent.setup();
-    const onStop = vi.fn();
-    setupStage({ mode: "stopped", onStop });
-    const stop = screen.getByRole("button", { name: "Detener" });
-    expect(stop.hasAttribute("disabled")).toBe(true);
-
-    cleanup();
-    setupStage({ mode: "playing", onStop });
-    await user.click(screen.getByRole("button", { name: "Detener" }));
-    expect(onStop).toHaveBeenCalled();
-  });
-
-  it("dock loop selector switches which loop the transport owns", async () => {
-    const user = userEvent.setup();
-    const onSelectLoop = vi.fn();
-    const { kit } = setupStage({ onSelectLoop });
-    const second = kit.loops[1];
-    if (!second) throw new Error("fixture needs two loops");
-    await user.selectOptions(screen.getByLabelText("Ciclo"), second.id);
-    expect(onSelectLoop).toHaveBeenCalledWith(second.id);
-  });
-
-  it("hides the dock when the kit has no loops (FR-5.2)", () => {
-    const doc = createDefaultDocument();
-    const bubble = doc.bubbles[0];
-    if (!bubble) throw new Error("fixture missing bubble");
-    const kit = { ...effectiveKit(bubble, doc), loops: [] };
-    render(
-      <Stage
-        bubble={bubble}
-        kit={kit}
-        loopId={null}
-        mode="stopped"
-        preview={null}
-        t={translator("es")}
-        onPause={() => {}}
-        onPlay={() => {}}
-        onStop={() => {}}
-        onSelectLoop={() => {}}
-      />,
-    );
+  it("no longer carries the transport it used to float (FR-6.6)", () => {
+    // The dock is gone from here, not merely restyled: the room it took is the
+    // point of the track. If it comes back the character loses that space and
+    // two controls claim the same job.
+    setupStage({ mode: "stopped" });
     expect(screen.queryByRole("button", { name: "Reproducir" })).toBeNull();
+    expect(screen.queryByLabelText("Ciclo")).toBeNull();
   });
 });
 

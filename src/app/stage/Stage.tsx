@@ -1,15 +1,18 @@
 // Stage: hosts the StageEngine, handles direct manipulation (FR-8).
 // Drag rotates the head and pauses playback; Escape undoes that drag.
 //
-// Layout follows docs/05 §1: a radial backdrop, the render centered on it, a
-// status pill top-left and the transport dock along the bottom. The engine
-// writes SVG straight into its own host element, so every overlay is a
-// sibling of that host — never a child, which innerHTML would wipe each frame.
+// Layout follows docs/05 §1: a radial backdrop, the render centered on it and
+// a status pill top-left. The transport used to float here as a dock; it is a
+// full-width track below the whole shell now (FR-6.6), which is what gives the
+// character this much room. The engine writes SVG straight into its own host
+// element, so every overlay is a sibling of that host — never a child, which
+// innerHTML would wipe each frame.
 import { useEffect, useRef, useState } from "react";
 import { StageEngine, type StageMode } from "./StageEngine";
 import type { Bubble, Kit } from "../../domain/document/types";
 import type { MoodSample } from "../../domain/playback/LoopPlayer";
 import type { MessageKey } from "../i18n";
+import type { StageClock } from "./clock";
 import { RangeInput } from "../studio/ui";
 
 export interface StageProps {
@@ -20,10 +23,9 @@ export interface StageProps {
   /** Mood held on the stage while it is being picked or edited (FR-4.4). */
   preview: MoodSample | null;
   t: (k: MessageKey) => string;
+  /** Handed to the engine, which publishes elapsed time for the track. */
+  clock?: StageClock | undefined;
   onPause: () => void;
-  onPlay: (loopId: string) => void;
-  onStop: () => void;
-  onSelectLoop: (loopId: string) => void;
 }
 
 /**
@@ -43,10 +45,8 @@ export function Stage({
   mode,
   preview,
   t,
+  clock,
   onPause,
-  onPlay,
-  onStop,
-  onSelectLoop,
 }: StageProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<StageEngine | null>(null);
@@ -83,6 +83,7 @@ export function Stage({
       headRotation: head,
       preview,
       guide: showGuide,
+      clock,
     });
     engineRef.current = engine;
     engine.start();
@@ -101,8 +102,9 @@ export function Stage({
       headRotation: head,
       preview,
       guide: showGuide,
+      clock,
     });
-  }, [bubble, kit, loopId, mode, head, preview, showGuide]);
+  }, [bubble, kit, loopId, mode, head, preview, showGuide, clock]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     // sx/sy seed the pitch and the yaw from where this drag starts, so each
@@ -147,11 +149,10 @@ export function Stage({
     if (e.key === "Escape") setHead(preDragRef.current); // Esc-undo (FR-8.3)
   };
 
-  // The transport acts on the loop the dock names; without loops there is
-  // nothing to drive, so the dock stays away entirely (FR-5.2).
+  // The pill names the loop on the stage, which is the selection the track
+  // owns; the stage itself no longer drives playback (FR-6.6).
   const selected = kit.loops.find((l) => l.id === loopId) ?? kit.loops.at(0);
   const playing = mode === "playing";
-
   return (
     <div className="relative h-full w-full overflow-hidden bg-stage">
       {/* Soft indigo pool behind the character (docs/05 §1). */}
@@ -249,46 +250,6 @@ export function Stage({
         t={t}
       />
 
-      {selected && (
-        <div
-          role="group"
-          aria-label={t("stage.transport")}
-          className="pointer-events-auto absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-line bg-panel/85 p-1.5 shadow-dock backdrop-blur-md"
-        >
-          <TransportButton
-            label={playing ? t("common.pause") : t("common.play")}
-            primary
-            onClick={() => {
-              if (playing) onPause();
-              else onPlay(selected.id);
-            }}
-          >
-            {playing ? <PauseIcon /> : <PlayIcon />}
-          </TransportButton>
-          <TransportButton
-            label={t("common.stop")}
-            disabled={mode === "stopped"}
-            onClick={onStop}
-          >
-            <StopIcon />
-          </TransportButton>
-          <span aria-hidden="true" className="mx-1 h-5 w-px bg-line" />
-          <select
-            value={selected.id}
-            onChange={(e) => {
-              onSelectLoop(e.target.value);
-            }}
-            aria-label={t("stage.loop")}
-            className="mr-1 max-w-36 truncate rounded-full bg-panel-2 px-3 py-1.5 text-xs text-ink"
-          >
-            {kit.loops.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
     </div>
   );
 }
@@ -416,61 +377,6 @@ function StatusPill({
         </>
       )}
     </div>
-  );
-}
-
-function TransportButton({
-  label,
-  onClick,
-  children,
-  primary = false,
-  disabled = false,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  primary?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={label}
-      className={`grid h-9 w-9 place-items-center rounded-full transition-colors duration-150 ease-out disabled:opacity-35 ${
-        primary
-          ? "bg-primary text-white hover:bg-primary-hi disabled:hover:bg-primary"
-          : "text-ink hover:bg-white/10 disabled:hover:bg-transparent"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
-      <path d="M4.5 2.8 13 8l-8.5 5.2z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
-      <path d="M4 3h3v10H4zM9 3h3v10H9z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function StopIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
-      <rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor" />
-    </svg>
   );
 }
 
