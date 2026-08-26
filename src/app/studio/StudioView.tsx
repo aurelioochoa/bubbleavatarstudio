@@ -27,6 +27,8 @@ export function StudioView() {
   }>({ loopId: null, mode: "stopped" });
   // FR-4.4: picking or editing a mood shows it on the stage straight away.
   const [preview, setPreview] = useState<MoodSample | null>(null);
+  // The step the track and the inspector are both talking about (FR-6.7).
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   // The inspector column, so the mood editor can mount over all of it rather
   // than inside the scroll box that would clip it (docs/05 §2).
   const [inspector, setInspector] = useState<HTMLElement | null>(null);
@@ -95,6 +97,22 @@ export function StudioView() {
   const selectLoop = (loopId: string) => {
     // Switching loops rewinds rather than cutting mid-step (FR-6.2).
     setTransport({ loopId, mode: "stopped" });
+    setSelectedStepId(null);
+  };
+  /**
+   * FR-6.7: pressing the timeline moves playback there. A stopped stage shows
+   * the resting face and rewinds on every update, so a scrub that left it
+   * stopped would do nothing visible; it pauses at the scrubbed position
+   * instead, which is what makes the gesture mean something. The preview goes
+   * for the same reason play drops it — it would otherwise win the frame and
+   * hide the pose just scrubbed to (FR-6.1).
+   */
+  const scrub = (ms: number) => {
+    setPreview(null);
+    if (selectedLoopId !== null && transport.mode === "stopped") {
+      setTransport({ loopId: selectedLoopId, mode: "paused" });
+    }
+    clock.seek(ms);
   };
 
   const tabs: { id: Tab; label: string }[] = [
@@ -274,9 +292,12 @@ export function StudioView() {
         dispatch={dispatch}
         t={t}
         collapsed={trackCollapsed}
+        selectedStepId={selectedStepId}
         onToggleCollapsed={() => {
           setTrackCollapsed((v) => !v);
         }}
+        onSelectStep={setSelectedStepId}
+        onScrub={scrub}
         onPlay={play}
         onPause={pause}
         onStop={stop}

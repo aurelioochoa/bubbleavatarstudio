@@ -97,3 +97,45 @@ describe("createStageClock", () => {
     expect(clock.last()?.loopId).toBeNull();
   });
 });
+
+// FR-6.7: a scrub is the same seam travelling the other way — the UI moving
+// the engine's loop clock, rather than the engine reporting it.
+describe("createStageClock seeking", () => {
+  it("hands a seek to the engine listening for one", () => {
+    const clock = createStageClock();
+    const seek = vi.fn();
+    clock.onSeek(seek);
+    clock.seek(1200);
+    expect(seek).toHaveBeenCalledWith(1200);
+  });
+
+  it("drops a seek with no engine listening rather than throwing", () => {
+    // The track renders before the engine mounts in a test that renders it
+    // alone, and a scrub there is a no-op, not a crash.
+    const clock = createStageClock();
+    expect(() => {
+      clock.seek(400);
+    }).not.toThrow();
+  });
+
+  it("keeps one listener, so a remounted engine replaces the old one", () => {
+    const clock = createStageClock();
+    const first = vi.fn();
+    const second = vi.fn();
+    clock.onSeek(first);
+    clock.onSeek(second);
+    clock.seek(90);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith(90);
+  });
+
+  it("releasing a listener that was already replaced leaves the new one", () => {
+    const clock = createStageClock();
+    const off = clock.onSeek(vi.fn());
+    const live = vi.fn();
+    clock.onSeek(live);
+    off();
+    clock.seek(7);
+    expect(live).toHaveBeenCalledWith(7);
+  });
+});

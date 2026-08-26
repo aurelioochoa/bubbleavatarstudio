@@ -20,11 +20,21 @@ export interface StageClock {
   subscribe(cb: (frame: StageFrame) => void): () => void;
   /** The newest frame, or null before the engine has published one. */
   last(): StageFrame | null;
+  /**
+   * FR-6.7: a scrub, travelling the other way. The clock is the seam between
+   * the frame loop and the UI, and moving the loop clock is that same traffic
+   * in reverse, so it rides here rather than leaking the engine instance up
+   * into the shell. Ignored if no engine is listening.
+   */
+  seek(ms: number): void;
+  /** The engine's end of `seek`. One listener; a later one replaces it. */
+  onSeek(cb: (ms: number) => void): () => void;
 }
 
 export function createStageClock(): StageClock {
   const subscribers = new Set<(frame: StageFrame) => void>();
   let current: StageFrame | null = null;
+  let seeker: ((ms: number) => void) | null = null;
 
   /**
    * A subscriber that throws must not take the frame loop down with it: this
@@ -55,6 +65,15 @@ export function createStageClock(): StageClock {
     },
     last() {
       return current;
+    },
+    seek(ms) {
+      seeker?.(ms);
+    },
+    onSeek(cb) {
+      seeker = cb;
+      return () => {
+        if (seeker === cb) seeker = null;
+      };
     },
   };
 }

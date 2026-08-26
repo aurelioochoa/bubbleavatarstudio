@@ -45,6 +45,7 @@ export class StageEngine {
   private ambientMs = 0;
   private lastTickMs: number | null = null;
   private lastSvg = "";
+  private unseek: (() => void) | null = null;
 
   constructor(host: HTMLElement, opts: StageEngineOptions) {
     this.host = host;
@@ -59,6 +60,13 @@ export class StageEngine {
   }
 
   start(): void {
+    // FR-6.7: a scrub moves this clock from the track. Bound for the life of
+    // the loop; the clock a running engine reads is not swapped.
+    this.unseek =
+      this.opts.clock?.onSeek((ms) => {
+        this.loopMs = Math.max(0, ms);
+        this.renderFrame();
+      }) ?? null;
     const tick = () => {
       this.renderFrame();
       this.raf = requestAnimationFrame(tick);
@@ -69,6 +77,8 @@ export class StageEngine {
   stop(): void {
     cancelAnimationFrame(this.raf);
     this.raf = 0;
+    this.unseek?.();
+    this.unseek = null;
   }
 
   private now(): number {

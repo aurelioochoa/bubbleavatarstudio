@@ -6,7 +6,13 @@
 // dock that the track replaces: play/pause, stop, switching loop, and the
 // empty-kit case FR-5.2 asks for.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { act } from "react";
 import userEvent from "@testing-library/user-event";
 import { Track } from "./Track";
@@ -24,7 +30,10 @@ interface Overrides {
   loopId?: string | null;
   kit?: (base: Kit) => Kit;
   collapsed?: boolean;
+  selectedStepId?: string | null;
   onToggleCollapsed?: () => void;
+  onSelectStep?: (stepId: string | null) => void;
+  onScrub?: (ms: number) => void;
   onPlay?: (loopId: string) => void;
   onPause?: () => void;
   onStop?: () => void;
@@ -50,7 +59,10 @@ function setup(over: Overrides = {}) {
       dispatch={dispatch}
       t={translator("es")}
       collapsed={over.collapsed ?? false}
+      selectedStepId={over.selectedStepId ?? null}
       onToggleCollapsed={over.onToggleCollapsed ?? (() => {})}
+      onSelectStep={over.onSelectStep ?? (() => {})}
+      onScrub={over.onScrub ?? (() => {})}
       onPlay={over.onPlay ?? (() => {})}
       onPause={over.onPause ?? (() => {})}
       onStop={over.onStop ?? (() => {})}
@@ -215,7 +227,10 @@ describe("Track timeline (FR-6.7)", () => {
           dispatch={vi.fn()}
           t={translator("es")}
           collapsed={false}
+          selectedStepId={null}
           onToggleCollapsed={() => {}}
+          onSelectStep={() => {}}
+          onScrub={() => {}}
           onPlay={() => {}}
           onPause={() => {}}
           onStop={() => {}}
@@ -302,5 +317,189 @@ describe("Track playback controls", () => {
     const blink = screen.getByTestId("track-blink");
     expect(blink.textContent).toContain("2.4–6.0 s");
     expect(blink.textContent).toContain("140 ms");
+  });
+});
+
+// jsdom lays nothing out, so the strip is given a width by hand: every pointer
+// mapping below is in the coordinates of a 1000px strip.
+const STRIP_PX = 1000;
+function measureStrip() {
+  const strip = screen.getByTestId("track-strip");
+  strip.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      right: STRIP_PX,
+      width: STRIP_PX,
+      top: 0,
+      bottom: 60,
+      height: 60,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }) as DOMRect;
+  return strip;
+}
+
+function firePointer(el: Element, type: string, props: Record<string, number>) {
+  const ev = new Event(type, { bubbles: true, cancelable: true });
+  Object.assign(ev, props);
+  fireEvent(el, ev);
+}
+
+describe("Track step selection (FR-6.7)", () => {
+  it("selects the step whose chip is pressed", async () => {
+    const user = userEvent.setup();
+    const onSelectStep = vi.fn();
+    setup({ kit: threeStepKit, onSelectStep });
+    const second = within(screen.getAllByTestId("step-chip")[1]).getAllByRole(
+      "button",
+    )[0];
+    await user.click(second);
+    expect(onSelectStep).toHaveBeenCalledWith("s2");
+  });
+
+  it("marks the selected chip for assistive tech, not only in paint", () => {
+    setup({ kit: threeStepKit, selectedStepId: "s2" });
+    const pressed = chips().map((c) =>
+      c.querySelector("button")?.getAttribute("aria-pressed"),
+    );
+    expect(pressed).toEqual(["false", "true", "false"]);
+  });
+});
+
+describe("Track retiming (FR-5.9)", () => {
+  it("a grip retimes the step on its left", () => {
+    const { dispatch } = setup({ kit: threeStepKit });
+    measureStrip();
+    // The strip is 2000ms over 1000px, so 100px is 200ms. s1 holds 400ms.
+    const grip = screen.getAllByTestId("step-grip")[0];
+    firePointer(grip, "pointerdown", { pointerId: 1, clientX: 200 });
+    firePointer(grip, "pointermove", { pointerId: 1, clientX: 300 });
+    expect(dispatch).toHaveBeenLastCalledWith({
+      type: "step/update",
+      loopId: "loop_t",
+      stepId: "s1",
+      patch: { holdMs: 600 },
+    });
+  });
+
+  it("holds the scale it started with rather than chasing its own edit", () => {
+    // The strip's pixels-per-millisecond depends on the total, which the drag
+    // is changing. Re-reading it mid-drag makes the step chase the pointer at
+    // a rate that changes under it; the scale is taken once, at pointerdown.
+    const { dispatch } = setup({ kit: threeStepKit });
+    measureStrip();
+    const grip = screen.getAllByTestId("step-grip")[0];
+    firePointer(grip, "pointerdown", { pointerId: 1, clientX: 200 });
+    firePointer(grip, "pointermove", { pointerId: 1, clientX: 300 });
+    firePointer(grip, "pointermove", { pointerId: 1, clientX: 400 });
+    // Both moves are measured from where the drag began, at 2ms per pixel.
+    expect(dispatch).toHaveBeenLastCalledWith({
+      type: "step/update",
+      loopId: "loop_t",
+      stepId: "s1",
+      patch: { holdMs: 800 },
+    });
+  });
+
+  it("will not drag a step below a hold that can still be seen", () => {
+    const { dispatch } = setup({ kit: threeStepKit });
+    measureStrip();
+    const grip = screen.getAllByTestId("step-grip")[0];
+    firePointer(grip, "pointerdown", { pointerId: 1, clientX: 500 });
+    firePointer(grip, "pointermove", { pointerId: 1, clientX: 0 });
+    const call = dispatch.mock.calls.at(-1)?.[0] as {
+      patch: { holdMs: number };
+    };
+    expect(call.patch.holdMs).toBe(50);
+  });
+
+  it("quantizes to the step the typed field uses", () => {
+    const { dispatch } = setup({ kit: threeStepKit });
+    measureStrip();
+    const grip = screen.getAllByTestId("step-grip")[0];
+    firePointer(grip, "pointerdown", { pointerId: 1, clientX: 200 });
+    firePointer(grip, "pointermove", { pointerId: 1, clientX: 213 });
+    const call = dispatch.mock.calls.at(-1)?.[0] as {
+      patch: { holdMs: number };
+    };
+    expect(call.patch.holdMs % 50).toBe(0);
+  });
+
+  it("commits nothing until the pointer actually moves", () => {
+    const { dispatch } = setup({ kit: threeStepKit });
+    measureStrip();
+    firePointer(screen.getAllByTestId("step-grip")[0], "pointerdown", {
+      pointerId: 1,
+      clientX: 200,
+    });
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+});
+
+describe("Track transitions (FR-6.7)", () => {
+  it("edits the transition at the seam it happens on", async () => {
+    const user = userEvent.setup();
+    const { dispatch } = setup({ kit: threeStepKit });
+    // The seam after s1 carries s2's entry transition.
+    await user.click(screen.getAllByTestId("seam")[0]);
+    await user.click(screen.getByRole("menuitem", { name: /Muelle|spring/i }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/update",
+      loopId: "loop_t",
+      stepId: "s2",
+      patch: { transition: "spring" },
+    });
+  });
+
+  it("draws one seam fewer than there are steps", () => {
+    // A transition joins two steps; the last one has nothing after it.
+    setup({ kit: threeStepKit });
+    expect(screen.getAllByTestId("seam")).toHaveLength(2);
+  });
+});
+
+describe("Track scrubbing (FR-6.7)", () => {
+  it("scrubs to the position on the strip that was pressed", () => {
+    const onScrub = vi.fn();
+    setup({ kit: threeStepKit, onScrub });
+    const strip = measureStrip();
+    firePointer(strip, "pointerdown", { pointerId: 1, clientX: 250 });
+    // A quarter of a 2000ms strip.
+    expect(onScrub).toHaveBeenCalledWith(500);
+  });
+
+  it("clamps a scrub that lands outside the strip", () => {
+    const onScrub = vi.fn();
+    setup({ kit: threeStepKit, onScrub });
+    const strip = measureStrip();
+    firePointer(strip, "pointerdown", { pointerId: 1, clientX: -80 });
+    expect(onScrub).toHaveBeenCalledWith(0);
+  });
+
+  it("does not scrub when the press was on a grip", () => {
+    // The grip is inside the strip, so its pointerdown bubbles; without this
+    // every retime would begin by jumping playback to the edge being dragged.
+    const onScrub = vi.fn();
+    setup({ kit: threeStepKit, onScrub });
+    measureStrip();
+    firePointer(screen.getAllByTestId("step-grip")[0], "pointerdown", {
+      pointerId: 1,
+      clientX: 200,
+    });
+    expect(onScrub).not.toHaveBeenCalled();
+  });
+});
+
+describe("Track grips (FR-5.9)", () => {
+  it("lights both handles of the selected step", () => {
+    // A grip belongs to the step on its left but draws on that chip's right
+    // edge — which is the selected chip's *left* edge. Lighting only its own
+    // chip's grip leaves the selection looking half-handled.
+    setup({ kit: threeStepKit, selectedStepId: "s2" });
+    const lit = screen
+      .getAllByTestId("step-grip")
+      .map((g) => !g.className.includes("opacity-0"));
+    expect(lit).toEqual([true, true, false]);
   });
 });

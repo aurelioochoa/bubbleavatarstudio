@@ -110,6 +110,11 @@ export type MessageKey =
   | "loops.summaryCycle"
   | "loops.summaryBlink"
   | "loops.blinkOff"
+  | "loops.step"
+  | "loops.transitionLinear"
+  | "loops.transitionEase"
+  | "loops.transitionSpring"
+  | "loops.transitionStep"
   | "loops.modeLoop"
   | "loops.modeOnce"
   | "loops.modePingpong"
@@ -266,6 +271,11 @@ const es: Record<MessageKey, string> = {
   "loops.summaryCycle": "Ciclo completo",
   "loops.summaryBlink": "Parpadeo",
   "loops.blinkOff": "Sin parpadeo",
+  "loops.step": "Paso",
+  "loops.transitionLinear": "Lineal",
+  "loops.transitionEase": "Suave",
+  "loops.transitionSpring": "Muelle",
+  "loops.transitionStep": "Salto",
   "loops.modeLoop": "En bucle",
   "loops.modeOnce": "Una vez",
   "loops.modePingpong": "Ida y vuelta",
@@ -428,6 +438,11 @@ const en: Record<MessageKey, string> = {
   "loops.summaryCycle": "Full cycle",
   "loops.summaryBlink": "Blink",
   "loops.blinkOff": "No blinking",
+  "loops.step": "Step",
+  "loops.transitionLinear": "Linear",
+  "loops.transitionEase": "Ease",
+  "loops.transitionSpring": "Spring",
+  "loops.transitionStep": "Step",
   "loops.modeLoop": "Looping",
   "loops.modeOnce": "Once",
   "loops.modePingpong": "Ping-pong",

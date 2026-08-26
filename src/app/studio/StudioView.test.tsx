@@ -149,6 +149,32 @@ describe("StudioView", () => {
     expect(within(track).getAllByTestId("step-chip").length).toBeGreaterThan(0);
   });
 
+  it("a scrub on a stopped stage pauses it where it was pressed (FR-6.7)", () => {
+    render(<StudioView />);
+    expect(screen.getByRole("status").textContent).toContain("En reposo");
+
+    const strip = screen.getByTestId("track-strip");
+    strip.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        right: 400,
+        width: 400,
+        top: 0,
+        bottom: 60,
+        height: 60,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const press = new Event("pointerdown", { bubbles: true, cancelable: true });
+    Object.assign(press, { pointerId: 1, clientX: 200 });
+    fireEvent(strip, press);
+
+    // Stopped rewinds on every engine update and shows the resting face, so a
+    // scrub that left it stopped would do nothing the user can see.
+    expect(screen.getByRole("status").textContent).toContain("En pausa");
+  });
+
   it("transport plays, pauses and stops the selected loop (FR-6.2)", async () => {
     const user = userEvent.setup();
     render(<StudioView />);

@@ -44,12 +44,25 @@ export interface TrackProps {
   t: (k: MessageKey) => string;
   /** FR-6.6: the Share tab is not editing a sequence, so the strip folds away. */
   collapsed: boolean;
+  /** The step the inspector is editing; owned above so both can name it. */
+  selectedStepId: string | null;
   onToggleCollapsed: () => void;
+  onSelectStep: (stepId: string | null) => void;
+  /** Position on the strip, in ms, the user pressed the timeline at. */
+  onScrub: (ms: number) => void;
   onPlay: (loopId: string) => void;
   onPause: () => void;
   onStop: () => void;
   onSelectLoop: (loopId: string) => void;
 }
+
+/**
+ * FR-5.9: the floor a drag can shorten a step to, and the grid it lands on.
+ * The grid is the step the typed field uses, so a hold dialled in by dragging
+ * and one dialled in by typing are the same kind of number.
+ */
+const MIN_HOLD_MS = 50;
+const HOLD_STEP_MS = 50;
 
 const MODES: { value: PlaybackMode; label: MessageKey }[] = [
   { value: "loop", label: "loops.modeLoop" },
@@ -87,7 +100,10 @@ export function Track({
   dispatch,
   t,
   collapsed,
+  selectedStepId,
   onToggleCollapsed,
+  onSelectStep,
+  onScrub,
   onPlay,
   onPause,
   onStop,
@@ -95,6 +111,9 @@ export function Track({
 }: TrackProps) {
   const [picking, setPicking] = useState(false);
   const [adding, setAdding] = useState(false);
+  /** The seam whose transition popover is open, by the step it leads into. */
+  const [seamFor, setSeamFor] = useState<string | null>(null);
+  const stripRef = useRef<HTMLOListElement>(null);
 
   // A bubble switch can leave the selection pointing at another kit's loop;
   // fall back to this kit's first rather than showing nothing (FR-6.4).
@@ -300,18 +319,71 @@ export function Track({
           >
             <Ruler totalMs={stripMs} />
 
-            <ol className="flex min-h-0 flex-1 gap-2">
-              {loop.steps.map((step, i) => (
-                <StepChip
-                  key={step.id}
-                  bubble={bubble}
-                  kit={kit}
-                  step={step}
-                  index={i}
-                  last={i === loop.steps.length - 1}
-                  t={t}
-                />
-              ))}
+            {/* The strip is the hit area for a scrub, and the frame the drag
+                scale is measured against. A press that began on a grip is not
+                a scrub — without that check every retime would start by
+                jumping playback to the edge being dragged. */}
+            <ol
+              ref={stripRef}
+              data-testid="track-strip"
+              onPointerDown={(e) => {
+                if ((e.target as HTMLElement).closest("[data-grip]")) return;
+                const box = stripRef.current?.getBoundingClientRect();
+                if (!box || box.width <= 0 || stripMs <= 0) return;
+                const at = (e.clientX - box.left) / box.width;
+                onScrub(Math.round(Math.min(1, Math.max(0, at)) * stripMs));
+              }}
+              className="flex min-h-0 flex-1 gap-2"
+            >
+              {loop.steps.map((step, i) => {
+                // `.at` rather than an index: the last step has no next, and
+                // the index signature would type that away.
+                const next = loop.steps.at(i + 1) ?? null;
+                return (
+                  <StepChip
+                    key={step.id}
+                    bubble={bubble}
+                    kit={kit}
+                    step={step}
+                    next={next}
+                    index={i}
+                    selected={step.id === selectedStepId}
+                    // A grip belongs to the step on its left but sits on that
+                    // chip's right edge — which is the *left* edge of the next
+                    // one. Lighting it for either neighbour is what makes a
+                    // selected step show both its handles.
+                    nextSelected={next !== null && next.id === selectedStepId}
+                    seamOpen={next !== null && seamFor === next.id}
+                    t={t}
+                    onSelect={() => {
+                      onSelectStep(step.id);
+                    }}
+                    onOpenSeam={(open) => {
+                      setSeamFor(open && next !== null ? next.id : null);
+                    }}
+                    onTransition={(transition) => {
+                      setSeamFor(null);
+                      if (next === null) return;
+                      dispatch({
+                        type: "step/update",
+                        loopId: loop.id,
+                        stepId: next.id,
+                        patch: { transition },
+                      });
+                    }}
+                    onRetime={(holdMs) => {
+                      dispatch({
+                        type: "step/update",
+                        loopId: loop.id,
+                        stepId: step.id,
+                        patch: { holdMs },
+                      });
+                    }}
+                    stripRef={stripRef}
+                    stripMs={stripMs}
+                  />
+                );
+              })}
             </ol>
 
             <Playhead clock={clock} loop={loop} stripMs={stripMs} />
@@ -431,25 +503,62 @@ function Ruler({ totalMs }: { totalMs: number }) {
   );
 }
 
+/** The transitions the seam popover offers, in the order easing.ts defines. */
+const TRANSITIONS: TransitionStyle[] = ["linear", "ease", "spring", "step"];
+
+/** Exhaustive by construction: a new style without a label fails typecheck. */
+const TRANSITION_LABELS: Record<TransitionStyle, MessageKey> = {
+  linear: "loops.transitionLinear",
+  ease: "loops.transitionEase",
+  spring: "loops.transitionSpring",
+  step: "loops.transitionStep",
+};
+
 /**
- * One step, as wide as its hold. The trailing badge sits on the seam it
- * describes: a transition happens between two steps, and every previous
- * design put it in a row that could be scrolled away from the pair it joins.
+ * One step, as wide as its hold.
+ *
+ * Two controls live on its right edge and both follow one rule: **a grip
+ * retimes the step to its left, and a seam badge edits the transition into the
+ * step to its right.** So the grip that looks like the selected chip's left
+ * handle is the previous chip's right edge, and retimes the previous step —
+ * which is what a timeline does, and avoids the ambiguity of a handle that
+ * could mean either of two steps. The last chip's grip lengthens the loop.
+ *
+ * A transition happens *between* two steps, and every previous design put it
+ * in a row that could be scrolled away from the pair it joins.
  */
 function StepChip({
   bubble,
   kit,
   step,
+  next,
   index,
-  last,
+  selected,
+  nextSelected,
+  seamOpen,
   t,
+  onSelect,
+  onOpenSeam,
+  onTransition,
+  onRetime,
+  stripRef,
+  stripMs,
 }: {
   bubble: Bubble;
   kit: Kit;
   step: LoopStep;
+  next: LoopStep | null;
   index: number;
-  last: boolean;
+  selected: boolean;
+  nextSelected: boolean;
+  seamOpen: boolean;
   t: (k: MessageKey) => string;
+  onSelect: () => void;
+  onOpenSeam: (open: boolean) => void;
+  onTransition: (style: TransitionStyle) => void;
+  onRetime: (holdMs: number) => void;
+  stripRef: React.RefObject<HTMLElement | null>;
+  stripMs: number;
 }) {
   const mood = kit.moods.find((m) => m.id === step.moodId);
   const thumb = useMemo(
@@ -467,35 +576,130 @@ function StepChip({
     [bubble, mood],
   );
 
+  // FR-5.9. The scale is read once, at pointerdown: the strip's
+  // milliseconds-per-pixel is a function of the total the drag is busy
+  // changing, so re-reading it mid-drag makes the edge chase the pointer at a
+  // rate that shifts under it. Seeded from the hold the drag started on, the
+  // same way the numeric fields' scrub works (look/fields.tsx).
+  const drag = useRef<{ x: number; from: number; msPerPx: number } | null>(
+    null,
+  );
+
+  const onGripDown = (e: React.PointerEvent) => {
+    const box = stripRef.current?.getBoundingClientRect();
+    if (!box || box.width <= 0 || stripMs <= 0) return;
+    drag.current = {
+      x: e.clientX,
+      from: step.holdMs,
+      msPerPx: stripMs / box.width,
+    };
+    (e.target as Partial<HTMLElement> & EventTarget).setPointerCapture?.(
+      e.pointerId,
+    );
+  };
+
+  const onGripMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const raw = d.from + (e.clientX - d.x) * d.msPerPx;
+    const snapped = Math.round(raw / HOLD_STEP_MS) * HOLD_STEP_MS;
+    const held = Math.max(MIN_HOLD_MS, snapped);
+    if (held !== step.holdMs) onRetime(held);
+  };
+
+  const endGrip = () => {
+    drag.current = null;
+  };
+
   return (
     <li
       data-testid="step-chip"
       data-step-id={step.id}
       style={{ flexGrow: step.holdMs, flexShrink: 1, flexBasis: 0 }}
-      className="relative flex min-w-0 items-center gap-2.5 rounded-[10px] border border-line-hi bg-panel-2 px-2.5"
+      className="relative min-w-0"
     >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none block h-7.5 w-7.5 shrink-0"
-        dangerouslySetInnerHTML={{ __html: thumb }}
-      />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-xs font-medium">
-          {mood?.name ?? "?"}
-        </span>
-        <span className="text-[10px] tabular-nums text-ink-dim">
-          {s2(step.holdMs)} s
-        </span>
-      </span>
-      {!last && (
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={onSelect}
+        className={`flex h-full w-full items-center gap-2.5 overflow-hidden rounded-[10px] px-2.5 text-left transition-colors duration-150 ease-out ${
+          selected
+            ? "bg-panel-3 shadow-[inset_0_0_0_1.5px_var(--color-brand)]"
+            : "border border-line-hi bg-panel-2 hover:border-outline"
+        }`}
+      >
         <span
-          title={`${t("loops.transition")}: ${step.transition}`}
-          className="absolute top-1/2 -right-3 z-[2] grid h-4 w-4 -translate-y-1/2 place-items-center rounded-full bg-panel text-ink-dim"
-        >
-          <TransitionGlyph style={step.transition} />
+          aria-hidden="true"
+          className="pointer-events-none block h-7.5 w-7.5 shrink-0"
+          dangerouslySetInnerHTML={{ __html: thumb }}
+        />
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate text-xs font-medium">
+            {mood?.name ?? "?"}
+          </span>
+          <span
+            className={`text-[10px] tabular-nums ${selected ? "text-ink" : "text-ink-dim"}`}
+          >
+            {s2(step.holdMs)} s
+          </span>
+        </span>
+        <span className="sr-only">{`${t("loops.step")} ${String(index + 1)}`}</span>
+      </button>
+
+      <span
+        data-grip="true"
+        data-testid="step-grip"
+        data-step-id={step.id}
+        role="separator"
+        aria-label={`${t("loops.holdMs")} · ${mood?.name ?? "?"}`}
+        onPointerDown={onGripDown}
+        onPointerMove={onGripMove}
+        onPointerUp={endGrip}
+        onPointerCancel={endGrip}
+        className={`absolute top-1/2 -right-0.5 z-[3] h-5.5 w-1.5 -translate-y-1/2 cursor-ew-resize touch-none rounded-full transition-opacity duration-150 ease-out ${
+          selected || nextSelected
+            ? "bg-brand opacity-100"
+            : "bg-brand opacity-0 hover:opacity-100"
+        }`}
+      />
+
+      {next !== null && (
+        <span className="absolute top-1/2 -right-3 z-[2] -translate-y-1/2">
+          <button
+            type="button"
+            data-testid="seam"
+            aria-haspopup="menu"
+            aria-expanded={seamOpen}
+            aria-label={`${t("loops.transition")}: ${next.transition}`}
+            title={`${t("loops.transition")}: ${next.transition}`}
+            onClick={() => {
+              onOpenSeam(!seamOpen);
+            }}
+            className="grid h-4 w-4 place-items-center rounded-full bg-panel text-ink-dim transition-colors duration-150 ease-out hover:text-ink"
+          >
+            <TransitionGlyph style={next.transition} />
+          </button>
+          {seamOpen && (
+            <Menu
+              label={t("loops.transition")}
+              onClose={() => {
+                onOpenSeam(false);
+              }}
+              className="absolute bottom-full left-1/2 z-30 mb-2 w-40 -translate-x-1/2"
+            >
+              {TRANSITIONS.map((style) => (
+                <MenuItem
+                  key={style}
+                  label={t(TRANSITION_LABELS[style])}
+                  onClick={() => {
+                    onTransition(style);
+                  }}
+                />
+              ))}
+            </Menu>
+          )}
         </span>
       )}
-      <span className="sr-only">{`${t("loops.steps")} ${String(index + 1)}`}</span>
     </li>
   );
 }
