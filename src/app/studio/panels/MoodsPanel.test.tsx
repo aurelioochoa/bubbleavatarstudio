@@ -234,6 +234,77 @@ describe("mood grid (FR-4.8, FR-4.9)", () => {
   });
 });
 
+describe("mood editor linking (FR-4.1)", () => {
+  it("starts independent, because two different eyes are what a mood is", async () => {
+    const user = userEvent.setup();
+    const { first } = setup();
+    await openEditor(user, first.name);
+    expect(
+      screen
+        .getByRole("radio", { name: "Independientes" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("brings the eyes into step the moment linking is turned on", async () => {
+    // Not on the next edit: a control that says "linked" while the two sides
+    // visibly differ is lying until something happens to touch one of them.
+    const user = userEvent.setup();
+    const { dispatch, first } = setup();
+    await openEditor(user, first.name);
+    await user.click(screen.getByRole("radio", { name: "Vinculados" }));
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    const call = dispatch.mock.calls.at(-1)?.[0] as {
+      patch: { left: { offsetX: number }; right: { offsetX: number } };
+    };
+    expect(call.patch.right.offsetX).toBe(-call.patch.left.offsetX);
+  });
+
+  it("mirrors each edit onto the other side while linked", async () => {
+    const user = userEvent.setup();
+    const { onPreview, first } = setup();
+    await openEditor(user, first.name);
+    await user.click(screen.getByRole("radio", { name: "Vinculados" }));
+    fireEvent.change(screen.getByLabelText("Ojo izquierdo · Rotación Z"), {
+      target: { value: "12" },
+    });
+    const last = onPreview.mock.calls.at(-1)?.[0] as {
+      left: { rotationZDeg: number };
+      right: { rotationZDeg: number };
+    };
+    // Roll is handed, so the mirror negates it (the same rule as FR-3.3).
+    expect(last.left.rotationZDeg).toBe(12);
+    expect(last.right.rotationZDeg).toBe(-12);
+  });
+
+  it("leaves the other side alone while independent", async () => {
+    const user = userEvent.setup();
+    const { onPreview, first } = setup();
+    await openEditor(user, first.name);
+    fireEvent.change(screen.getByLabelText("Ojo izquierdo · Rotación Z"), {
+      target: { value: "12" },
+    });
+    const last = onPreview.mock.calls.at(-1)?.[0] as {
+      right: { rotationZDeg: number };
+    };
+    expect(last.right.rotationZDeg).toBe(first.right.rotationZDeg);
+  });
+
+  it("edits an eye's offset as one place, on a pad per side (FR-4.1)", async () => {
+    const user = userEvent.setup();
+    const { onPreview, first } = setup();
+    await openEditor(user, first.name);
+    expect(screen.getAllByTestId("xy-pad")).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText("Ojo derecho · Desplazamiento X"), {
+      target: { value: "18" },
+    });
+    const last = onPreview.mock.calls.at(-1)?.[0] as {
+      right: { offsetX: number };
+    };
+    expect(last.right.offsetX).toBe(18);
+  });
+});
+
 describe("mood editor (FR-4.1, FR-4.3, FR-4.4)", () => {
   it("exposes all seven deltas for each eye", async () => {
     const user = userEvent.setup();

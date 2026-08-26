@@ -29,7 +29,8 @@ import type {
 import type { MoodSample } from "../../../domain/playback/LoopPlayer";
 import type { Action } from "../store";
 import type { MessageKey } from "../../i18n";
-import { Card, IconButton, Modal, RangeInput } from "../ui";
+import { IconButton, Modal, RangeInput, Segmented } from "../ui";
+import { XYPad } from "./moods/XYPad";
 import { useDragReorder } from "../dragReorder";
 
 export interface MoodsPanelProps {
@@ -49,74 +50,27 @@ export interface MoodsPanelProps {
 }
 
 /**
- * FR-4.1: the seven deltas a mood stores per eye, each with the range docs/05
- * §2 gives it and the unit it is measured in.
+ * FR-4.1: the seven deltas a mood stores per eye. The two offsets are edited
+ * on the pad and the rest as rows, but every control still needs a name, and
+ * the record is exhaustive by construction — a delta added to `MoodEye`
+ * without a label here fails typecheck rather than reaching the UI unnamed.
  */
-const MOOD_FIELDS: {
-  key: keyof MoodEye;
-  label: MessageKey;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-}[] = [
-  {
-    key: "rotationXDeg",
-    label: "common.rotationX",
-    min: -30,
-    max: 30,
-    step: 1,
-    unit: "°",
-  },
-  {
-    key: "rotationYDeg",
-    label: "common.rotationY",
-    min: -30,
-    max: 30,
-    step: 1,
-    unit: "°",
-  },
-  {
-    key: "rotationZDeg",
-    label: "common.rotationZ",
-    min: -30,
-    max: 30,
-    step: 1,
-    unit: "°",
-  },
-  {
-    key: "scaleX",
-    label: "look.scaleX",
-    min: 0.3,
-    max: 2,
-    step: 0.05,
-    unit: "×",
-  },
-  {
-    key: "scaleY",
-    label: "look.scaleY",
-    min: 0.3,
-    max: 2,
-    step: 0.05,
-    unit: "×",
-  },
-  {
-    key: "offsetX",
-    label: "look.offsetX",
-    min: -40,
-    max: 40,
-    step: 1,
-    unit: "u",
-  },
-  {
-    key: "offsetY",
-    label: "look.offsetY",
-    min: -40,
-    max: 40,
-    step: 1,
-    unit: "u",
-  },
-];
+const FIELD_LABELS: Record<keyof MoodEye, MessageKey> = {
+  rotationXDeg: "common.rotationX",
+  rotationYDeg: "common.rotationY",
+  rotationZDeg: "common.rotationZ",
+  scaleX: "look.scaleX",
+  scaleY: "look.scaleY",
+  offsetX: "look.offsetX",
+  offsetY: "look.offsetY",
+};
+
+/** docs/05 §2: how far from the resting anchor an eye may be nudged. */
+const OFFSET_RANGE = 40;
+
+/** Fixed decimals so a row does not reflow as its neighbour is dragged. */
+const scale = (v: number): string => v.toFixed(2);
+const degrees = (v: number): string => `${String(Math.round(v))}°`;
 
 /** Fallback swatch when a channel is switched on and has nothing to show yet. */
 const DEFAULT_OVERRIDE = "#6c7bff";
@@ -491,6 +445,12 @@ function MoodEditor({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  /**
+   * An editing mode, not a stored property: while it is on, every edit to one
+   * eye is mirrored onto the other as it is made. Off by default, because a
+   * mood whose two eyes differ is most of what makes a mood.
+   */
+  const [linked, setLinked] = useState(false);
   const override = draft.colorOverride;
   const setOverride = (next: ColorOverride) => {
     onChange({ ...draft, colorOverride: next });
@@ -510,7 +470,7 @@ function MoodEditor({
 
   return (
     <Modal
-      title={t("moods.edit")}
+      title={t("moods.editTitle")}
       closeLabel={t("common.close")}
       onClose={onCancel}
       footer={
@@ -541,87 +501,134 @@ function MoodEditor({
           onChange={(e) => {
             onChange({ ...draft, name: e.target.value });
           }}
-          className="mt-1 w-full rounded-field border border-line bg-panel px-2 py-1.5 text-xs text-ink"
+          className="mt-1 w-full rounded-field border border-line bg-stage px-2.5 py-2 text-[12.5px] text-ink"
         />
       </label>
+
+      {/* Linked is an editing mode, not something the mood stores: it mirrors
+          each edit onto the other eye as it is made, which is the same rule
+          FR-3.3 applies to the resting face. `mirrorEye` is the one function
+          that knows which axes are handed, so both paths ask it. */}
+      <Segmented<"linked" | "free">
+        label={t("moods.eyeLink")}
+        value={linked ? "linked" : "free"}
+        options={[
+          { value: "linked", label: t("moods.linkedEyes") },
+          { value: "free", label: t("moods.independentEyes") },
+        ]}
+        onChange={(v) => {
+          const on = v === "linked";
+          setLinked(on);
+          // Turning it on brings the two sides into step at once, rather than
+          // leaving them apart until the next edit happens to touch one.
+          if (on) onChange({ ...draft, right: mirrorEye(draft.left) });
+        }}
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <EyeColumn
+          title={t("look.leftEye")}
+          eye={draft.left}
+          t={t}
+          onChange={(left) => {
+            onChange({
+              ...draft,
+              left,
+              ...(linked ? { right: mirrorEye(left) } : {}),
+            });
+          }}
+        />
+        <EyeColumn
+          title={t("look.rightEye")}
+          eye={draft.right}
+          t={t}
+          onChange={(right) => {
+            onChange({
+              ...draft,
+              right,
+              ...(linked ? { left: mirrorEye(right) } : {}),
+            });
+          }}
+        />
+      </div>
 
       <button
         type="button"
         onClick={() => {
           onChange({ ...draft, right: mirrorEye(draft.left) });
         }}
-        className="w-full rounded-field bg-panel px-2 py-1.5 text-xs text-ink transition-colors duration-150 ease-out hover:bg-panel-3"
+        className="flex w-full items-center justify-center gap-2 rounded-field border border-line bg-panel-2 px-2 py-2 text-xs text-ink transition-colors duration-150 ease-out hover:border-outline"
       >
+        <MirrorIcon />
         {t("moods.mirror")}
       </button>
 
-      <EyeCard
-        title={t("look.leftEye")}
-        eye={draft.left}
-        t={t}
-        onChange={(left) => {
-          onChange({ ...draft, left });
-        }}
-      />
-      <EyeCard
-        title={t("look.rightEye")}
-        eye={draft.right}
-        t={t}
-        onChange={(right) => {
-          onChange({ ...draft, right });
-        }}
-      />
-
-      <Card title={t("moods.colorOverride")}>
-        <OverrideRow
-          label={t("look.bodyColor")}
-          colorLabel={t("moods.overrideBodyColor")}
-          value={override?.body}
-          fallback={bubble.colors.body}
-          onToggle={(on) => {
-            setOverride(
-              withChannel(
-                "body",
-                on ? (override?.body ?? DEFAULT_OVERRIDE) : undefined,
-              ),
-            );
-          }}
-          onColor={(v) => {
-            setOverride(withChannel("body", v));
-          }}
-        />
-        <OverrideRow
-          label={t("look.eyeColor")}
-          colorLabel={t("moods.overrideEyesColor")}
-          value={override?.eyes}
-          fallback={bubble.colors.eyes}
-          onToggle={(on) => {
-            setOverride(
-              withChannel(
-                "eyes",
-                on ? (override?.eyes ?? DEFAULT_OVERRIDE) : undefined,
-              ),
-            );
-          }}
-          onColor={(v) => {
-            setOverride(withChannel("eyes", v));
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            setOverride(null);
-          }}
-          className="w-full rounded-field bg-panel px-2 py-1.5 text-xs text-ink-dim transition-colors duration-150 ease-out hover:text-ink"
-        >
-          {t("moods.clearOverride")}
-        </button>
-      </Card>
+      <div className="flex flex-col gap-2 rounded-[10px] border border-line bg-panel-2 p-2.5">
+        <div className="flex items-center gap-2">
+          <span className="flex-1 text-[9px] font-semibold tracking-[0.08em] text-ink-dim uppercase">
+            {t("moods.colorOverride")}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setOverride(null);
+            }}
+            className="text-[9.5px] text-accent transition-colors duration-150 ease-out hover:text-ink"
+          >
+            {t("moods.clearOverride")}
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <OverrideRow
+            label={t("look.bodyColor")}
+            colorLabel={t("moods.overrideBodyColor")}
+            value={override?.body}
+            fallback={bubble.colors.body}
+            onToggle={(on) => {
+              setOverride(
+                withChannel(
+                  "body",
+                  on ? (override?.body ?? DEFAULT_OVERRIDE) : undefined,
+                ),
+              );
+            }}
+            onColor={(v) => {
+              setOverride(withChannel("body", v));
+            }}
+          />
+          <OverrideRow
+            label={t("look.eyeColor")}
+            colorLabel={t("moods.overrideEyesColor")}
+            value={override?.eyes}
+            fallback={bubble.colors.eyes}
+            onToggle={(on) => {
+              setOverride(
+                withChannel(
+                  "eyes",
+                  on ? (override?.eyes ?? DEFAULT_OVERRIDE) : undefined,
+                ),
+              );
+            }}
+            onColor={(v) => {
+              setOverride(withChannel("eyes", v));
+            }}
+          />
+        </div>
+      </div>
     </Modal>
   );
 }
 
-function EyeCard({
+/**
+ * One eye, as the artboard lays it out: the offset as a place, then scale and
+ * rotation as compact rows.
+ *
+ * This was seven stacked sliders per eye — fourteen in a 360px column, which
+ * is a scroll tunnel where the only thing worth looking at is the stage
+ * behind it. The offset is now a pad, and the five that remain are one line
+ * each.
+ */
+function EyeColumn({
   title,
   eye,
   t,
@@ -632,38 +639,64 @@ function EyeCard({
   t: (k: MessageKey) => string;
   onChange: (next: MoodEye) => void;
 }) {
-  // Both eyes open: the common edit is to compare the two, and the card's own
-  // collapse is there for the user who wants one out of the way.
+  const row = (
+    key: keyof MoodEye,
+    axis: string,
+    min: number,
+    max: number,
+    step: number,
+    format: (v: number) => string,
+  ) => (
+    <span key={key} className="flex h-4.5 items-center gap-1.5">
+      <span className="w-2.5 text-[9.5px] text-ink-dim">{axis}</span>
+      <RangeInput
+        label={`${title} · ${t(FIELD_LABELS[key])}`}
+        value={eye[key]}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(v) => {
+          onChange({ ...eye, [key]: v });
+        }}
+        className="min-w-0 flex-1"
+      />
+      <span className="w-7 text-right text-[9.5px] tabular-nums">
+        {format(eye[key])}
+      </span>
+    </span>
+  );
+
   return (
-    <Card title={title}>
-      {MOOD_FIELDS.map((f) => {
-        // Both eyes carry the same seven fields, so each control names its
-        // side as well as its field — otherwise the two sets share a name.
-        const label = `${title} · ${t(f.label)}`;
-        return (
-          <label key={f.key} className="block text-xs">
-            <span className="flex justify-between text-ink-dim">
-              {t(f.label)}
-              <span className="tabular-nums text-ink">
-                {String(Math.round(eye[f.key] * 100) / 100)}
-                {f.unit}
-              </span>
-            </span>
-            <RangeInput
-              label={label}
-              value={eye[f.key]}
-              min={f.min}
-              max={f.max}
-              step={f.step}
-              onChange={(v) => {
-                onChange({ ...eye, [f.key]: v });
-              }}
-              className="mt-1 w-full"
-            />
-          </label>
-        );
-      })}
-    </Card>
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[9px] font-semibold tracking-[0.08em] text-ink-dim uppercase">
+        {title}
+      </span>
+
+      <XYPad
+        label={title}
+        xLabel={t("look.offsetX")}
+        yLabel={t("look.offsetY")}
+        x={eye.offsetX}
+        y={eye.offsetY}
+        range={OFFSET_RANGE}
+        onChange={(offsetX, offsetY) => {
+          onChange({ ...eye, offsetX, offsetY });
+        }}
+      />
+
+      <span className="mt-0.5 text-[9px] font-semibold tracking-[0.08em] text-ink-mute uppercase">
+        {t("common.scale")}
+      </span>
+      {row("scaleX", "X", 0.3, 2, 0.05, scale)}
+      {row("scaleY", "Y", 0.3, 2, 0.05, scale)}
+
+      <span className="mt-0.5 text-[9px] font-semibold tracking-[0.08em] text-ink-mute uppercase">
+        {t("common.rotation")}
+      </span>
+      {row("rotationXDeg", "X", -30, 30, 1, degrees)}
+      {row("rotationYDeg", "Y", -30, 30, 1, degrees)}
+      {row("rotationZDeg", "Z", -30, 30, 1, degrees)}
+    </div>
   );
 }
 
@@ -767,6 +800,28 @@ function TrashIcon() {
         fill="none"
         stroke="currentColor"
         strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MirrorIcon() {
+  return (
+    <svg viewBox="0 0 18 14" className="h-3 w-3.5" aria-hidden="true">
+      <path
+        d="M9 1.4v11.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeDasharray="2 2"
+      />
+      <path
+        d="M6.6 4 3.4 7l3.2 3M11.4 4l3.2 3-3.2 3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

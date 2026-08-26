@@ -147,22 +147,40 @@ Sections as collapsible cards:
 
 ### Moods
 
-**[built]** all of the above. The card grid with true mini-renders,
-click-to-preview on the stage, and a modal editor opened by double-click or
-from the card's kebab. The editor carries all seven deltas for each eye
-separately (FR-4.1) — rotation X and Y had reached the renderer long before
-any control set them — each with a translated label, its own range and a unit;
-a mirror action applying FR-3.3's handedness rule, so roll and yaw flip sign
-and pitch and the scales do not; rename; a colour override covering body and
-eyes independently with a clear action (FR-4.3); and Save / Cancel, where
-Cancel discards the draft and puts the saved mood back on the stage (FR-4.4).
-The kebab carries edit, duplicate, move up/down and delete-with-confirm, and
-cards reorder by dragging as well (FR-4.2).
+**[built]** all of the above, and the track redesign reshaped it twice.
 
-The editor is a modal scoped to the inspector column rather than the viewport,
-so the stage stays visible behind it. That is not a detail: the point of
-dragging a delta slider is watching the character change, and a full-screen
-dim would hide exactly what is being edited.
+The grid is three columns of true mini-renders, filterable by name (FR-4.9)
+with a count of what is on screen rather than of the library, and each card
+badged with how many loops play it (FR-4.8). Click previews on the stage
+(FR-4.4); double-click opens the editor.
+
+**Card actions live on a bar at the foot of the column, not on a kebab.** One
+of them has to say *why* it is unavailable: every one of the 24 starter moods
+is in at least one starter loop, so deleting any of them used to be offered,
+confirmed, and only then refused by the reducer with E_REF. The bar disables
+the control and names the reason (FR-4.8); FR-5.6 is unchanged and still the
+backstop for every path that does not go through this panel. The bar carries
+the mood's thumbnail, its name, how many loops use it, ↑/↓ — which were the
+kebab's keyboard path for reordering and are still the only one — edit,
+duplicate and delete-with-confirm. Cards also reorder by dragging (FR-4.2).
+
+**The editor is two XY pads, not fourteen sliders.** A per-eye offset is two
+numbers that mean one place, so it is dragged as one place, on a pad per eye
+that states the ±40u it spans; scale and rotation are one compact row each.
+The pad is a pointer affordance only — each axis also has a real range input,
+visually hidden, because a div that swallows arrow keys is not a control. A
+`Vinculados / Independientes` segmented control makes linking an editing
+mode: while it is on, every edit mirrors onto the other side as it is made,
+and turning it on brings the two into step at once rather than waiting for
+the next edit to touch one. Independent is the default, because two eyes that
+differ are most of what a mood is. The one-shot mirror action remains for the
+independent case, applying FR-3.3's handedness rule — roll and yaw flip sign,
+pitch and the scales do not. Rename, the colour override covering body and
+eyes independently with a clear action (FR-4.3), and Save / Cancel, where
+Cancel discards the draft and puts the saved mood back on the stage (FR-4.4).
+
+The whole editor now fits the column without scrolling, which is the point:
+the thing being judged is the stage behind it.
 
 - Grid of mood cards (mini stage render + name), `+` card. Click = preview on
   stage (FR-4.4); double-click = open **Mood editor** (modal over inspector):
@@ -171,6 +189,9 @@ dim would hide exactly what is being edited.
   (body/eyes optional swatches, "clear override"); Save / Cancel (cancel
   restores pre-edit stage, FR-4.4). Kebab on cards: duplicate, delete (blocked
   with toast if referenced — FR-5.6), reorder via drag.
+
+  _(The paragraph above this list is the description; the list is the original
+  target. The kebab and the slider stack are both gone.)_
 
 ### Loops
 

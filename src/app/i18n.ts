@@ -78,6 +78,12 @@ export type MessageKey =
   | "moods.mirror"
   | "moods.topUp"
   | "moods.topUpHint"
+  | "moods.editTitle"
+  | "moods.eyeLink"
+  | "moods.linkedEyes"
+  | "moods.independentEyes"
+  | "common.scale"
+  | "common.rotation"
   | "moods.search"
   | "moods.unused"
   | "moods.usedInOne"
@@ -249,6 +255,12 @@ const es: Record<MessageKey, string> = {
   "moods.topUp": "Añadir lo que falta",
   "moods.topUpHint":
     "La biblioteca creció desde que guardaste este proyecto. Añadir no cambia nada de lo que ya tienes.",
+  "moods.editTitle": "Editar ánimo",
+  "moods.eyeLink": "Vínculo entre ojos",
+  "moods.linkedEyes": "Vinculados",
+  "moods.independentEyes": "Independientes",
+  "common.scale": "Escala",
+  "common.rotation": "Rotación",
   "moods.search": "Buscar ánimo",
   "moods.unused": "Sin usar todavía",
   "moods.usedInOne": "Usado en 1 ciclo",
@@ -426,6 +438,12 @@ const en: Record<MessageKey, string> = {
   "moods.topUp": "Add what's missing",
   "moods.topUpHint":
     "The library has grown since this project was saved. Adding never changes what you already have.",
+  "moods.editTitle": "Edit mood",
+  "moods.eyeLink": "Eye linking",
+  "moods.linkedEyes": "Linked",
+  "moods.independentEyes": "Independent",
+  "common.scale": "Scale",
+  "common.rotation": "Rotation",
   "moods.search": "Search mood",
   "moods.unused": "Not used yet",
   "moods.usedInOne": "Used in 1 loop",
