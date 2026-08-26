@@ -78,6 +78,16 @@ export type MessageKey =
   | "moods.mirror"
   | "moods.topUp"
   | "moods.topUpHint"
+  | "moods.search"
+  | "moods.unused"
+  | "moods.usedInOne"
+  | "moods.usedIn"
+  | "moods.usedInMany"
+  | "moods.removeBlocked"
+  | "moods.noMatch"
+  | "moods.tray"
+  | "moods.trayHint"
+  | "moods.dropHint"
   | "moods.overrideBodyColor"
   | "moods.overrideEyesColor"
   | "common.save"
@@ -239,6 +249,16 @@ const es: Record<MessageKey, string> = {
   "moods.topUp": "Añadir lo que falta",
   "moods.topUpHint":
     "La biblioteca creció desde que guardaste este proyecto. Añadir no cambia nada de lo que ya tienes.",
+  "moods.search": "Buscar ánimo",
+  "moods.unused": "Sin usar todavía",
+  "moods.usedInOne": "Usado en 1 ciclo",
+  "moods.usedIn": "Usado en",
+  "moods.usedInMany": "ciclos",
+  "moods.removeBlocked": "No se puede borrar mientras un ciclo lo use",
+  "moods.noMatch": "Ningún ánimo con ese nombre",
+  "moods.tray": "Ánimos",
+  "moods.trayHint": "arrastra a la secuencia",
+  "moods.dropHint": "Suelta para insertar el paso",
   "moods.overrideBodyColor": "Color del cuerpo",
   "moods.overrideEyesColor": "Color de los ojos",
   "common.save": "Guardar",
@@ -406,6 +426,16 @@ const en: Record<MessageKey, string> = {
   "moods.topUp": "Add what's missing",
   "moods.topUpHint":
     "The library has grown since this project was saved. Adding never changes what you already have.",
+  "moods.search": "Search mood",
+  "moods.unused": "Not used yet",
+  "moods.usedInOne": "Used in 1 loop",
+  "moods.usedIn": "Used in",
+  "moods.usedInMany": "loops",
+  "moods.removeBlocked": "Cannot delete while a loop uses it",
+  "moods.noMatch": "No mood by that name",
+  "moods.tray": "Moods",
+  "moods.trayHint": "drag onto the sequence",
+  "moods.dropHint": "Drop to insert the step",
   "moods.overrideBodyColor": "Body color",
   "moods.overrideEyesColor": "Eye color",
   "common.save": "Save",

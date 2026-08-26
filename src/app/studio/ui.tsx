@@ -69,6 +69,23 @@ function Chevron({ open }: { open: boolean }) {
 }
 
 /**
+ * The scroll box a panel's stack of cards lives in.
+ *
+ * It used to wrap every panel from the shell. Two panels now end in a bar
+ * pinned to the foot of the column — the Moods selection bar, the Loops step
+ * editor — and a footer inside the scroller is a footer that scrolls away, so
+ * the shell hands each panel the whole column and the ones that are a plain
+ * stack put the scroller back on themselves.
+ */
+export function PanelScroll({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+      {children}
+    </div>
+  );
+}
+
+/**
  * Radio-group segmented control; the documented shape for small enum picks.
  *
  * An option may carry an `icon`, in which case the glyph is what is drawn and

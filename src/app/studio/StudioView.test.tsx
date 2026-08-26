@@ -293,28 +293,23 @@ describe("StudioView", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  it("deleting a referenced mood surfaces the E_REF error alert", async () => {
+  it("refuses to delete a referenced mood before it is attempted (FR-4.8)", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ánimos" }));
-    // Confirm first (docs/05 §3); the reducer is what refuses afterwards.
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => true),
-    );
-    await user.click(screen.getByRole("button", { name: "Acciones · happy" }));
-    await user.click(
-      within(screen.getByRole("menu", { name: "happy" })).getByRole(
-        "menuitem",
-        { name: "Eliminar" },
-      ),
-    );
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("No se puede eliminar");
+    // Every starter mood is in at least one starter loop, so this used to be
+    // the shortest path to an E_REF alert: confirm the delete, watch the
+    // reducer refuse it, read the refusal. The control now says so itself.
+    // FR-5.6 is unchanged and still the backstop — store.test.ts drives the
+    // reducer straight and asserts the E_REF it returns.
+    const bar = screen.getByTestId("mood-selection");
+    const remove = within(bar).getByRole("button", {
+      name: "No se puede borrar mientras un ciclo lo use",
+    });
+    expect(remove.hasAttribute("disabled")).toBe(true);
+    expect(within(bar).getByText("Usado en 6 ciclos")).toBeTruthy();
   });
 
-  // docs/05 §3: every destructive action confirms. Bubble delete and import
-  // already did; loop and mood delete applied immediately until this landed.
   it("asks for confirmation before deleting a loop", async () => {
     const user = userEvent.setup();
     render(<StudioView />);
@@ -374,22 +369,17 @@ describe("StudioView", () => {
     render(<StudioView />);
     await user.click(screen.getByRole("tab", { name: "Ánimos" }));
     // Every starter mood is referenced by a starter loop, so deleting one is
-    // blocked by E_REF (FR-5.6) whatever the confirmation says. Add a fresh
-    // mood so this test measures the confirmation gate and nothing else.
+    // refused outright (FR-4.8/FR-5.6). Add a fresh mood so this test measures
+    // the confirmation gate and nothing else.
     await user.click(screen.getByRole("button", { name: "+ Nuevo ánimo" }));
     // MoodsPanel names a new mood `mood ${kit.moods.length + 1}`; derive it
     // rather than re-hard-coding a number the starter library sets.
     const added = `mood ${String(starterKit().moods.length + 1)}`;
+    await user.click(screen.getByRole("button", { name: added }));
 
     const remove = async () => {
       await user.click(
-        screen.getByRole("button", { name: `Acciones · ${added}` }),
-      );
-      await user.click(
-        within(screen.getByRole("menu", { name: added })).getByRole(
-          "menuitem",
-          { name: "Eliminar" },
-        ),
+        screen.getByRole("button", { name: `Eliminar · ${added}` }),
       );
     };
 

@@ -8,6 +8,7 @@ import { MoodsPanel } from "./panels/MoodsPanel";
 import { LoopsPanel } from "./panels/LoopsPanel";
 import { SharePanel } from "./panels/SharePanel";
 import { useStudio } from "./store";
+import { PanelScroll } from "./ui";
 import { BubbleRail } from "./BubbleRail";
 import { Track } from "./Track";
 import { createStageClock } from "../stage/clock";
@@ -226,58 +227,64 @@ export function StudioView() {
             ))}
           </div>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-          {state.lastError && (
-            <p
-              role="alert"
-              className="rounded-field border border-danger/30 bg-danger/15 px-2.5 py-1.5 text-xs text-danger"
-            >
-              {state.lastError.code === "E_REF"
-                ? t("error.ref")
-                : t("error.generic")}
-            </p>
-          )}
+          <div className="flex min-h-0 flex-1 flex-col">
+            {state.lastError && (
+              <p
+                role="alert"
+                className="m-3 mb-0 shrink-0 rounded-field border border-danger/30 bg-danger/15 px-2.5 py-1.5 text-xs text-danger"
+              >
+                {state.lastError.code === "E_REF"
+                  ? t("error.ref")
+                  : t("error.generic")}
+              </p>
+            )}
 
-          {tab === "look" && (
-            <LookPanel bubble={bubble} dispatch={dispatch} t={t} />
-          )}
-          {tab === "moods" && (
-            <MoodsPanel
-              kit={kit}
-              dispatch={dispatch}
-              t={t}
-              bubble={bubble}
-              overlayHost={inspector}
-              onPreview={(sample) => {
-                setPreview(sample);
-                // Manual selection owns the live state (FR-6.1).
-                if (sample) {
-                  setTransport((tr) =>
-                    tr.mode === "playing" ? { ...tr, mode: "paused" } : tr,
-                  );
-                }
-              }}
-            />
-          )}
-          {tab === "loops" && (
-            <LoopsPanel
-              kit={kit}
-              dispatch={dispatch}
-              t={t}
-              selectedLoopId={selectedLoopId}
-              onSelectLoop={selectLoop}
-            />
-          )}
-          {tab === "share" && (
-            <SharePanel
-              bubble={bubble}
-              kit={kit}
-              doc={state.doc}
-              dispatch={dispatch}
-              overlayHost={inspector}
-              t={t}
-            />
-          )}
+            {tab === "look" && (
+              <PanelScroll>
+                <LookPanel bubble={bubble} dispatch={dispatch} t={t} />
+              </PanelScroll>
+            )}
+            {tab === "moods" && (
+              <MoodsPanel
+                kit={kit}
+                dispatch={dispatch}
+                t={t}
+                bubble={bubble}
+                overlayHost={inspector}
+                onPreview={(sample) => {
+                  setPreview(sample);
+                  // Manual selection owns the live state (FR-6.1).
+                  if (sample) {
+                    setTransport((tr) =>
+                      tr.mode === "playing" ? { ...tr, mode: "paused" } : tr,
+                    );
+                  }
+                }}
+              />
+            )}
+            {tab === "loops" && (
+              <PanelScroll>
+                <LoopsPanel
+                  kit={kit}
+                  dispatch={dispatch}
+                  t={t}
+                  selectedLoopId={selectedLoopId}
+                  onSelectLoop={selectLoop}
+                />
+              </PanelScroll>
+            )}
+            {tab === "share" && (
+              <PanelScroll>
+                <SharePanel
+                  bubble={bubble}
+                  kit={kit}
+                  doc={state.doc}
+                  dispatch={dispatch}
+                  overlayHost={inspector}
+                  t={t}
+                />
+              </PanelScroll>
+            )}
           </div>
         </aside>
       </div>
@@ -292,6 +299,7 @@ export function StudioView() {
         dispatch={dispatch}
         t={t}
         collapsed={trackCollapsed}
+        tray={tab === "moods"}
         selectedStepId={selectedStepId}
         onToggleCollapsed={() => {
           setTrackCollapsed((v) => !v);

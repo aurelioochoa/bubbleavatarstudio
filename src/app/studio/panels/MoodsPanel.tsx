@@ -1,5 +1,13 @@
-// Moods panel: a grid of true mini-renders, a per-card menu, and a modal
-// editor holding the relative per-eye deltas and the colour override (FR-4).
+// Moods panel: a searchable grid of true mini-renders, a selection bar that
+// acts on the one card in hand, and a modal editor holding the relative
+// per-eye deltas and the colour override (FR-4).
+//
+// The card actions used to hang off a per-card kebab. They live on the bar at
+// the foot of the column now, because one of them has to say *why* it is
+// unavailable: FR-4.8 disables deleting a mood some loop still plays, and a
+// menu that has to be opened to discover a refusal is a worse messenger than a
+// row that is always there. The bar keeps ↑/↓, which were the menu's keyboard
+// path for reordering (docs/05 §2) and are still the only one.
 //
 // Edits are cancelable (FR-4.4): the editor works on a draft that previews on
 // the stage every change and reaches the document only on Save. The modal is
@@ -8,6 +16,7 @@
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { libraryGap } from "../../../domain/document/library";
+import { moodUsage } from "../../../domain/document/summary";
 import { moodScene } from "../../../render/scene";
 import { sceneToSvg } from "../../../render/svg";
 import type {
@@ -20,7 +29,7 @@ import type {
 import type { MoodSample } from "../../../domain/playback/LoopPlayer";
 import type { Action } from "../store";
 import type { MessageKey } from "../../i18n";
-import { Card, Menu, MenuItem, Modal, RangeInput } from "../ui";
+import { Card, IconButton, Modal, RangeInput } from "../ui";
 import { useDragReorder } from "../dragReorder";
 
 export interface MoodsPanelProps {
@@ -146,13 +155,22 @@ export function MoodsPanel({
   const [selected, setSelected] = useState<string | null>(
     kit.moods[0]?.id ?? null,
   );
-  const [menuFor, setMenuFor] = useState<string | null>(null);
+  /** FR-4.9: the filter over the grid; matched on name, nothing else. */
+  const [query, setQuery] = useState("");
   /** The mood being edited, as a draft; null when the editor is closed. */
   const [draft, setDraft] = useState<Mood | null>(null);
 
   /** FR-4.5: cards show the mood on the real character, not an icon. */
-  const thumbnail = (sample: MoodSample): string =>
-    sceneToSvg(moodScene(bubble, sample), { background: null, size: 44 });
+  const thumbnail = (sample: MoodSample, size = 54): string =>
+    sceneToSvg(moodScene(bubble, sample), { background: null, size });
+
+  /** FR-4.8: how many loops each mood is in, measured once per kit change. */
+  const usage = useMemo(() => moodUsage(kit), [kit]);
+  const needle = query.trim().toLowerCase();
+  const shown =
+    needle === ""
+      ? kit.moods
+      : kit.moods.filter((m) => m.name.toLowerCase().includes(needle));
 
   const select = (id: string) => {
     setSelected(id);
@@ -161,7 +179,6 @@ export function MoodsPanel({
   };
 
   const openEditor = (mood: Mood) => {
-    setMenuFor(null);
     setSelected(mood.id);
     setDraft(structuredClone(mood));
     onPreview(sampleOf(mood));
@@ -224,142 +241,220 @@ export function MoodsPanel({
     const next = [...ids];
     [next[index], next[to]] = [ids[to], ids[index]] as [string, string];
     reorder(next);
-    setMenuFor(null);
   };
 
+  /** What the bar says about the selected mood, and what blocks its delete. */
+  const usedLabel = (n: number): string =>
+    n === 0
+      ? t("moods.unused")
+      : n === 1
+        ? t("moods.usedInOne")
+        : `${t("moods.usedIn")} ${String(n)} ${t("moods.usedInMany")}`;
+
+  const current = kit.moods.find((m) => m.id === selected) ?? null;
+  const currentIndex = current
+    ? kit.moods.findIndex((m) => m.id === current.id)
+    : -1;
+
   return (
-    <div className="space-y-3">
-      <ul className="grid grid-cols-4 gap-1.5">
-        {kit.moods.map((m, i) => (
-          <li
-            key={m.id}
-            {...drag.itemProps(m.id)}
-            className="relative data-[dragging]:opacity-40"
-          >
-            <button
-              type="button"
-              onClick={() => {
-                select(m.id);
-              }}
-              onDoubleClick={() => {
-                openEditor(m);
-              }}
-              className={`flex w-full flex-col items-center gap-1 rounded-field p-1.5 text-[10px] transition-colors duration-150 ease-out ${
-                m.id === selected
-                  ? "bg-primary text-white"
-                  : "bg-panel-2 text-ink-dim hover:text-ink"
-              }`}
-            >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none block h-11 w-11"
-                dangerouslySetInnerHTML={{ __html: thumbnail(sampleOf(m)) }}
-              />
-              <span className="w-full truncate text-center">{m.name}</span>
-            </button>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* FR-4.9. The count is of what is on screen, so a filter says how much
+          it left behind rather than repeating the library's size. */}
+      <div className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2.5">
+        <span className="flex min-w-0 flex-1 items-center gap-2 rounded-field border border-line bg-stage px-2.5">
+          <SearchIcon />
+          <input
+            type="search"
+            value={query}
+            aria-label={t("moods.search")}
+            placeholder={t("moods.search")}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
+            className="min-w-0 flex-1 bg-transparent py-1.5 text-xs text-ink outline-none placeholder:text-ink-mute"
+          />
+        </span>
+        <span
+          data-testid="mood-count"
+          className="shrink-0 rounded-full bg-panel-2 px-2.5 py-1 text-[10px] tabular-nums text-ink-dim"
+        >
+          {shown.length}
+        </span>
+      </div>
 
-            <button
-              type="button"
-              aria-label={`${t("moods.menu")} · ${m.name}`}
-              title={t("moods.menu")}
-              aria-haspopup="menu"
-              aria-expanded={menuFor === m.id}
-              onClick={() => {
-                setMenuFor((cur) => (cur === m.id ? null : m.id));
-              }}
-              className="absolute top-0.5 right-0.5 grid h-4 w-4 place-items-center rounded-full border border-line bg-panel text-[9px] leading-none text-ink-dim opacity-60 transition-opacity duration-150 ease-out hover:opacity-100 focus-visible:opacity-100"
-            >
-              ⋯
-            </button>
-
-            {menuFor === m.id && (
-              <Menu
-                label={m.name}
-                onClose={() => {
-                  setMenuFor(null);
-                }}
-                className="absolute top-full left-0 z-20 mt-1 w-40"
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3">
+        <ul className="grid grid-cols-3 gap-2">
+          {shown.map((m) => {
+            const used = usage[m.id] ?? 0;
+            return (
+              <li
+                key={m.id}
+                {...drag.itemProps(m.id)}
+                data-testid="mood-card"
+                data-mood-id={m.id}
+                className="relative data-[dragging]:opacity-40"
               >
-                <MenuItem
-                  label={t("moods.edit")}
+                <button
+                  type="button"
+                  aria-pressed={m.id === selected}
                   onClick={() => {
+                    select(m.id);
+                  }}
+                  onDoubleClick={() => {
                     openEditor(m);
                   }}
-                />
-                <MenuItem
-                  label={t("common.duplicate")}
-                  onClick={() => {
-                    dispatch({ type: "mood/duplicate", moodId: m.id });
-                    setMenuFor(null);
-                  }}
-                />
-                <MenuItem
-                  label={t("moods.moveUp")}
-                  disabled={i === 0}
-                  onClick={() => {
-                    move(i, i - 1);
-                  }}
-                />
-                <MenuItem
-                  label={t("moods.moveDown")}
-                  disabled={i === kit.moods.length - 1}
-                  onClick={() => {
-                    move(i, i + 1);
-                  }}
-                />
-                <MenuItem
-                  label={t("common.remove")}
-                  danger
-                  onClick={() => {
-                    setMenuFor(null);
-                    // docs/05 §3: destructive actions confirm. A referenced
-                    // mood is still refused afterwards (E_REF, FR-5.6).
-                    if (!globalThis.confirm(t("confirm.removeMood"))) return;
-                    dispatch({ type: "mood/remove", moodId: m.id });
-                    setSelected(
-                      kit.moods.find((x) => x.id !== m.id)?.id ?? null,
-                    );
-                  }}
-                />
-              </Menu>
-            )}
-          </li>
-        ))}
-        <li>
+                  className={`flex w-full flex-col items-center gap-1.5 rounded-[10px] px-1 pt-2.5 pb-2 text-[10.5px] transition-colors duration-150 ease-out ${
+                    m.id === selected
+                      ? "bg-panel-3 font-semibold text-ink shadow-[inset_0_0_0_1.5px_var(--color-brand)]"
+                      : "bg-panel-2 text-ink-dim shadow-[inset_0_0_0_1px_var(--color-line)] hover:text-ink"
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none block h-13.5 w-13.5"
+                    dangerouslySetInnerHTML={{ __html: thumbnail(sampleOf(m)) }}
+                  />
+                  <span className="w-full truncate text-center">{m.name}</span>
+                </button>
+
+                {used > 0 && (
+                  <span
+                    data-testid="usage-badge"
+                    title={usedLabel(used)}
+                    className="pointer-events-none absolute top-1.5 right-1.5 rounded-full bg-panel px-1.5 text-[8.5px] tabular-nums text-ink-dim"
+                  >
+                    {used}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+          {needle === "" && (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch({
+                    type: "mood/add",
+                    name: `mood ${String(kit.moods.length + 1)}`,
+                  });
+                }}
+                className="flex h-full min-h-[5.5rem] w-full items-center justify-center rounded-[10px] border border-dashed border-line px-1 text-center text-[10px] leading-tight text-ink-dim transition-colors duration-150 ease-out hover:border-primary hover:text-ink"
+              >
+                + {t("moods.add")}
+              </button>
+            </li>
+          )}
+        </ul>
+
+        {shown.length === 0 && (
+          <p className="py-6 text-center text-xs text-ink-mute">
+            {t("moods.noMatch")}
+          </p>
+        )}
+
+        {gap.moods + gap.loops > 0 && (
+          <div className="rounded-card border border-dashed border-line bg-panel-2 p-3">
+            <p className="text-[11px] leading-snug text-ink-dim">
+              {t("moods.topUpHint")}
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-xs tabular-nums text-ink">
+                {gapLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch({ type: "library/topUp" });
+                }}
+                className="shrink-0 rounded-field bg-primary px-3 py-1.5 text-xs text-white transition-colors duration-150 ease-out hover:bg-primary-hi"
+              >
+                {t("moods.topUp")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* FR-4.8: the bar acts on the card in hand, and says what it cannot do
+          before the reducer would have to refuse it. */}
+      {current && (
+        <div
+          data-testid="mood-selection"
+          className="flex shrink-0 items-center gap-2 border-t border-line bg-panel-2 px-3 py-2.5"
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none block h-7.5 w-7.5 shrink-0"
+            dangerouslySetInnerHTML={{
+              __html: thumbnail(sampleOf(current), 30),
+            }}
+          />
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate text-xs font-semibold">
+              {current.name}
+            </span>
+            <span className="truncate text-[9.5px] text-ink-mute">
+              {usedLabel(usage[current.id] ?? 0)}
+            </span>
+          </span>
+
+          <IconButton
+            label={`${t("moods.moveUp")} · ${current.name}`}
+            disabled={currentIndex <= 0}
+            onClick={() => {
+              move(currentIndex, currentIndex - 1);
+            }}
+          >
+            ↑
+          </IconButton>
+          <IconButton
+            label={`${t("moods.moveDown")} · ${current.name}`}
+            disabled={currentIndex < 0 || currentIndex >= kit.moods.length - 1}
+            onClick={() => {
+              move(currentIndex, currentIndex + 1);
+            }}
+          >
+            ↓
+          </IconButton>
           <button
             type="button"
             onClick={() => {
-              dispatch({
-                type: "mood/add",
-                name: `mood ${String(kit.moods.length + 1)}`,
-              });
+              openEditor(current);
             }}
-            className="flex min-h-[4.25rem] w-full items-center justify-center rounded-field border border-dashed border-line px-1 text-center text-[10px] leading-tight text-ink-dim transition-colors duration-150 ease-out hover:border-primary hover:text-ink"
+            className="shrink-0 rounded-field bg-primary px-2.5 py-1.5 text-[11px] text-white transition-colors duration-150 ease-out hover:bg-primary-hi"
           >
-            + {t("moods.add")}
+            {t("moods.edit")}
           </button>
-        </li>
-      </ul>
-
-      {gap.moods + gap.loops > 0 && (
-        <div className="rounded-card border border-dashed border-line bg-panel-2 p-3">
-          <p className="text-[11px] leading-snug text-ink-dim">
-            {t("moods.topUpHint")}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="min-w-0 flex-1 truncate text-xs tabular-nums text-ink">
-              {gapLabel}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                dispatch({ type: "library/topUp" });
-              }}
-              className="shrink-0 rounded-field bg-primary px-3 py-1.5 text-xs text-white transition-colors duration-150 ease-out hover:bg-primary-hi"
-            >
-              {t("moods.topUp")}
-            </button>
-          </div>
+          <IconButton
+            label={`${t("common.duplicate")} · ${current.name}`}
+            onClick={() => {
+              dispatch({ type: "mood/duplicate", moodId: current.id });
+            }}
+          >
+            <DuplicateIcon />
+          </IconButton>
+          <IconButton
+            label={
+              (usage[current.id] ?? 0) > 0
+                ? t("moods.removeBlocked")
+                : `${t("common.remove")} · ${current.name}`
+            }
+            danger
+            disabled={(usage[current.id] ?? 0) > 0}
+            onClick={() => {
+              // docs/05 §3: destructive actions confirm. FR-5.6's E_REF is
+              // still the backstop; this only stops the user reaching a
+              // refusal the panel could already see coming.
+              if (!globalThis.confirm(t("confirm.removeMood"))) return;
+              dispatch({ type: "mood/remove", moodId: current.id });
+              setSelected(
+                kit.moods.find((x) => x.id !== current.id)?.id ?? null,
+              );
+            }}
+          >
+            <TrashIcon />
+          </IconButton>
         </div>
       )}
 
@@ -611,5 +706,70 @@ function OverrideRow({
         className="h-7 w-12 shrink-0 cursor-pointer rounded-field border border-line bg-panel disabled:opacity-40"
       />
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-3 w-3 shrink-0 text-ink-dim"
+      aria-hidden="true"
+    >
+      <circle
+        cx="7"
+        cy="7"
+        r="4.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M10.4 10.4 13.6 13.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function DuplicateIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
+      <rect
+        x="5.4"
+        y="2.4"
+        width="8.2"
+        height="8.2"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path
+        d="M10.6 13.6H4.4a2 2 0 0 1-2-2V5.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
+      <path
+        d="M2.8 4.4h10.4M6.4 4.4V3a1 1 0 0 1 1-1h1.2a1 1 0 0 1 1 1v1.4M4.2 4.4l.6 8a1.4 1.4 0 0 0 1.4 1.3h3.6a1.4 1.4 0 0 0 1.4-1.3l.6-8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

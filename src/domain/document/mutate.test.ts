@@ -299,6 +299,71 @@ describe("FR-5 loops", () => {
     ).toBe(false);
   });
 
+  // FR-5.10: a mood dragged onto the sequence lands where it was dropped, not
+  // at the end. The index is where the new step ends up, counted before it is
+  // inserted, so dropping "at 0" puts it first.
+  it("inserts a step at the index it is given", () => {
+    const base = doc0();
+    const bubbleId = base.bubbles[0].id;
+    const loopId = base.starterKit.loops[0].id;
+    const moodId = base.starterKit.moods[3].id;
+    const before = kitOf(base, bubbleId).loops[0].steps.map((s) => s.moodId);
+    const after = unwrap(
+      addStep(
+        base,
+        bubbleId,
+        loopId,
+        { moodId, holdMs: 500, transition: "ease" },
+        { random: seedRandom() },
+        1,
+      ),
+    );
+    const steps = kitOf(after, bubbleId).loops[0].steps.map((s) => s.moodId);
+    expect(steps).toEqual([before[0], moodId, ...before.slice(1)]);
+  });
+
+  it("appends when no index is given, as it always did", () => {
+    const base = doc0();
+    const bubbleId = base.bubbles[0].id;
+    const loopId = base.starterKit.loops[0].id;
+    const moodId = base.starterKit.moods[3].id;
+    const after = unwrap(
+      addStep(
+        base,
+        bubbleId,
+        loopId,
+        { moodId, holdMs: 500, transition: "ease" },
+        { random: seedRandom() },
+      ),
+    );
+    expect(kitOf(after, bubbleId).loops[0].steps.at(-1)?.moodId).toBe(moodId);
+  });
+
+  it("clamps an index past either end rather than dropping the step", () => {
+    // A drop at the far right of the strip is one past the last chip, and a
+    // drag that leaves the strip entirely reports a negative index.
+    const base = doc0();
+    const bubbleId = base.bubbles[0].id;
+    const loopId = base.starterKit.loops[0].id;
+    const moodId = base.starterKit.moods[3].id;
+    const insert = (at: number) =>
+      kitOf(
+        unwrap(
+          addStep(
+            base,
+            bubbleId,
+            loopId,
+            { moodId, holdMs: 500, transition: "ease" },
+            { random: seedRandom() },
+            at,
+          ),
+        ),
+        bubbleId,
+      ).loops[0].steps;
+    expect(insert(99).at(-1)?.moodId).toBe(moodId);
+    expect(insert(-4).at(0)?.moodId).toBe(moodId);
+  });
+
   it("steps reference moods by id; unknown mood is E_REF", () => {
     const base = doc0();
     const moodId = base.starterKit.moods[0].id;

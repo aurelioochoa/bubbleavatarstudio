@@ -518,6 +518,14 @@ export function addStep(
   loopId: string,
   step: Omit<LoopStep, "id">,
   deps?: MutationDeps,
+  /**
+   * FR-5.10: where the new step lands, counted before it is inserted — `0`
+   * makes it first. Absent, it is appended, which is what every caller but a
+   * drop onto the timeline wants. Out of range clamps rather than failing: a
+   * drop past the last chip means "after everything", and that is a
+   * well-formed intent, not an error.
+   */
+  at?: number,
 ): MutationResult {
   const ctx: Ctx = { doc, deps: deps ?? {} };
   const bubble = doc.bubbles.find((b) => b.id === bubbleId);
@@ -529,10 +537,15 @@ export function addStep(
     return fail("E_REF", `mood ${step.moodId}`);
   }
   return withOwnKit(ctx, bubbleId, (kit2) =>
-    mapLoop(kit2, loopId, (l) => ({
-      ...l,
-      steps: [...l.steps, { ...step, id: id(ctx, "stp") }],
-    })),
+    mapLoop(kit2, loopId, (l) => {
+      const steps = [...l.steps];
+      const where =
+        at === undefined
+          ? steps.length
+          : Math.max(0, Math.min(at, steps.length));
+      steps.splice(where, 0, { ...step, id: id(ctx, "stp") });
+      return { ...l, steps };
+    }),
   );
 }
 

@@ -30,6 +30,7 @@ interface Overrides {
   loopId?: string | null;
   kit?: (base: Kit) => Kit;
   collapsed?: boolean;
+  tray?: boolean;
   selectedStepId?: string | null;
   onToggleCollapsed?: () => void;
   onSelectStep?: (stepId: string | null) => void;
@@ -59,6 +60,7 @@ function setup(over: Overrides = {}) {
       dispatch={dispatch}
       t={translator("es")}
       collapsed={over.collapsed ?? false}
+      tray={over.tray ?? false}
       selectedStepId={over.selectedStepId ?? null}
       onToggleCollapsed={over.onToggleCollapsed ?? (() => {})}
       onSelectStep={over.onSelectStep ?? (() => {})}
@@ -227,6 +229,7 @@ describe("Track timeline (FR-6.7)", () => {
           dispatch={vi.fn()}
           t={translator("es")}
           collapsed={false}
+          tray={false}
           selectedStepId={null}
           onToggleCollapsed={() => {}}
           onSelectStep={() => {}}
@@ -501,5 +504,137 @@ describe("Track grips (FR-5.9)", () => {
       .getAllByTestId("step-grip")
       .map((g) => !g.className.includes("opacity-0"));
     expect(lit).toEqual([true, true, false]);
+  });
+});
+
+// FR-5.10: the tray puts the mood library on the track, so a loop can be built
+// with the sequence and the moods both in view. Before this, adding a step
+// meant remembering a thumbnail from a tab you were no longer looking at.
+function transfer() {
+  const data = new Map<string, string>();
+  return {
+    setData: (k: string, v: string) => data.set(k, v),
+    getData: (k: string) => data.get(k) ?? "",
+    effectAllowed: "",
+    dropEffect: "",
+  };
+}
+
+/**
+ * jsdom has no DragEvent, and Testing Library's own drag helpers do not carry
+ * `clientX` through to React's synthetic event — which is the only thing the
+ * drop cares about. Same shape as the pointer helper above: a plain event with
+ * the fields assigned as own properties.
+ */
+function fireDrag(
+  el: Element,
+  type: string,
+  props: { dataTransfer: unknown; clientX?: number },
+) {
+  const ev = new Event(type, { bubbles: true, cancelable: true });
+  Object.assign(ev, props);
+  fireEvent(el, ev);
+}
+
+/** Gives the chips a layout so a drop can be resolved to an index. */
+function measureChips(width = 100) {
+  screen.getAllByTestId("step-chip").forEach((chip, i) => {
+    chip.getBoundingClientRect = () =>
+      ({
+        left: i * width,
+        right: (i + 1) * width,
+        width,
+        top: 0,
+        bottom: 60,
+        height: 60,
+        x: i * width,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+  });
+}
+
+describe("Track mood tray (FR-5.10)", () => {
+  it("shows the tray only when the track is opened for it", () => {
+    setup({ kit: threeStepKit });
+    expect(screen.queryByTestId("tray-card")).toBeNull();
+    cleanup();
+    setup({ kit: threeStepKit, tray: true });
+    expect(screen.getAllByTestId("tray-card").length).toBeGreaterThan(0);
+  });
+
+  it("drops a mood into the sequence at the chip it was let go over", () => {
+    const { dispatch, kit } = setup({ kit: threeStepKit, tray: true });
+    measureChips();
+    const dataTransfer = transfer();
+    const card = screen.getAllByTestId("tray-card")[1];
+    const strip = screen.getByTestId("track-strip");
+    fireDrag(card, "dragstart", { dataTransfer });
+    // 150px is inside the second chip, past its midpoint.
+    fireDrag(strip, "dragover", { dataTransfer, clientX: 150 });
+    fireDrag(strip, "drop", { dataTransfer, clientX: 150 });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "step/add",
+      loopId: "loop_t",
+      step: { moodId: kit.moods[1]?.id, holdMs: 800, transition: "ease" },
+      at: 2,
+    });
+  });
+
+  it("drops past the last chip as an append", () => {
+    const { dispatch } = setup({ kit: threeStepKit, tray: true });
+    measureChips();
+    const dataTransfer = transfer();
+    fireDrag(screen.getAllByTestId("tray-card")[0], "dragstart", {
+      dataTransfer,
+    });
+    const strip = screen.getByTestId("track-strip");
+    fireDrag(strip, "dragover", { dataTransfer, clientX: 900 });
+    fireDrag(strip, "drop", { dataTransfer, clientX: 900 });
+    const call = dispatch.mock.calls.at(-1)?.[0] as { at: number };
+    expect(call.at).toBe(3);
+  });
+
+  it("shows where the step will land while the drag is over the strip", () => {
+    setup({ kit: threeStepKit, tray: true });
+    measureChips();
+    const dataTransfer = transfer();
+    fireDrag(screen.getAllByTestId("tray-card")[0], "dragstart", {
+      dataTransfer,
+    });
+    const strip = screen.getByTestId("track-strip");
+    expect(screen.queryByTestId("drop-marker")).toBeNull();
+    fireDrag(strip, "dragover", { dataTransfer, clientX: 120 });
+    expect(screen.getByTestId("drop-marker")).toBeTruthy();
+    // The marker sits between the chips it would separate.
+    const kids = [...(strip.children as unknown as HTMLElement[])];
+    expect(kids.indexOf(screen.getByTestId("drop-marker"))).toBe(1);
+  });
+
+  it("takes the marker away when the drag leaves the strip", () => {
+    setup({ kit: threeStepKit, tray: true });
+    measureChips();
+    const dataTransfer = transfer();
+    fireDrag(screen.getAllByTestId("tray-card")[0], "dragstart", {
+      dataTransfer,
+    });
+    const strip = screen.getByTestId("track-strip");
+    fireDrag(strip, "dragover", { dataTransfer, clientX: 120 });
+    fireDrag(strip, "dragleave", { dataTransfer });
+    expect(screen.queryByTestId("drop-marker")).toBeNull();
+  });
+
+  it("ignores a drop carrying something that is not a mood", () => {
+    // The mood grid's own reorder drags travel on the same MIME, and one that
+    // wandered onto the track must not silently become a step.
+    const { dispatch } = setup({ kit: threeStepKit, tray: true });
+    measureChips();
+    const dataTransfer = transfer();
+    dataTransfer.setData("text/plain", "mood_not_prefixed");
+    fireDrag(screen.getByTestId("track-strip"), "drop", {
+      dataTransfer,
+      clientX: 120,
+    });
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

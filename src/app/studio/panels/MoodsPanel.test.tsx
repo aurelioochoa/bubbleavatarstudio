@@ -1,6 +1,11 @@
-// Moods panel: the card grid, its per-card menu, and the modal editor
-// (FR-4.1 all seven deltas per eye, FR-4.2 CRUD and reorder, FR-4.3 the
-// optional colour override on body and eyes, FR-4.4 cancelable edits).
+// Moods panel: the searchable card grid (FR-4.9), the selection bar that acts
+// on the card in hand and pre-empts a delete FR-5.6 would refuse (FR-4.8), and
+// the modal editor (FR-4.1 all seven deltas per eye, FR-4.2 CRUD and reorder,
+// FR-4.3 the optional colour override on body and eyes, FR-4.4 cancelable
+// edits).
+//
+// The four cases that opened a per-card kebab now go through the bar, which is
+// where those actions moved.
 //
 // dispatch is a spy and the panel's fields are controlled by props, so each
 // case commits a whole value in one event rather than typing into a field
@@ -18,17 +23,19 @@ import { MoodsPanel } from "./MoodsPanel";
 import { createDefaultDocument } from "../../../domain/document/create";
 import { effectiveKit } from "../../../domain/document/mutate";
 import { translator } from "../../i18n";
+import type { Kit } from "../../../domain/document/types";
 
 beforeEach(cleanup);
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function setup() {
+function setup(over: { kit?: (base: Kit) => Kit } = {}) {
   const doc = createDefaultDocument();
   const bubble = doc.bubbles[0];
   if (!bubble) throw new Error("fixture missing bubble");
-  const kit = effectiveKit(bubble, doc);
+  const base = effectiveKit(bubble, doc);
+  const kit = over.kit ? over.kit(base) : base;
   const dispatch = vi.fn();
   const onPreview = vi.fn();
   render(
@@ -46,22 +53,30 @@ function setup() {
   return { kit, dispatch, onPreview, first, second };
 }
 
-const openMenu = async (
-  user: ReturnType<typeof userEvent.setup>,
-  name: string,
-) => {
-  await user.click(screen.getByRole("button", { name: `Acciones · ${name}` }));
-  return screen.getByRole("menu", { name });
+/** Puts a card in hand, which is what the selection bar acts on. */
+const pick = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+  await user.click(screen.getByRole("button", { name }));
+  return screen.getByTestId("mood-selection");
 };
 
 const openEditor = async (
   user: ReturnType<typeof userEvent.setup>,
   name: string,
 ) => {
-  const menu = await openMenu(user, name);
-  await user.click(within(menu).getByRole("menuitem", { name: "Editar" }));
+  const bar = await pick(user, name);
+  await user.click(within(bar).getByRole("button", { name: "Editar" }));
   return screen.getByRole("dialog");
 };
+
+/** A kit whose last mood no step names, so its delete is actually offered. */
+function withSpareMood(base: Kit): Kit {
+  const spare = base.moods[0];
+  if (!spare) throw new Error("fixture needs a mood");
+  return {
+    ...base,
+    moods: [...base.moods, { ...spare, id: "mood_spare", name: "libre" }],
+  };
+}
 
 describe("mood cards (FR-4.5, docs/05 §2)", () => {
   it("previews a mood on the stage when its card is clicked (FR-4.4)", async () => {
@@ -76,12 +91,14 @@ describe("mood cards (FR-4.5, docs/05 §2)", () => {
   });
 });
 
-describe("mood menu (FR-4.2)", () => {
-  it("duplicates from the menu", async () => {
+describe("mood selection bar (FR-4.2, FR-4.8)", () => {
+  it("duplicates the card in hand", async () => {
     const user = userEvent.setup();
     const { dispatch, first } = setup();
-    const menu = await openMenu(user, first.name);
-    await user.click(within(menu).getByRole("menuitem", { name: "Duplicar" }));
+    const bar = await pick(user, first.name);
+    await user.click(
+      within(bar).getByRole("button", { name: `Duplicar · ${first.name}` }),
+    );
     expect(dispatch).toHaveBeenCalledWith({
       type: "mood/duplicate",
       moodId: first.id,
@@ -91,8 +108,10 @@ describe("mood menu (FR-4.2)", () => {
   it("reorders by swapping with the neighbour, never by index alone", async () => {
     const user = userEvent.setup();
     const { dispatch, kit, first, second } = setup();
-    const menu = await openMenu(user, first.name);
-    await user.click(within(menu).getByRole("menuitem", { name: "Bajar" }));
+    const bar = await pick(user, first.name);
+    await user.click(
+      within(bar).getByRole("button", { name: `Bajar · ${first.name}` }),
+    );
     const ids = kit.moods.map((m) => m.id);
     expect(dispatch).toHaveBeenCalledWith({
       type: "mood/reorder",
@@ -103,35 +122,115 @@ describe("mood menu (FR-4.2)", () => {
   it("cannot move the first mood up", async () => {
     const user = userEvent.setup();
     const { first } = setup();
-    const menu = await openMenu(user, first.name);
+    const bar = await pick(user, first.name);
     expect(
-      within(menu)
-        .getByRole("menuitem", { name: "Subir" })
+      within(bar)
+        .getByRole("button", { name: `Subir · ${first.name}` })
         .hasAttribute("disabled"),
     ).toBe(true);
   });
 
-  it("confirms before deleting, and does nothing when refused (docs/05 §3)", async () => {
+  it("says how many loops the card in hand is in (FR-4.8)", async () => {
+    const user = userEvent.setup();
+    const { first } = setup();
+    const bar = await pick(user, first.name);
+    // `happy` opens six of the starter loops.
+    expect(within(bar).getByText("Usado en 6 ciclos")).toBeTruthy();
+  });
+
+  it("refuses a delete FR-5.6 would refuse, and says why (FR-4.8)", async () => {
     const user = userEvent.setup();
     const { dispatch, first } = setup();
+    const bar = await pick(user, first.name);
+    const blocked = within(bar).getByRole("button", {
+      name: "No se puede borrar mientras un ciclo lo use",
+    });
+    expect(blocked.hasAttribute("disabled")).toBe(true);
+    await user.click(blocked);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("confirms before deleting, and does nothing when refused (docs/05 §3)", async () => {
+    const user = userEvent.setup();
+    const { dispatch } = setup({ kit: withSpareMood });
     vi.stubGlobal(
       "confirm",
       vi.fn(() => false),
     );
-    const menu = await openMenu(user, first.name);
-    await user.click(within(menu).getByRole("menuitem", { name: "Eliminar" }));
+    const bar = await pick(user, "libre");
+    const remove = within(bar).getByRole("button", {
+      name: "Eliminar · libre",
+    });
+    await user.click(remove);
     expect(dispatch).not.toHaveBeenCalled();
 
     vi.stubGlobal(
       "confirm",
       vi.fn(() => true),
     );
-    const again = await openMenu(user, first.name);
-    await user.click(within(again).getByRole("menuitem", { name: "Eliminar" }));
+    await user.click(remove);
     expect(dispatch).toHaveBeenCalledWith({
       type: "mood/remove",
-      moodId: first.id,
+      moodId: "mood_spare",
     });
+  });
+});
+
+describe("mood grid (FR-4.8, FR-4.9)", () => {
+  it("counts what is on screen, not what the library holds", async () => {
+    const user = userEvent.setup();
+    const { kit } = setup();
+    expect(screen.getByTestId("mood-count").textContent).toBe(
+      String(kit.moods.length),
+    );
+    await user.type(screen.getByLabelText("Buscar ánimo"), "happy");
+    expect(screen.getByTestId("mood-count").textContent).toBe("1");
+  });
+
+  it("filters the grid by name, ignoring case (FR-4.9)", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.type(screen.getByLabelText("Buscar ánimo"), "CURIO");
+    // The badge sits inside the card, so read the name from its own node.
+    const shown = screen
+      .getAllByTestId("mood-card")
+      .map((c) => within(c).getByRole("button").textContent?.trim());
+    expect(shown).toEqual(["curious"]);
+  });
+
+  it("says so rather than showing an empty grid when nothing matches", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.type(screen.getByLabelText("Buscar ánimo"), "zzzz");
+    expect(screen.queryAllByTestId("mood-card")).toHaveLength(0);
+    expect(screen.getByText("Ningún ánimo con ese nombre")).toBeTruthy();
+  });
+
+  it("hides the add card while a filter is on", async () => {
+    // "+ Nuevo ánimo" under a filter would make a mood the filter then hides.
+    const user = userEvent.setup();
+    setup();
+    expect(screen.getByRole("button", { name: "+ Nuevo ánimo" })).toBeTruthy();
+    await user.type(screen.getByLabelText("Buscar ánimo"), "happy");
+    expect(screen.queryByRole("button", { name: "+ Nuevo ánimo" })).toBeNull();
+  });
+
+  it("badges a card with the number of loops that play it (FR-4.8)", () => {
+    const { first } = setup();
+    const card = screen
+      .getAllByTestId("mood-card")
+      .find((c) => c.dataset.moodId === first.id);
+    expect(
+      within(card as HTMLElement).getByTestId("usage-badge").textContent,
+    ).toBe("6");
+  });
+
+  it("leaves an unused mood unbadged rather than badging it zero", () => {
+    setup({ kit: withSpareMood });
+    const card = screen
+      .getAllByTestId("mood-card")
+      .find((c) => c.dataset.moodId === "mood_spare");
+    expect(within(card as HTMLElement).queryByTestId("usage-badge")).toBeNull();
   });
 });
 

@@ -24,6 +24,7 @@ import type {
   Kit,
   Loop,
   LoopStep,
+  Mood,
   PlaybackMode,
   TransitionStyle,
 } from "../../domain/document/types";
@@ -44,6 +45,8 @@ export interface TrackProps {
   t: (k: MessageKey) => string;
   /** FR-6.6: the Share tab is not editing a sequence, so the strip folds away. */
   collapsed: boolean;
+  /** FR-5.10: the Moods tab opens the tray, so a step can be dragged in. */
+  tray: boolean;
   /** The step the inspector is editing; owned above so both can name it. */
   selectedStepId: string | null;
   onToggleCollapsed: () => void;
@@ -63,6 +66,36 @@ export interface TrackProps {
  */
 const MIN_HOLD_MS = 50;
 const HOLD_STEP_MS = 50;
+
+/**
+ * FR-5.10. `text/plain` is the MIME jsdom and every browser agree on, so the
+ * payload is prefixed instead of typed: the mood grid reorders on the same
+ * MIME, and one of its drags wandering onto the strip must not become a step.
+ */
+const DRAG_TYPE = "text/plain";
+const MOOD_PREFIX = "bubble-mood:";
+
+function draggedMoodId(payload: string): string | null {
+  return payload.startsWith(MOOD_PREFIX)
+    ? payload.slice(MOOD_PREFIX.length)
+    : null;
+}
+
+/**
+ * Which gap in the sequence a pointer at `clientX` is over: the index of the
+ * first chip whose middle it has not yet passed, and one past the end when it
+ * has passed them all.
+ */
+function dropIndexAt(strip: HTMLElement | null, clientX: number): number {
+  const chips = strip
+    ? [...strip.querySelectorAll<HTMLElement>('[data-testid="step-chip"]')]
+    : [];
+  for (let i = 0; i < chips.length; i++) {
+    const box = chips[i].getBoundingClientRect();
+    if (clientX < box.left + box.width / 2) return i;
+  }
+  return chips.length;
+}
 
 const MODES: { value: PlaybackMode; label: MessageKey }[] = [
   { value: "loop", label: "loops.modeLoop" },
@@ -100,6 +133,7 @@ export function Track({
   dispatch,
   t,
   collapsed,
+  tray,
   selectedStepId,
   onToggleCollapsed,
   onSelectStep,
@@ -113,6 +147,8 @@ export function Track({
   const [adding, setAdding] = useState(false);
   /** The seam whose transition popover is open, by the step it leads into. */
   const [seamFor, setSeamFor] = useState<string | null>(null);
+  /** FR-5.10: where a mood being dragged over the strip would land. */
+  const [dropAt, setDropAt] = useState<number | null>(null);
   const stripRef = useRef<HTMLOListElement>(null);
 
   // A bubble switch can leave the selection pointing at another kit's loop;
@@ -148,7 +184,7 @@ export function Track({
   };
 
   return (
-    <TrackShell collapsed={collapsed} t={t}>
+    <TrackShell collapsed={collapsed} tray={tray && !collapsed} t={t}>
       {/* `w-full` so the trailing group's ml-auto reaches the right edge in
           both shells: collapsed, this row is a flex *item* rather than the
           whole column, and would otherwise shrink to its own content. */}
@@ -224,7 +260,14 @@ export function Track({
           )}
         </span>
 
-        {mode !== "stopped" && (
+        {dropAt !== null && (
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent/12 px-2.5 py-1 text-[10.5px] text-accent">
+            <DropIcon />
+            {t("moods.dropHint")} {dropAt + 1}
+          </span>
+        )}
+
+        {mode !== "stopped" && dropAt === null && (
           <span
             data-testid="track-elapsed"
             aria-label={t("track.elapsed")}
@@ -310,6 +353,8 @@ export function Track({
         </span>
       </div>
 
+      {!collapsed && tray && <MoodTray bubble={bubble} kit={kit} t={t} />}
+
       {!collapsed && (
         <div className="flex min-h-0 flex-1 items-stretch gap-2">
           <div
@@ -333,13 +378,40 @@ export function Track({
                 const at = (e.clientX - box.left) / box.width;
                 onScrub(Math.round(Math.min(1, Math.max(0, at)) * stripMs));
               }}
+              onDragOver={(e) => {
+                if (!tray) return;
+                // Without this the browser refuses the drop outright.
+                e.preventDefault();
+                setDropAt(dropIndexAt(stripRef.current, e.clientX));
+              }}
+              onDragLeave={() => {
+                setDropAt(null);
+              }}
+              onDrop={(e) => {
+                const at = dropAt ?? dropIndexAt(stripRef.current, e.clientX);
+                setDropAt(null);
+                const moodId = draggedMoodId(e.dataTransfer.getData(DRAG_TYPE));
+                // The mood grid reorders on the same MIME; a drag that wandered
+                // here from it must not silently become a step.
+                if (moodId === null) return;
+                dispatch({
+                  type: "step/add",
+                  loopId: loop.id,
+                  step: { moodId, holdMs: 800, transition: "ease" },
+                  at,
+                });
+              }}
               className="flex min-h-0 flex-1 gap-2"
             >
-              {loop.steps.map((step, i) => {
+              {/* The marker is a flex child rather than an overlay, so the
+                  chips part where the step would land — which is the whole
+                  point of showing it. */}
+              {loop.steps.flatMap((step, i) => {
                 // `.at` rather than an index: the last step has no next, and
                 // the index signature would type that away.
                 const next = loop.steps.at(i + 1) ?? null;
-                return (
+                return [
+                  ...(dropAt === i ? [<DropMarker key="drop" />] : []),
                   <StepChip
                     key={step.id}
                     bubble={bubble}
@@ -381,9 +453,10 @@ export function Track({
                     }}
                     stripRef={stripRef}
                     stripMs={stripMs}
-                  />
-                );
+                  />,
+                ];
               })}
+              {dropAt === loop.steps.length && <DropMarker key="drop-end" />}
             </ol>
 
             <Playhead clock={clock} loop={loop} stripMs={stripMs} />
@@ -441,10 +514,12 @@ export function Track({
  */
 function TrackShell({
   collapsed,
+  tray = false,
   t,
   children,
 }: {
   collapsed: boolean;
+  tray?: boolean;
   t: (k: MessageKey) => string;
   children: React.ReactNode;
 }) {
@@ -452,7 +527,11 @@ function TrackShell({
     <section
       aria-label={t("track.title")}
       className={`flex shrink-0 gap-2 border-t border-line bg-panel px-4 ${
-        collapsed ? "h-11 flex-row items-center" : "h-38 flex-col pt-2.5 pb-3"
+        collapsed
+          ? "h-11 flex-row items-center"
+          : tray
+            ? "h-53 flex-col pt-2.5 pb-3"
+            : "h-38 flex-col pt-2.5 pb-3"
       }`}
     >
       {children}
@@ -850,6 +929,21 @@ function PlusIcon() {
   );
 }
 
+function DropIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" aria-hidden="true">
+      <path
+        d="M8 2.6v7.6M5 7.4 8 10.4l3-3M3.2 12.8h9.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function BlinkIcon() {
   return (
     <svg viewBox="0 0 20 12" className="h-2.5 w-4" aria-hidden="true">
@@ -924,5 +1018,95 @@ function TransitionGlyph({ style }: { style: TransitionStyle }) {
     <svg viewBox="0 0 14 12" className="h-2.5 w-2.5" aria-hidden="true">
       <path d={d} {...common} />
     </svg>
+  );
+}
+
+/** Where a dragged mood would land, drawn between the chips it separates. */
+function DropMarker() {
+  return (
+    <li
+      data-testid="drop-marker"
+      aria-hidden="true"
+      className="w-[3px] shrink-0 self-stretch rounded-full bg-accent"
+    />
+  );
+}
+
+/**
+ * FR-5.10: the mood library, on the track.
+ *
+ * Building a loop used to mean holding a thumbnail in your head from a tab you
+ * were no longer looking at. Here the moods and the sequence they go into are
+ * on screen together, and one is dragged onto the other.
+ */
+function MoodTray({
+  bubble,
+  kit,
+  t,
+}: {
+  bubble: Bubble;
+  kit: Kit;
+  t: (k: MessageKey) => string;
+}) {
+  return (
+    <div className="flex shrink-0 flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-[9px] font-semibold tracking-[0.09em] text-ink-dim uppercase">
+          {t("moods.tray")}
+        </span>
+        <span aria-hidden="true" className="h-px flex-1 bg-line-soft" />
+        <span className="text-[9.5px] text-ink-mute">
+          {t("moods.trayHint")}
+        </span>
+      </div>
+      <div className="relative overflow-hidden">
+        <ul className="flex gap-1.5 overflow-x-auto pb-0.5">
+          {kit.moods.map((m) => (
+            <TrayCard key={m.id} bubble={bubble} mood={m} />
+          ))}
+        </ul>
+        {/* The lane scrolls; the fade says so without a scrollbar. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-14 bg-gradient-to-r from-transparent to-panel"
+        />
+      </div>
+    </div>
+  );
+}
+
+function TrayCard({ bubble, mood }: { bubble: Bubble; mood: Mood }) {
+  const thumb = useMemo(
+    () =>
+      sceneToSvg(
+        moodScene(bubble, {
+          left: mood.left,
+          right: mood.right,
+          colorOverride: mood.colorOverride,
+        }),
+        { background: null, size: 30 },
+      ),
+    [bubble, mood],
+  );
+  return (
+    <li
+      data-testid="tray-card"
+      data-mood-id={mood.id}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData(DRAG_TYPE, `${MOOD_PREFIX}${mood.id}`);
+      }}
+      className="flex w-13.5 shrink-0 cursor-grab flex-col items-center gap-1 rounded-[9px] bg-panel-2 px-0.5 py-1.5 active:cursor-grabbing"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none block h-7.5 w-7.5"
+        dangerouslySetInnerHTML={{ __html: thumb }}
+      />
+      <span className="max-w-12 truncate text-[8.5px] text-ink-dim">
+        {mood.name}
+      </span>
+    </li>
   );
 }

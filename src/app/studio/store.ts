@@ -53,7 +53,13 @@ export type Action =
     }
   | { type: "loop/remove"; loopId: string }
   | { type: "loop/duplicate"; loopId: string }
-  | { type: "step/add"; loopId: string; step: Parameters<typeof M.addStep>[3] }
+  | {
+      type: "step/add";
+      loopId: string;
+      step: Parameters<typeof M.addStep>[3];
+      /** Where it lands (FR-5.10); appended when absent. */
+      at?: number;
+    }
   | {
       type: "step/update";
       loopId: string;
@@ -145,7 +151,16 @@ export function studioReducer(state: StudioState, action: Action): StudioState {
     case "loop/duplicate":
       return apply(M.duplicateLoop(doc, bubbleId, action.loopId));
     case "step/add":
-      return apply(M.addStep(doc, bubbleId, action.loopId, action.step));
+      return apply(
+        M.addStep(
+          doc,
+          bubbleId,
+          action.loopId,
+          action.step,
+          undefined,
+          action.at,
+        ),
+      );
     case "step/update":
       return apply(
         M.updateStep(doc, bubbleId, action.loopId, action.stepId, action.patch),
