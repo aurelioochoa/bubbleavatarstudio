@@ -130,15 +130,21 @@ export interface Scene {
 }
 
 /**
- * Stage-only additions to a frame. Both default off at every layer, which is
- * what keeps snapshots, the ZIP, the runtime and all three goldens unaffected
- * by either of them (FR-8.4).
+ * Stage-only additions to a frame. All three default off at every layer, which
+ * is what keeps snapshots, the ZIP, the runtime and all three goldens
+ * unaffected by any of them (FR-8.4).
  */
 export interface SceneChrome {
   /** Draw the projection surface the face is anchored to (FR-8.4). */
   guide?: boolean;
   /** Draw the contact shadow under the character. */
   shadow?: boolean;
+  /**
+   * FR-8.6: where the eyes are looking, as an offset in the face frame — the
+   * cursor-follow's second half, added to the eye anchors before they are
+   * projected so the gaze rides the surface instead of sitting on the picture.
+   */
+  gaze?: { x: number; y: number };
 }
 
 /** Live (non-persisted) inputs for one frame. */
@@ -152,6 +158,8 @@ export interface LiveInput {
   guide?: boolean;
   /** Draw the contact shadow under the character. */
   shadow?: boolean;
+  /** Eye offset the cursor-follow asks for, in face-frame units (FR-8.6). */
+  gaze?: { x: number; y: number };
 }
 
 export const SCENE_SIZE = 512;
@@ -582,12 +590,19 @@ export function buildScene(bubble: Bubble, input: LiveInput): Scene {
     .map((x) => x.render);
 
   const eyeFill = moodColors?.eyes ?? bubble.colors.eyes;
+  // The gaze joins the idle drift in the same slot: both are live offsets on
+  // the flat face, and adding them here means the eye anchor is projected
+  // once, whatever moved it (FR-8.6).
+  const eyeOffset = {
+    x: live.ambient.eyeX + (live.gaze?.x ?? 0),
+    y: live.ambient.eyeY + (live.gaze?.y ?? 0),
+  };
   const left = {
     ...eyeRender(
       bubble,
       "left",
       live.mood.left,
-      { x: live.ambient.eyeX, y: live.ambient.eyeY },
+      eyeOffset,
       live.blink,
       projection,
     ),
@@ -598,7 +613,7 @@ export function buildScene(bubble: Bubble, input: LiveInput): Scene {
       bubble,
       "right",
       live.mood.right,
-      { x: live.ambient.eyeX, y: live.ambient.eyeY },
+      eyeOffset,
       live.blink,
       projection,
     ),

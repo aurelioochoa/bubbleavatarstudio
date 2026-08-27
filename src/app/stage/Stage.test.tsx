@@ -447,6 +447,14 @@ describe("Stage readout and hint (FR-8.2)", () => {
  */
 describe("follow the cursor (FR-8.6)", () => {
   const toggle = () => screen.getByRole("button", { name: "Seguir el cursor" });
+  /**
+   * A pointer at a point on the window. Built as a MouseEvent because jsdom's
+   * synthetic pointer events drop clientX/clientY, and coordinates are the
+   * whole content of the message the follow listens for.
+   */
+  const move = (clientX: number, clientY: number) => {
+    fireEvent(window, new MouseEvent("pointermove", { clientX, clientY }));
+  };
 
   it("offers the toggle, off to begin with", () => {
     setupStage();
@@ -471,6 +479,44 @@ describe("follow the cursor (FR-8.6)", () => {
     await user.click(toggle());
     const off = engineOf().update.mock.calls.at(-1)?.[0] as { follow: boolean };
     expect(off.follow).toBe(false);
+  });
+
+  it("gives the engine a gaze getter, so the eyes look too", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(toggle());
+    const on = engineOf().update.mock.calls.at(-1)?.[0] as {
+      gaze: () => { x: number; y: number } | null;
+    };
+    // Nothing to look at before the pointer has said where it is.
+    expect(on.gaze()).toBeNull();
+    // jsdom lays nothing out, so the stage measures 0×0 and every offset is
+    // already at the reach — which is exactly what makes the signs readable
+    // here without a browser.
+    move(40, 40);
+    const right = on.gaze();
+    expect(right?.x).toBeGreaterThan(0);
+    expect(right?.y).toBeGreaterThan(0);
+    move(-40, -40);
+    const left = on.gaze();
+    expect(left?.x).toBeLessThan(0);
+    expect(left?.y).toBeLessThan(0);
+  });
+
+  it("the intensity dial scales the gaze as well as the turn", async () => {
+    const user = userEvent.setup();
+    setupStage();
+    await user.click(toggle());
+    const on = engineOf().update.mock.calls.at(-1)?.[0] as {
+      gaze: () => { x: number; y: number } | null;
+    };
+    move(40, 40);
+    const full = on.gaze()?.x ?? 0;
+    fireEvent.change(screen.getByLabelText("Intensidad"), {
+      target: { value: "40" },
+    });
+    move(40, 40);
+    expect(on.gaze()?.x).toBeCloseTo(full * 0.4, 6);
   });
 
   it("a drag switches it off — direct manipulation wins (FR-8.1)", () => {

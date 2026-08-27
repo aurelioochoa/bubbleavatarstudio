@@ -5,7 +5,7 @@ import type { MoodSample } from "../../domain/playback/LoopPlayer";
 import { sceneToSvg } from "../../render/svg";
 import type { Bubble, Kit } from "../../domain/document/types";
 import type { StageClock } from "./clock";
-import { approachPose } from "../../domain/geometry/follow";
+import { approachGaze, approachPose } from "../../domain/geometry/follow";
 import type { HeadPose } from "../../domain/document/types";
 
 /**
@@ -15,7 +15,16 @@ import type { HeadPose } from "../../domain/document/types";
  * and low enough that a cursor thrown across the screen reads as a head
  * turning to look rather than as a jump cut.
  */
-const FOLLOW_EASE = 0.15;
+const FOLLOW_EASE = 0.2;
+
+/**
+ * The same, for the eyes — deliberately quicker than the head.
+ *
+ * That is the order the real thing happens in: eyes snap to what caught them
+ * and the head comes round after. Easing both at one rate reads as a mannequin
+ * turning, which is the opposite of the cue this is here to give.
+ */
+const GAZE_EASE = 0.4;
 
 /**
  * Transport state (FR-6.2). `paused` freezes the frame in place; `stopped`
@@ -53,6 +62,12 @@ export interface StageEngineOptions {
    * last rendered, which is `null` for the entire follow.
    */
   aim?: (() => { x: number; y: number } | null) | undefined;
+  /**
+   * Where the cursor is asking the *eyes* to look, in face-frame units. A
+   * getter for exactly the reason `aim` is one, and eased here for the reason
+   * the pose is: it changes every frame, and FR-11.2 keeps React out of that.
+   */
+  gaze?: (() => { x: number; y: number } | null) | undefined;
   /** Called once when following ends, with the pose the character came to rest in. */
   onFollowEnd?: ((head: HeadPose) => void) | undefined;
   /**
@@ -80,6 +95,12 @@ export class StageEngine {
   private unseek: (() => void) | null = null;
   /** The pose the follow owns while it runs; null when React owns it again. */
   private followPose: HeadPose | null = null;
+  /**
+   * The eased eye offset, for the length of the follow. Unlike the pose it is
+   * never handed back: a gaze is not an authored property of the character, so
+   * when the follow ends the eyes simply return to the face.
+   */
+  private gazeOffset: { x: number; y: number } | null = null;
 
   constructor(host: HTMLElement, opts: StageEngineOptions) {
     this.host = host;
@@ -95,6 +116,7 @@ export class StageEngine {
     // character eases on from its current pose instead of snapping to centre.
     if ((opts.follow ?? false) && !wasFollowing) {
       this.followPose = opts.headRotation;
+      this.gazeOffset = { x: 0, y: 0 };
     }
     // Leaving one hands the pose back exactly once. Without this the shell
     // still holds the pose from before the follow, and the character would
@@ -102,6 +124,7 @@ export class StageEngine {
     if (!(opts.follow ?? false) && wasFollowing) {
       const settled = this.followPose;
       this.followPose = null;
+      this.gazeOffset = null;
       if (settled) this.opts.onFollowEnd?.(settled);
     }
     this.renderFrame();
@@ -171,6 +194,20 @@ export class StageEngine {
     return this.followPose;
   }
 
+  /**
+   * The eye offset for this frame, or undefined when nothing is looking —
+   * which is what keeps `gaze` out of the scene, and every byte the exporters
+   * and goldens produce unchanged.
+   */
+  private stepGaze(): { x: number; y: number } | undefined {
+    const { follow, gaze } = this.opts;
+    if (!(follow ?? false) || !this.gazeOffset) return undefined;
+    const target = gaze?.() ?? null;
+    if (target)
+      this.gazeOffset = approachGaze(this.gazeOffset, target, GAZE_EASE);
+    return this.gazeOffset;
+  }
+
   private renderFrame(): void {
     this.advanceClocks(this.now());
     const { bubble, kit, loopId, mode, preview, guide } = this.opts;
@@ -178,7 +215,8 @@ export class StageEngine {
     // The stage is the one caller that asks for chrome: the guide when the
     // user toggles it, the contact shadow always — this is where the volume
     // is being judged, and the exported character has no ground to sit on.
-    const chrome = { guide, shadow: true };
+    const gaze = this.stepGaze();
+    const chrome = { guide, shadow: true, ...(gaze ? { gaze } : {}) };
     let scene;
     if (preview) {
       // Manual selection owns the live state while it lasts (FR-6.1).

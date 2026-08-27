@@ -279,9 +279,15 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
   head turning to look rather than as a cursor dragging it. Direct
   manipulation wins: starting a drag switches the follow off (FR-8.1), and the
   pose the character settled in is handed back rather than snapping away. The
-  roll is left alone; following aims a head, it does not tilt one. A slider appears
-  beside the toggle while it runs and scales how far the head reaches, from a
-  tenth of the full turn to all of it — strength is amplitude here, not speed.
+  roll is left alone; following aims a head, it does not tilt one. **The eyes
+  track as well as the head**, sliding across the face toward the pointer and
+  arriving ahead of the turn, the way eyes lead a head in life — the turn alone
+  is ambiguous at a glance against the idle motion, and the two together are
+  what make it plain the character is watching. The gaze is stage-only chrome
+  like the guide and the shadow: nothing exported carries it. A slider appears
+  beside the toggle while it runs and scales how far the head reaches and how
+  far the eyes slide, from a tenth of the full turn to all of it — strength is
+  amplitude here, not speed.
 - **FR-8.7** A stage toggle shows an orientation triad in the corner: three
   axes carried through the same rotation the character is, sorted back to
   front, each named by a letter as well as a colour so the reading never rests

@@ -3,7 +3,7 @@
 // arithmetic that decides where a character looks is testable without a
 // browser, and only the listener that feeds it needs one.
 import { describe, expect, it } from "vitest";
-import { approachPose, followTarget } from "./follow";
+import { approachGaze, approachPose, followGaze, followTarget } from "./follow";
 
 const LIMITS = { yaw: 32, pitch: 20 };
 const aim = (dx: number, dy: number) =>
@@ -97,5 +97,57 @@ describe("easing toward the aim", () => {
     const jumped = approachPose(here, target, 1);
     expect(jumped.x).toBeCloseTo(7, 6);
     expect(jumped.y).toBeCloseTo(-9, 6);
+  });
+});
+
+describe("gazing at the cursor", () => {
+  const RANGE = { x: 12, y: 8 };
+  const gaze = (dx: number, dy: number) =>
+    followGaze({ dx, dy, reach: 400, range: RANGE });
+
+  it("centres the eyes when the cursor is on the centre", () => {
+    expect(gaze(0, 0)).toEqual({ x: 0, y: 0 });
+  });
+
+  it("slides the eyes the way the cursor went", () => {
+    // Face-frame x runs right and y runs down, the same as the screen — so
+    // unlike the pitch, neither axis flips. The eyes go where the cursor is.
+    expect(gaze(200, 0).x).toBeGreaterThan(0);
+    expect(gaze(-200, 0).x).toBeLessThan(0);
+    expect(gaze(0, 200).y).toBeGreaterThan(0);
+    expect(gaze(0, -200).y).toBeLessThan(0);
+  });
+
+  it("reaches its range exactly at the stated reach, and stops there", () => {
+    expect(gaze(400, 0).x).toBeCloseTo(RANGE.x, 6);
+    expect(gaze(0, 400).y).toBeCloseTo(RANGE.y, 6);
+    expect(gaze(9999, 0).x).toBeCloseTo(RANGE.x, 6);
+    expect(gaze(0, -9999).y).toBeCloseTo(-RANGE.y, 6);
+  });
+
+  it("is proportional in between, so the eyes track rather than flick", () => {
+    expect(gaze(200, 0).x).toBeCloseTo(RANGE.x / 2, 6);
+    expect(gaze(0, 100).y).toBeCloseTo(RANGE.y / 4, 6);
+  });
+
+  it("treats a reach of zero as 'already there' rather than dividing by it", () => {
+    const g = followGaze({ dx: 5, dy: 5, reach: 0, range: RANGE });
+    expect(g).toEqual({ x: RANGE.x, y: RANGE.y });
+  });
+});
+
+describe("easing the gaze", () => {
+  it("moves a fraction of the way, not the whole way", () => {
+    expect(approachGaze({ x: 0, y: 0 }, { x: 10, y: -4 }, 0.5)).toEqual({
+      x: 5,
+      y: -2,
+    });
+  });
+
+  it("converges on the target without overshooting", () => {
+    let g = { x: 0, y: 0 };
+    for (let i = 0; i < 200; i++) g = approachGaze(g, { x: 12, y: 8 }, 0.4);
+    expect(g.x).toBeCloseTo(12, 6);
+    expect(g.y).toBeCloseTo(8, 6);
   });
 });

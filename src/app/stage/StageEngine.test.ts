@@ -171,3 +171,68 @@ describe("StageEngine transport (FR-6.1, FR-6.2)", () => {
     expect(host.innerHTML).toBe(firstFrame);
   });
 });
+
+/**
+ * FR-8.6: the eyes are the loud half of the follow. Like the aim, the gaze is
+ * read through a getter once a frame — a value handed to `update()` would be
+ * whatever React last rendered, which is nothing for the whole follow — and
+ * like the pose, it is eased here rather than in the tree (FR-11.2).
+ */
+describe("the gaze during a follow (FR-8.6)", () => {
+  /** Where the left eye group currently sits on the stage. */
+  function eyeX(host: HTMLElement): number {
+    const g = host.querySelector("#eye-left");
+    const m = /translate\((-?[\d.]+)/.exec(g?.getAttribute("transform") ?? "");
+    return Number(m?.[1] ?? "0");
+  }
+
+  function mount(gaze?: () => { x: number; y: number } | null) {
+    const { bubble, kit } = fixture();
+    const host = document.createElement("div");
+    // Ambient off: idle drift moves the eyes too, and the gaze is what is
+    // being measured here.
+    const still = { ...bubble, ambient: { ...bubble.ambient, enabled: false } };
+    const opts = {
+      bubble: still,
+      kit,
+      loopId: null,
+      mode: "stopped" as StageMode,
+      headRotation: { x: 0, y: 0, z: 0 },
+      preview: null,
+      guide: false,
+      follow: true,
+      aim: () => ({ x: 0, y: 0 }),
+      ...(gaze ? { gaze } : {}),
+    };
+    const engine = new StageEngine(host, { ...opts, follow: false });
+    engine.update({ ...opts, follow: false });
+    const resting = eyeX(host);
+    engine.update(opts);
+    return { host, engine, opts, resting };
+  }
+
+  it("leaves the eyes alone when nothing reports a cursor", () => {
+    const { host, engine, opts, resting } = mount();
+    for (let i = 0; i < 20; i++) engine.update(opts);
+    expect(eyeX(host)).toBeCloseTo(resting, 6);
+  });
+
+  it("eases the eyes toward the cursor rather than snapping them", () => {
+    const { host, engine, opts, resting } = mount(() => ({ x: 12, y: 0 }));
+    engine.update(opts);
+    const first = eyeX(host);
+    expect(first).toBeGreaterThan(resting);
+    // A single frame is a fraction of the way, so there is travel left.
+    expect(first).toBeLessThan(resting + 12);
+    for (let i = 0; i < 200; i++) engine.update(opts);
+    expect(eyeX(host)).toBeGreaterThan(first);
+  });
+
+  it("recentres the eyes when the follow ends", () => {
+    const { host, engine, opts, resting } = mount(() => ({ x: 12, y: 0 }));
+    for (let i = 0; i < 200; i++) engine.update(opts);
+    expect(eyeX(host)).toBeGreaterThan(resting);
+    engine.update({ ...opts, follow: false });
+    expect(eyeX(host)).toBeCloseTo(resting, 6);
+  });
+});

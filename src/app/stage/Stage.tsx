@@ -15,7 +15,7 @@ import type { MessageKey } from "../i18n";
 import type { StageClock } from "./clock";
 import { RangeInput } from "../studio/ui";
 import { wrapDeg } from "../../domain/geometry/angles";
-import { followTarget } from "../../domain/geometry/follow";
+import { followGaze, followTarget } from "../../domain/geometry/follow";
 import { triadSvg } from "../../render/axes";
 
 export interface StageProps {
@@ -103,10 +103,19 @@ export function Stage({
   const [intensity, setIntensity] = useState(100);
   const intensityRef = useRef(intensity);
   intensityRef.current = intensity;
+  // The gaze is measured against the eye it moves, and the pointer listener
+  // must not be rebuilt every time the character is edited — so the bubble
+  // reaches it the same way the intensity does.
+  const bubbleRef = useRef(bubble);
+  bubbleRef.current = bubble;
   // FR-8.7: the corner triad, off until asked for like every other overlay.
   const [axes, setAxes] = useState(false);
   const triadRef = useRef<HTMLDivElement>(null);
   const aimRef = useRef<{ x: number; y: number } | null>(null);
+  // FR-8.6: the eyes' half of the same gesture, written by the same handler
+  // and read by the engine the same way. Kept apart from the aim because the
+  // two are eased at different rates — eyes arrive first, the head follows.
+  const gazeRef = useRef<{ x: number; y: number } | null>(null);
   // FR-11.2: the pose moves every frame while following, and these three
   // numbers move with it. React renders them once from the prop; after that
   // the clock subscription below writes the text by hand, the same way the
@@ -115,6 +124,7 @@ export function Stage({
   // and a function so the engine sees the ref's current value rather than the
   // one React last rendered.
   const readAim = useCallback(() => aimRef.current, []);
+  const readGaze = useCallback(() => gazeRef.current, []);
   const readoutRefs = {
     x: useRef<HTMLSpanElement>(null),
     y: useRef<HTMLSpanElement>(null),
@@ -192,6 +202,7 @@ export function Stage({
   useEffect(() => {
     if (!follow) {
       aimRef.current = null;
+      gazeRef.current = null;
       return;
     }
     const onMove = (e: PointerEvent) => {
@@ -201,14 +212,25 @@ export function Stage({
       // Measured against the stage's own centre, but listening on the window:
       // the character should look at the pointer wherever it is on screen, not
       // only while it is over the stage.
+      const dx = e.clientX - (box.left + box.width / 2);
+      const dy = e.clientY - (box.top + box.height / 2);
+      // Half the stage's diagonal: the corners of the stage are where the
+      // turn saturates, which keeps the reach proportional to the room the
+      // character actually has rather than to the size of the monitor.
+      const reach = Math.hypot(box.width, box.height) / 2;
       aimRef.current = followTarget({
-        dx: e.clientX - (box.left + box.width / 2),
-        dy: e.clientY - (box.top + box.height / 2),
-        // Half the stage's diagonal: the corners of the stage are where the
-        // turn saturates, which keeps the reach proportional to the room the
-        // character actually has rather than to the size of the monitor.
-        reach: Math.hypot(box.width, box.height) / 2,
+        dx,
+        dy,
+        reach,
         limits: scaleLimits(intensityRef.current),
+      });
+      // Same offset, same reach: the eyes and the head saturate together, so
+      // the two halves of the look never disagree about where the cursor is.
+      gazeRef.current = followGaze({
+        dx,
+        dy,
+        reach,
+        range: gazeRange(bubbleRef.current, intensityRef.current),
       });
     };
     window.addEventListener("pointermove", onMove);
@@ -229,6 +251,7 @@ export function Stage({
       clock,
       follow,
       aim: readAim,
+      gaze: readGaze,
       onFollowEnd: onHead,
     });
   }, [
@@ -696,12 +719,30 @@ function FollowIcon() {
  * FR-8.6: the widest the head turns, at full intensity. The slider scales
  * these rather than the easing, because what "more pronounced" describes is
  * how far the character goes, not how fast it gets there.
+ *
+ * Wide on purpose. A modest turn is ambiguous — it reads as a lean, or as the
+ * idle motion the character is doing anyway — and the whole point of the
+ * follow is that a bystander can tell at a glance that it is watching them.
+ * The eyes below carry the rest of that claim.
  */
-const FOLLOW_LIMITS = { yaw: 32, pitch: 20 };
+const FOLLOW_LIMITS = { yaw: 46, pitch: 28 };
 
 function scaleLimits(percent: number): { yaw: number; pitch: number } {
   const k = percent / 100;
   return { yaw: FOLLOW_LIMITS.yaw * k, pitch: FOLLOW_LIMITS.pitch * k };
+}
+
+/**
+ * FR-8.6: how far the eyes slide at full intensity, as a fraction of the eye
+ * itself — a character with tiny eyes would have them leave its face at any
+ * fixed number of units, and the same fraction reads the same on every one.
+ */
+const GAZE_RANGE = { x: 0.45, y: 0.22 };
+
+function gazeRange(bubble: Bubble, percent: number): { x: number; y: number } {
+  const { eye } = bubble.restingFace;
+  const k = percent / 100;
+  return { x: eye.width * GAZE_RANGE.x * k, y: eye.height * GAZE_RANGE.y * k };
 }
 
 /**

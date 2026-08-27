@@ -1136,3 +1136,49 @@ describe("a loop turns the character (FR-4.10)", () => {
     expect(headAt(cycle)).toBe(headAt(0));
   });
 });
+
+// FR-8.6: the eyes go where the cursor is. Stage-only, like the guide and the
+// shadow — an exported byte never carries a gaze, which is what keeps the
+// goldens out of it.
+describe("gaze (stage chrome)", () => {
+  const bubble = doc.bubbles[0];
+  const looking = (
+    gaze: { x: number; y: number } | undefined,
+    rotation = FACING,
+  ) => restingScene(bubble, 0, rotation, gaze ? { gaze } : {});
+
+  it("leaves the eyes where the face put them unless asked", () => {
+    const plain = looking(undefined);
+    expect(plain.eyes.left.x).toBeCloseTo(
+      looking({ x: 0, y: 0 }).eyes.left.x,
+      6,
+    );
+    // Byte-identical: absent chrome must not change a single serialized number.
+    expect(sceneToSvg(plain)).toBe(sceneToSvg(restingScene(bubble, 0)));
+  });
+
+  it("slides both eyes toward the cursor", () => {
+    const ahead = looking({ x: 0, y: 0 });
+    const right = looking({ x: 10, y: 0 });
+    expect(right.eyes.left.x).toBeGreaterThan(ahead.eyes.left.x);
+    expect(right.eyes.right.x).toBeGreaterThan(ahead.eyes.right.x);
+    const down = looking({ x: 0, y: 8 });
+    expect(down.eyes.left.y).toBeGreaterThan(ahead.eyes.left.y);
+    expect(down.eyes.right.y).toBeGreaterThan(ahead.eyes.right.y);
+  });
+
+  it("carries the gaze on the surface, so a turned head still projects it", () => {
+    // The offset is in the face frame, not in screen px: turned away, the same
+    // gaze travels a shorter distance on screen because the surface is
+    // foreshortened. An eye pasted flat over the render would not do this.
+    const turned = { x: 0, y: 40, z: 0 };
+    const flatTravel =
+      looking({ x: 10, y: 0 }).eyes.right.x -
+      looking({ x: 0, y: 0 }).eyes.right.x;
+    const turnedTravel =
+      looking({ x: 10, y: 0 }, turned).eyes.right.x -
+      looking({ x: 0, y: 0 }, turned).eyes.right.x;
+    expect(turnedTravel).toBeGreaterThan(0);
+    expect(turnedTravel).toBeLessThan(flatTravel);
+  });
+});

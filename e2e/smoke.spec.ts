@@ -373,6 +373,17 @@ test("follow: the character turns toward the cursor and stops at its limit", asy
 
   await page.getByRole("button", { name: "Seguir el cursor" }).click();
 
+  // Scoped to the stage: every mood thumbnail in the inspector is the same
+  // character, so the page carries a great many eyes with this id.
+  const eye = page.getByLabel("bubble stage").locator("#eye-left").first();
+  const eyeX = async () =>
+    Number(
+      /translate\((-?[\d.]+)/.exec(
+        (await eye.getAttribute("transform")) ?? "",
+      )?.[1] ?? "0",
+    );
+  const restingEyeX = await eyeX();
+
   const stage = await page.getByLabel("bubble stage").boundingBox();
   if (!stage) throw new Error("stage not laid out");
   const midY = stage.y + stage.height / 2;
@@ -386,8 +397,15 @@ test("follow: the character turns toward the cursor and stops at its limit", asy
     .toBeGreaterThan(10);
 
   const settledRight = Number((await yaw.textContent())?.replace("°", ""));
-  // It eases toward a bounded aim rather than tracking without limit.
-  expect(settledRight).toBeLessThanOrEqual(32);
+  // It eases toward a bounded aim rather than tracking without limit
+  // (FOLLOW_LIMITS.yaw in Stage.tsx).
+  expect(settledRight).toBeLessThanOrEqual(46);
+
+  // And the eyes went with it — further than the turn alone could carry them.
+  // Measured at this viewport: the head turn moves this eye about 32 units and
+  // the gaze adds about 13 on top, so the threshold sits between the two and
+  // fails if the eyes stop tracking, which a bare "it moved" would not.
+  expect(await eyeX()).toBeGreaterThan(restingEyeX + 38);
 
   // Left of centre: it comes back the other way.
   await page.mouse.move(stage.x + 4, midY);
