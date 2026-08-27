@@ -820,4 +820,40 @@ test.describe("touch targets", () => {
     await page.getByRole("tab", { name: "Aspecto" }).click();
     await shoot(page, "phone-touch");
   });
+
+  /**
+   * FR-12.6: pinch reaches the zoom the pill reaches. Two real touch points
+   * through CDP, because this is exactly the gesture jsdom can only mime — it
+   * has no notion of two pointers being a scale rather than two drags.
+   */
+  test("pinching the stage zooms it (FR-12.6)", async ({ page }) => {
+    await page.goto("/");
+    const zoom = page.getByLabel("Zoom", { exact: true });
+    await expect(zoom).toHaveValue("100");
+
+    const box = await page.getByLabel("bubble stage").boundingBox();
+    if (!box) throw new Error("stage not laid out");
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+
+    const cdp = await page.context().newCDPSession(page);
+    type TouchPhase = "touchStart" | "touchMove" | "touchEnd";
+    const at = (spread: number) => [
+      { x: cx - spread, y: cy, id: 1 },
+      { x: cx + spread, y: cy, id: 2 },
+    ];
+    const send = async (type: TouchPhase, points: ReturnType<typeof at>) => {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type,
+        touchPoints: type === "touchEnd" ? [] : points,
+      });
+    };
+
+    await send("touchStart", at(40));
+    await send("touchMove", at(80));
+    await send("touchEnd", at(80));
+
+    // Doubling the span doubles the zoom, and 200% is where the range stops.
+    await expect(zoom).toHaveValue("200");
+  });
 });

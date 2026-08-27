@@ -48,6 +48,11 @@ export interface StageProps {
   onPause: () => void;
 }
 
+interface Point {
+  x: number;
+  y: number;
+}
+
 /** The zoom the stage opens at, and the range its control offers. */
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 2;
@@ -88,6 +93,12 @@ export function Stage({
   // pose held when the last drag began — not the resting pose. Kept in a ref
   // and outside dragRef, which is cleared on pointerup.
   const preDragRef = useRef({ x: 0, y: 0, z: 0 });
+  /** Every pointer currently down on the stage, so a second one can be told
+   *  from the first (FR-12.6). */
+  const points = useRef(new Map<number, Point>());
+  /** The pinch in progress: how far apart the fingers began, and the zoom
+   *  they began from, so the scale is proportional rather than incremental. */
+  const pinch = useRef<{ span: number; zoom: number } | null>(null);
   // FR-8.2 / FR-8.4: the rotation pad and the projection guide, both off until
   // asked for. Overlays live beside the engine host, never inside it.
   const [gizmo, setGizmo] = useState(false);
@@ -268,11 +279,29 @@ export function Stage({
   ]);
 
   const onPointerDown = (e: React.PointerEvent) => {
+    points.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // FR-12.6: the second finger down turns the gesture into a pinch, and the
+    // head drag the first one started is abandoned — otherwise the head lurches
+    // toward whichever finger it began under while the other scales the view.
+    if (points.current.size === 2) {
+      const [a, b] = [...points.current.values()] as [Point, Point];
+      pinch.current = { span: Math.hypot(a.x - b.x, a.y - b.y), zoom };
+      dragRef.current = null;
+      setDragging(false);
+      return;
+    }
     // sx/sy seed the pitch and the yaw from where this drag starts, so each
     // axis continues from its own value rather than from the resting pose.
+    //
     // Direct manipulation wins (FR-8.1): grabbing the character takes it back
-    // from the cursor rather than fighting the follow for the same pose.
-    setFollow(false);
+    // from the cursor rather than fighting the follow for the same pose. Only
+    // not for a finger, though (FR-12.7). A cursor exists whether or not it is
+    // pressed, so pressing it means "mine now"; a finger exists only while it
+    // is down, and the same rule would switch the follow off at the first
+    // touch and leave the toggle unusable. The touch is the exception rather
+    // than the mouse the rule, because a pen hovers too and should behave the
+    // way a cursor does.
+    if (e.pointerType !== "touch") setFollow(false);
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
     setDragging(true);
     setEverDragged(true);
@@ -285,6 +314,19 @@ export function Stage({
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (points.current.has(e.pointerId))
+      points.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // FR-12.6: two fingers scale, and the same 25–200% the pill is held to.
+    const spread = pinch.current;
+    if (spread && points.current.size === 2) {
+      const [a, b] = [...points.current.values()] as [Point, Point];
+      const span = Math.hypot(a.x - b.x, a.y - b.y);
+      if (spread.span > 0) {
+        const next = (spread.zoom * span) / spread.span;
+        onZoom(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next)));
+      }
+      return;
+    }
     const d = dragRef.current;
     if (!d) return;
     const dx = e.clientX - d.px;
@@ -305,7 +347,12 @@ export function Stage({
     });
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
+    points.current.delete(e.pointerId);
+    // A pinch ends when it stops being two fingers; the one still down does
+    // not become a head drag, because the drag it would continue was never
+    // started — lifting one finger of a pinch should settle, not lurch.
+    if (points.current.size < 2) pinch.current = null;
     dragRef.current = null;
     setDragging(false);
   };
