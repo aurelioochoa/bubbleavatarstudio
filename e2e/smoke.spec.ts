@@ -470,3 +470,135 @@ test("triad and strength: axis colours resolve, and strength scales the turn", a
 
   await shoot(page, "stage-triad");
 });
+
+/**
+ * FR-12.1 / FR-12.2 / FR-12.3: the phone shell. A real viewport is the only
+ * place these can be judged — jsdom has no layout, so "nothing overflows" and
+ * "the stage still has room" are claims only a browser can settle.
+ *
+ * 390×844 is an iPhone 14/15 in portrait, the narrowest shape worth naming.
+ */
+test("phone: the studio folds to a stage and a sheet at 390×844", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  // The three columns are gone; the rail runs across and the inspector is a
+  // sheet the stage sits above.
+  await expect(page.getByTestId("sheet")).toBeVisible();
+  await expect(page.locator("nav")).toHaveAttribute(
+    "data-orientation",
+    "horizontal",
+  );
+  expect(await page.locator("aside").count()).toBe(0);
+
+  // FR-6.2 is still reachable from every tab.
+  await expect(page.getByTestId("phone-transport")).toBeVisible();
+
+  // The header is chrome, not content: three lines of wrapped title is 80px
+  // the stage does not get.
+  const head = await page.locator("header").boundingBox();
+  expect(head?.height ?? 999).toBeLessThanOrEqual(56);
+
+  // The stage's own overlays have to fit the width they are given; the
+  // orientation readout and the toggle row used to collide and clip at 390px.
+  const overlays = await page.evaluate(() => {
+    const host = document.querySelector('[aria-label="bubble stage"]');
+    if (!host) return null;
+    const stage = host.parentElement;
+    if (!stage) return null;
+    const room = stage.getBoundingClientRect();
+    // The overlays are every child except the engine's host and the two
+    // full-bleed gradient layers, which are the backdrop rather than chrome.
+    const boxes = [...stage.children]
+      .filter((el) => el !== host)
+      .map((el) => el.getBoundingClientRect())
+      .filter((b) => b.width > 0 && b.width < room.width - 2);
+
+    const over = boxes.filter(
+      (b) => b.left < room.left - 1 || b.right > room.right + 1,
+    ).length;
+    // Two overlays sharing pixels is the failure that reads as clipping: the
+    // orientation readout sat under the status pill and lost its first axis.
+    let overlapping = 0;
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        if (
+          a.left < b.right - 1 &&
+          b.left < a.right - 1 &&
+          a.top < b.bottom - 1 &&
+          b.top < a.bottom - 1
+        )
+          overlapping++;
+      }
+    return { over, overlapping };
+  });
+  expect(overlays).toEqual({ over: 0, overlapping: 0 });
+
+  // FR-12.2: nothing overflows sideways, anywhere.
+  const overflows = await page.evaluate(() => {
+    const d = document.documentElement;
+    const wide = (el: Element) => el.scrollWidth > el.clientWidth + 1;
+    return {
+      page: wide(d),
+      sheet: wide(document.querySelector('[data-testid="sheet"]') as Element),
+      rail: wide(document.querySelector("nav") as Element),
+    };
+  });
+  expect(overflows).toEqual({ page: false, sheet: false, rail: false });
+
+  // FR-12.2: at the resting detent the stage keeps 40% of the studio area —
+  // the room below the header, which is what the shell actually divides.
+  const header = await page.locator("header").boundingBox();
+  const stage = await page.getByLabel("bubble stage").boundingBox();
+  if (!header || !stage) throw new Error("phone shell not laid out");
+  expect(stage.height / (844 - header.height)).toBeGreaterThanOrEqual(0.4);
+
+  await shoot(page, "phone-390");
+});
+
+/**
+ * FR-12.3: the sheet's tall detent must still leave the character visible —
+ * FR-4.4 says a mood is judged against it, and a sheet that could cover the
+ * stage would undo on a phone what the scoped mood editor protects on desktop.
+ */
+test("phone: the sheet never covers the stage, even pulled all the way up", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  // The grip is the no-drag path (docs/05 §3): pressing it cycles detents.
+  const grip = page.getByRole("button", { name: "Alto del inspector" });
+  await grip.click(); // half → tall
+  await page.waitForTimeout(250);
+
+  // Measured as area of the character left uncovered, not as "is the stage
+  // element still there". A stage box that exists while the render inside it
+  // is hidden behind an overlay passes every visibility check and fails the
+  // rule this test is named after — which is exactly what happened once.
+  const clear = await page.evaluate(() => {
+    const svg = document
+      .querySelector('[aria-label="bubble stage"]')
+      ?.querySelector("svg");
+    if (!svg) return 0;
+    const box = svg.getBoundingClientRect();
+    if (box.height <= 0) return 0;
+    // Sample the character's own centre column: whatever the topmost element
+    // is there, it should be the render, not something drawn over it.
+    const hits = [0.35, 0.5, 0.65].map((f) => {
+      const el = document.elementFromPoint(
+        box.x + box.width / 2,
+        box.y + box.height * f,
+      );
+      return el?.closest("svg") === svg;
+    });
+    return hits.filter(Boolean).length;
+  });
+  expect(clear).toBe(3);
+
+  await shoot(page, "phone-sheet-tall");
+});

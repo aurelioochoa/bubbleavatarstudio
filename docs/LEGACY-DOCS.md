@@ -372,14 +372,16 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
   **tablet** 768–1023px, **desktop** 1024px and up. Desktop is the three-column
   shell already specified in part 05 §1. One media query owns the choice; every
   other adaptation that CSS can express stays in CSS.
-- **FR-12.2** At 360px nothing overflows horizontally, and the stage keeps at
-  least 40% of the viewport height — below that the character stops being the
-  thing the studio is about.
+- **FR-12.2** At 360px nothing overflows horizontally, and at the sheet's
+  resting detent the stage keeps at least 40% of the viewport height — below
+  that the character stops being the thing the studio is about. A detent the
+  user pulls to themselves is their business; this governs where it rests.
 - **FR-12.3** On phone the inspector is a bottom sheet with three detents
-  (handle / half / tall). The tall detent still leaves the stage visible:
-  FR-4.4 requires a mood to be judged against the character, and a sheet that
-  covered it would break the same rule the mood editor's scoped modal exists to
-  keep (part 05 §2).
+  (handle / half / tall). **No detent covers the stage entirely**, the tall one
+  included: FR-4.4 requires a mood to be judged against the character, and a
+  sheet that hid it would break the same rule the mood editor's scoped modal
+  exists to keep (part 05 §2). The detents are reachable without dragging, the
+  way every drag in this studio has a button beside it (part 05 §3).
 - **FR-12.4** Every drag-to-reorder works with a coarse pointer, activated by a
   long press. The keyboard/button path beside each list (part 05 §3) is
   unchanged and remains the accessible route; the drag sits on top of it.

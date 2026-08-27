@@ -7,7 +7,9 @@ import { effectiveKit } from "../../domain/document/mutate";
 import { useStudio } from "./store";
 import { BubbleMark } from "./BubbleMark";
 import { HelpSheet } from "./help/HelpSheet";
+import { useBreakpoint } from "../useMediaQuery";
 import { DesktopShell } from "./shell/DesktopShell";
+import { PhoneShell } from "./shell/PhoneShell";
 import type { ShellProps, Tab } from "./shell/props";
 import { createStageClock } from "../stage/clock";
 import type { StageMode } from "../stage/StageEngine";
@@ -16,6 +18,8 @@ import type { MoodSample } from "../../domain/playback/LoopPlayer";
 
 export function StudioView() {
   const [state, dispatch] = useStudio();
+  // FR-12.1: which of the three arrangements this window gets.
+  const at = useBreakpoint();
   const [tab, setTab] = useState<Tab>("look");
   // FR-6.2: playback is a three-state transport, not a boolean.
   const [transport, setTransport] = useState<{
@@ -218,9 +222,11 @@ export function StudioView() {
 
   return (
     <div className="flex h-dvh flex-col bg-stage text-ink">
-      <header className="flex shrink-0 items-center gap-3 border-b border-line bg-panel px-4 py-2.5">
+      {/* The title truncates rather than wrapping: at 390px it wrapped to
+          three lines and took 80px of height the stage needs (FR-12.2). */}
+      <header className="flex shrink-0 items-center gap-2 border-b border-line bg-panel px-3 py-2 md:gap-3 md:px-4 md:py-2.5">
         <BubbleMark size={28} />
-        <h1 className="text-sm font-semibold tracking-tight">
+        <h1 className="min-w-0 truncate text-sm font-semibold tracking-tight">
           {t("app.title")}
         </h1>
         <span aria-hidden="true" className="mx-1 h-4.5 w-px bg-line" />
@@ -258,7 +264,7 @@ export function StudioView() {
         </span>
       </header>
 
-      <DesktopShell {...shell} />
+      {at === "phone" ? <PhoneShell {...shell} /> : <DesktopShell {...shell} />}
 
       {help && (
         <HelpSheet

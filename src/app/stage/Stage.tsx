@@ -349,7 +349,11 @@ export function Stage({
         <div
           role="group"
           aria-label={t("stage.orientation")}
-          className="flex h-7 items-center gap-2.5 rounded-full border border-line bg-panel/80 px-3 text-[10.5px] tabular-nums text-ink-dim backdrop-blur-md"
+          /* FR-12.1: below md the readout and the status pill share a line
+             they cannot both fit on, and the readout loses its first axis
+             under the pill. The three angles are still in the rotation pad,
+             which is where they were authored. */
+          className="hidden h-7 items-center gap-2.5 rounded-full border border-line bg-panel/80 px-3 text-[10.5px] tabular-nums text-ink-dim backdrop-blur-md md:flex"
         >
           {AXES.map((a) => (
             <span key={a.axis}>
@@ -518,7 +522,9 @@ export function Stage({
 
       {/* An affordance hint, so it goes once the affordance has been used. */}
       {!everDragged && (
-        <p className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 text-[10.5px] text-ink-dim opacity-70">
+        /* Hidden on a phone: it names Esc, which there is no key for, and at
+           390px it runs straight through the zoom pill. */
+        <p className="pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 items-center gap-2 text-[10.5px] text-ink-dim opacity-70 md:flex">
           <DragIcon />
           {t("stage.dragHint")}
         </p>
