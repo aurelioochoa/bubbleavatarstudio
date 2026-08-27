@@ -635,20 +635,54 @@ test("tablet: the inspector is a drawer over the stage at 820×1180", async ({
   // as overlap with the drawn character, not as the drawer's own width: an
   // overlay half the stage wide covers half a centred character, which passed
   // a width check and hid the face.
-  const after = await page.getByLabel("bubble stage").boundingBox();
-  const drawer = await page.locator("aside").boundingBox();
-  const drawn = await page
-    .getByLabel("bubble stage")
-    .locator("svg")
-    .boundingBox();
-  if (!drawer || !after || !drawn || !full) {
-    throw new Error("tablet shell not laid out");
-  }
-  expect(after.width).toBeLessThan(full.width);
-  expect(drawn.x + drawn.width).toBeLessThanOrEqual(drawer.x + 1);
+  // Measured inside one `evaluate` turn rather than with `boundingBox()`: the
+  // engine rewrites the host's `innerHTML` every frame (FR-11.2), so the `svg`
+  // Playwright resolves can be detached by the time it is measured, and the
+  // box comes back null perhaps one run in three. The boot case reads the same
+  // numbers the same way, for the same reason.
+  const laid = await page.evaluate(() => {
+    const host = document.querySelector('[aria-label="bubble stage"]');
+    const drawerEl = document.querySelector("aside");
+    const svg = host?.querySelector("svg");
+    if (!host || !drawerEl || !svg) return null;
+    const stage = host.getBoundingClientRect();
+    const drawn = svg.getBoundingClientRect();
+    const drawer = drawerEl.getBoundingClientRect();
+    return {
+      stageWidth: stage.width,
+      drawnRight: drawn.x + drawn.width,
+      drawerLeft: drawer.x,
+    };
+  });
+  if (!laid || !full) throw new Error("tablet shell not laid out");
+
+  expect(laid.stageWidth).toBeLessThan(full.width);
+  expect(laid.drawnRight).toBeLessThanOrEqual(laid.drawerLeft + 1);
 
   // And the stage's own overlays fit the column the drawer left them.
   expect(await stageOverlays(page)).toEqual({ over: 0, overlapping: 0 });
+
+  /* FR-10.6: the export frame covers exactly the box the render occupies, or
+     it is decorative. This is the shape that used to break it — a column
+     taller than it is wide, where sizing off a percentage of the height drew
+     a frame twice the character's height. Both read `min(94cqmin, 40rem)`
+     now, and the stage column answers for both its axes. */
+  await page.getByRole("tab", { name: "Compartir" }).click();
+  const frame = await page.evaluate(() => {
+    const host = document.querySelector('[aria-label="bubble stage"]');
+    const svg = host?.querySelector("svg");
+    const box = document.querySelector('[data-testid="export-frame"]');
+    if (!svg || !box) return null;
+    const a = svg.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    return {
+      dw: Math.abs(a.width - b.width),
+      dh: Math.abs(a.height - b.height),
+    };
+  });
+  expect(frame).not.toBeNull();
+  expect(frame?.dw).toBeLessThanOrEqual(1);
+  expect(frame?.dh).toBeLessThanOrEqual(1);
 
   await shoot(page, "tablet-820");
 });
@@ -720,5 +754,70 @@ test.describe("touch", () => {
     await touch("touchEnd", b);
 
     expect(await order()).toEqual([before[1], before[0]]);
+  });
+});
+
+/**
+ * FR-12.5: every interactive target is at least 44×44 CSS px under a coarse
+ * pointer. A control may keep a smaller *drawn* mark — the step grip is 6px
+ * wide and stays so — provided its hit area meets the floor, which is why the
+ * measurement takes the larger of the element's own box and the `::after`
+ * overlay `.touch-target` gives it.
+ */
+test.describe("touch targets", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("every control a finger can reach is at least 44px (FR-12.5)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    expect(
+      await page.evaluate(() => matchMedia("(pointer: coarse)").matches),
+    ).toBe(true);
+
+    const tooSmall = async () =>
+      page.evaluate(() => {
+        const out: string[] = [];
+        const controls = document.querySelectorAll(
+          "button, input, select, [role=tab], [role=radio], [role=menuitem]",
+        );
+        for (const el of controls) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          const after = getComputedStyle(el, "::after");
+          const grown = after.content !== "none";
+          const w = grown
+            ? Math.max(r.width, parseFloat(after.width) || 0)
+            : r.width;
+          const h = grown
+            ? Math.max(r.height, parseFloat(after.height) || 0)
+            : r.height;
+          if (w < 44 || h < 44) {
+            const name =
+              el.getAttribute("aria-label") ??
+              el.textContent?.trim().slice(0, 20) ??
+              el.tagName;
+            out.push(
+              `${String(Math.round(w))}x${String(Math.round(h))} ${name}`,
+            );
+          }
+        }
+        return out;
+      });
+
+    const seen: string[] = [];
+    seen.push(...(await tooSmall()));
+    for (const tab of ["Ánimos", "Ciclos", "Compartir"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      await page.waitForTimeout(200);
+      seen.push(...(await tooSmall()));
+    }
+    expect(seen).toEqual([]);
+
+    // Archived separately from phone-390: that one runs with a fine pointer,
+    // where the controls keep their compact desktop sizes. This is what a real
+    // phone shows.
+    await page.getByRole("tab", { name: "Aspecto" }).click();
+    await shoot(page, "phone-touch");
   });
 });

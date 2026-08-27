@@ -319,7 +319,7 @@ export function SharePanel({
                           : cur.filter((id) => !ids.includes(id)),
                       );
                     }}
-                    className="text-[9.5px] text-accent transition-colors duration-150 ease-out hover:text-ink"
+                    className="touch-target text-[9.5px] text-accent transition-colors duration-150 ease-out hover:text-ink"
                   >
                     {anyOn ? t("share.none") : t("share.all")}
                   </button>
@@ -499,7 +499,7 @@ function groupLabel(group: string, t: (k: MessageKey) => string): string {
  *
  * It covers exactly the box the render occupies, which is what makes it true
  * rather than decorative: the scene's viewBox is square and the stage caps it
- * at the same `min(94%, 40rem)` this uses, and both scale by the stage's
+ * at the same `min(94cqmin, 40rem)` this uses, and both scale by the stage's
  * `--stage-zoom` so a zoomed view still frames exactly what will be exported.
  */
 function ExportFrame({
@@ -520,7 +520,7 @@ function ExportFrame({
         <div
           data-testid="export-frame"
           aria-label={frameLabel}
-          className="relative aspect-square h-[calc(min(94%,40rem)*var(--stage-zoom,1))] w-auto max-w-[calc(94%*var(--stage-zoom,1))] border border-dashed border-accent/45"
+          className="relative aspect-square h-[calc(min(94cqmin,40rem)*var(--stage-zoom,1))] w-auto border border-dashed border-accent/45"
         >
           {(
             [

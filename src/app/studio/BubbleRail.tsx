@@ -181,7 +181,7 @@ function RailItem({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={onToggleMenu}
-        className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border border-line bg-panel text-[9px] leading-none text-ink-dim opacity-60 transition-opacity duration-150 ease-out hover:opacity-100 focus-visible:opacity-100"
+        className="touch-target absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border border-line bg-panel text-[9px] leading-none text-ink-dim opacity-60 transition-opacity duration-150 ease-out hover:opacity-100 focus-visible:opacity-100"
       >
         ⋯
       </button>

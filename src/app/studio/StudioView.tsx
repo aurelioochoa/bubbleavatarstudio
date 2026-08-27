@@ -253,7 +253,7 @@ export function StudioView() {
                 dispatch({ type: "locale", locale: l });
               }}
               aria-pressed={state.doc.locale === l}
-              className={`rounded-[6px] px-2 py-0.5 text-xs uppercase transition-colors duration-150 ease-out ${
+              className={`touch-target rounded-[6px] px-2 py-0.5 text-xs uppercase transition-colors duration-150 ease-out ${
                 state.doc.locale === l
                   ? "bg-primary text-white"
                   : "text-ink-dim hover:text-ink"

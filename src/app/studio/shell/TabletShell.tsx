@@ -67,7 +67,7 @@ export function TabletShell(props: ShellProps) {
 
         <main
           ref={onStageHost}
-          className="relative min-w-0 flex-1 overflow-hidden"
+          className="stage-box relative min-w-0 flex-1 overflow-hidden"
           style={{ "--stage-zoom": String(zoom) } as React.CSSProperties}
         >
           <Stage

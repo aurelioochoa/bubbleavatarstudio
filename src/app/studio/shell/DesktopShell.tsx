@@ -59,7 +59,7 @@ export function DesktopShell(props: ShellProps) {
             whole claim the frame makes (FR-10.6). */}
         <main
           ref={onStageHost}
-          className="relative min-w-0 flex-1 overflow-hidden"
+          className="stage-box relative min-w-0 flex-1 overflow-hidden"
           style={{ "--stage-zoom": String(zoom) } as React.CSSProperties}
         >
           <Stage

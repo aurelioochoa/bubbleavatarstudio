@@ -319,12 +319,7 @@ export function Stage({
   const selected = kit.loops.find((l) => l.id === loopId) ?? kit.loops.at(0);
   const playing = mode === "playing";
   return (
-    /* `@container`: the overlays below are laid out in this column, not in the
-       window, and a drawer opening beside the stage narrows it without the
-       viewport changing at all. Keyed on the viewport they collided at 820px
-       with the tablet inspector open — same defect as at 390px, different
-       width, which is what says the lever was the wrong one. */
-    <div className="@container relative h-full w-full overflow-hidden bg-stage">
+    <div className="relative h-full w-full overflow-hidden bg-stage">
       {/* Soft indigo pool behind the character (docs/05 §1). */}
       <div
         aria-hidden="true"
@@ -337,7 +332,7 @@ export function Stage({
 
       <div
         ref={hostRef}
-        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:aspect-square [&>svg]:h-[calc(min(94%,40rem)*var(--stage-zoom,1))] [&>svg]:w-auto [&>svg]:max-w-[calc(94%*var(--stage-zoom,1))] active:cursor-grabbing"
+        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:aspect-square [&>svg]:h-[calc(min(94cqmin,40rem)*var(--stage-zoom,1))] [&>svg]:w-auto active:cursor-grabbing"
         role="img"
         aria-label="bubble stage"
         tabIndex={0}
@@ -421,7 +416,7 @@ export function Stage({
               preDragRef.current = head;
               onHead({ x: 0, y: 0, z: 0 });
             }}
-            className="grid h-7.5 w-7.5 place-items-center rounded-full border border-line bg-panel/80 text-ink-dim backdrop-blur-md transition-colors duration-150 ease-out hover:text-ink"
+            className="touch-target grid h-7.5 w-7.5 place-items-center rounded-full border border-line bg-panel/80 text-ink-dim backdrop-blur-md transition-colors duration-150 ease-out hover:text-ink"
           >
             <ResetIcon />
           </button>
@@ -455,7 +450,7 @@ export function Stage({
             const v = Number(e.target.value);
             if (Number.isFinite(v) && v > 0) onZoom(v / 100);
           }}
-          className="w-11 rounded-full bg-panel-2 px-1.5 py-0.5 text-right text-ink tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-primary"
+          className="touch-target w-11 rounded-full bg-panel-2 px-1.5 py-0.5 text-right text-ink tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-primary"
         />
         <span className="pr-1">%</span>
       </div>
@@ -572,7 +567,7 @@ function OverlayToggle({
       title={label}
       aria-pressed={pressed}
       onClick={onClick}
-      className={`grid h-8 w-8 place-items-center rounded-full border border-line backdrop-blur-md transition-colors duration-150 ease-out ${
+      className={`touch-target grid h-8 w-8 place-items-center rounded-full border border-line backdrop-blur-md transition-colors duration-150 ease-out ${
         pressed
           ? "bg-primary text-white"
           : "bg-panel/80 text-ink-dim hover:text-ink"
