@@ -78,7 +78,7 @@ diagram):
 - **`src/export/`** — portable `*.bubble-avatar.json`, SVG/PNG snapshots, ZIP.
 - **`src/runtime/`** — SSR-safe `<BubbleAvatar/>`.
 
-Eight cross-cutting mechanics that are not obvious from any single file:
+Nine cross-cutting mechanics that are not obvious from any single file:
 
 **The body is a solid, and one branch of it is analytic.** `surfacePath` gives
 a family's flat outline; `solid.ts` treats that outline as the generatrix of a
@@ -166,6 +166,25 @@ to the kit that bubble actually reads: the shared starter kit when it inherits
 the call site: it measures with `libraryGap()` and shows a top-up row only
 while the gap is non-zero, dispatching `library/topUp`.
 
+**The studio has one state and three shapes.** `StudioView` owns every piece of
+view state and hands it to a shell as one `ShellProps` bag (`app/studio/shell/`);
+a shell arranges and owns none of it, which is what keeps three layouts from
+meaning three copies of the studio's behaviour. `useBreakpoint()` picks between
+them at 768 and 1024 — the same numbers as Tailwind's `md:`/`lg:`, stated as
+literals in `app/useMediaQuery.ts` so the CSS half of an adaptation and the JS
+half cannot switch at different widths. Anything CSS can express stays in CSS;
+the hook is only for where the tree itself differs.
+
+Two traps. **Stage chrome is keyed to the stage column, not the window** — the
+column carries `container-type: size` (Tailwind's `@container` is `inline-size`,
+which leaves `cqmin` answering with the width alone, the _long_ side on a phone
+stage) and the render reads `min(94cqmin, 40rem)`. Keyed to the viewport, the
+orientation readout collided with the status pill at 390px _and_ at 820px with
+the tablet drawer open. And **`overlayHost` is whichever box the panels scroll
+in** — the inspector column on desktop and tablet, the sheet on phone. Point it
+anywhere else and the mood editor is clipped by that scroll box instead of
+covering it, which is the failure the next paragraph exists to prevent.
+
 **Inspector overlays portal out of the scroll box.** `Modal` and
 `Menu`/`MenuItem` live in `src/app/studio/ui.tsx`. `Modal` positions itself
 against its nearest positioned ancestor rather than the viewport, and both the
@@ -229,6 +248,13 @@ from ever disagreeing.
   sections are built from `Card`/`Segmented`/`IconButton` in
   `src/app/studio/ui.tsx` so the radius, spacing grid and ≤160ms transition are
   stated once.
+- **The 44px touch floor is a CSS rule, not a per-component habit** (FR-12.5).
+  `styles.css` gives every `button`/`input`/`[role=tab]`… a `min-height` under
+  `(pointer: coarse)`; a control that must keep its drawn size opts out with
+  `.touch-target`, which gives it an invisible 44px overlay instead. Reach for
+  the class only when growing the control would be wrong — the rule is the
+  default, and adding `pointer-coarse:` sizing per component re-states what is
+  already stated once.
 - Tests that render panels pass a spy `dispatch`; because the fields are
   controlled by props a spy never updates, commit a whole value in one change
   event rather than typing character by character.
