@@ -35,6 +35,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/**
+ * Unmount after the last case too, not only before the next one. `cleanup` in
+ * `beforeEach` alone leaves the final render of the file mounted when the
+ * environment is torn down, and a studio that is still mounted still has its
+ * autosave debounce pending — which then fires into a dead tree and fails the
+ * run as an unhandled error, with every test passing.
+ */
+afterEach(cleanup);
+
 const rail = () => screen.getByRole("navigation");
 
 describe("shell selection (FR-12.1)", () => {

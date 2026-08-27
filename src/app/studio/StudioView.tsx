@@ -79,6 +79,25 @@ export function StudioView() {
     setSaveState("saving");
   }, [state.doc, autosaver]);
 
+  /**
+   * The debounce must not outlive the studio. Left running it fires into a
+   * tree that is gone — a write nobody asked for, and `setSaveState` on an
+   * unmounted component; under Vitest that lands after the environment is torn
+   * down, where React reaches for `window` and throws, which is how it
+   * surfaced: an intermittent unhandled error failing `pnpm check` while every
+   * test passed.
+   *
+   * Cancelling loses nothing FR-9.2 promises. The reload path is `pagehide`
+   * below, which flushes before the page goes; this is the other exit, and
+   * nothing is waiting on the far side of it.
+   */
+  useEffect(
+    () => () => {
+      autosaver.cancel();
+    },
+    [autosaver],
+  );
+
   // FR-9.2: a reload racing the 300ms debounce must not lose the last edit.
   useEffect(() => {
     const onHide = () => {
