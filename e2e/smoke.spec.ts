@@ -22,6 +22,48 @@ async function shoot(page: import("@playwright/test").Page, name: string) {
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
 }
 
+/**
+ * The stage's overlays, checked for the two ways they go wrong in a narrow
+ * column: spilling past its edges, and sharing pixels with each other. The
+ * second is what reads as clipping — the orientation readout sat under the
+ * status pill and lost its first axis, twice, at two different widths.
+ *
+ * Measured against the stage column rather than the window, because that is
+ * what the overlays are actually laid out in: a drawer opening beside the
+ * stage narrows it without the viewport changing at all.
+ */
+async function stageOverlays(page: import("@playwright/test").Page) {
+  return page.evaluate(() => {
+    const host = document.querySelector('[aria-label="bubble stage"]');
+    if (!host) return null;
+    const stage = host.parentElement;
+    if (!stage) return null;
+    const room = stage.getBoundingClientRect();
+    const boxes = [...stage.children]
+      .filter((el) => el !== host)
+      .map((el) => el.getBoundingClientRect())
+      .filter((b) => b.width > 0 && b.width < room.width - 2);
+
+    const over = boxes.filter(
+      (b) => b.left < room.left - 1 || b.right > room.right + 1,
+    ).length;
+    let overlapping = 0;
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        if (
+          a.left < b.right - 1 &&
+          b.left < a.right - 1 &&
+          a.top < b.bottom - 1 &&
+          b.top < a.bottom - 1
+        )
+          overlapping++;
+      }
+    return { over, overlapping };
+  });
+}
+
 test("boot: studio shell renders with a starter bubble", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -503,40 +545,7 @@ test("phone: the studio folds to a stage and a sheet at 390×844", async ({
 
   // The stage's own overlays have to fit the width they are given; the
   // orientation readout and the toggle row used to collide and clip at 390px.
-  const overlays = await page.evaluate(() => {
-    const host = document.querySelector('[aria-label="bubble stage"]');
-    if (!host) return null;
-    const stage = host.parentElement;
-    if (!stage) return null;
-    const room = stage.getBoundingClientRect();
-    // The overlays are every child except the engine's host and the two
-    // full-bleed gradient layers, which are the backdrop rather than chrome.
-    const boxes = [...stage.children]
-      .filter((el) => el !== host)
-      .map((el) => el.getBoundingClientRect())
-      .filter((b) => b.width > 0 && b.width < room.width - 2);
-
-    const over = boxes.filter(
-      (b) => b.left < room.left - 1 || b.right > room.right + 1,
-    ).length;
-    // Two overlays sharing pixels is the failure that reads as clipping: the
-    // orientation readout sat under the status pill and lost its first axis.
-    let overlapping = 0;
-    for (let i = 0; i < boxes.length; i++)
-      for (let j = i + 1; j < boxes.length; j++) {
-        const a = boxes[i];
-        const b = boxes[j];
-        if (
-          a.left < b.right - 1 &&
-          b.left < a.right - 1 &&
-          a.top < b.bottom - 1 &&
-          b.top < a.bottom - 1
-        )
-          overlapping++;
-      }
-    return { over, overlapping };
-  });
-  expect(overlays).toEqual({ over: 0, overlapping: 0 });
+  expect(await stageOverlays(page)).toEqual({ over: 0, overlapping: 0 });
 
   // FR-12.2: nothing overflows sideways, anywhere.
   const overflows = await page.evaluate(() => {
@@ -601,4 +610,45 @@ test("phone: the sheet never covers the stage, even pulled all the way up", asyn
   expect(clear).toBe(3);
 
   await shoot(page, "phone-sheet-tall");
+});
+
+/**
+ * FR-12.1: the tablet shell at 820×1180 (iPad Air, portrait). The claim worth
+ * measuring here is the one that motivated the drawer: standing the inspector
+ * beside the rail at this width would leave the stage narrower than the
+ * character needs, so it opens over the stage and covers at most half of it.
+ */
+test("tablet: the inspector is a drawer over the stage at 820×1180", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto("/");
+
+  // Closed to begin with: the stage has the column to itself.
+  expect(await page.getByRole("tab").count()).toBe(0);
+  const full = await page.getByLabel("bubble stage").boundingBox();
+
+  await page.getByRole("button", { name: "Inspector" }).click();
+  await expect(page.getByRole("tab", { name: "Aspecto" })).toBeVisible();
+
+  // The drawer takes width from the stage rather than covering it. Measured
+  // as overlap with the drawn character, not as the drawer's own width: an
+  // overlay half the stage wide covers half a centred character, which passed
+  // a width check and hid the face.
+  const after = await page.getByLabel("bubble stage").boundingBox();
+  const drawer = await page.locator("aside").boundingBox();
+  const drawn = await page
+    .getByLabel("bubble stage")
+    .locator("svg")
+    .boundingBox();
+  if (!drawer || !after || !drawn || !full) {
+    throw new Error("tablet shell not laid out");
+  }
+  expect(after.width).toBeLessThan(full.width);
+  expect(drawn.x + drawn.width).toBeLessThanOrEqual(drawer.x + 1);
+
+  // And the stage's own overlays fit the column the drawer left them.
+  expect(await stageOverlays(page)).toEqual({ over: 0, overlapping: 0 });
+
+  await shoot(page, "tablet-820");
 });

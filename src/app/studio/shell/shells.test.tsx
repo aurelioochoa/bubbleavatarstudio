@@ -99,3 +99,44 @@ describe("phone overlays (FR-12.3)", () => {
     );
   });
 });
+
+describe("tablet (FR-12.1)", () => {
+  /**
+   * 768–1023px has room for the rail and a full-width stage, but not for a
+   * 360px inspector standing beside them without squeezing the stage to less
+   * than the character needs. So the inspector becomes a drawer: closed by
+   * default, opened over the stage, and never covering all of it.
+   */
+  it("keeps the rail as a column and holds the inspector back", () => {
+    atWidth("tablet");
+    render(<StudioView />);
+
+    expect(rail().dataset.orientation).toBe("vertical");
+    expect(screen.queryByTestId("sheet")).toBeNull();
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+  });
+
+  it("opens the inspector over the stage, and the stage stays", async () => {
+    atWidth("tablet");
+    const user = userEvent.setup();
+    render(<StudioView />);
+
+    await user.click(screen.getByRole("button", { name: "Inspector" }));
+
+    expect(screen.getAllByRole("tab")).toHaveLength(4);
+    // FR-4.4 again: whatever the drawer covers, it is not the character.
+    expect(screen.getByLabelText("bubble stage")).toBeTruthy();
+  });
+
+  it("closes again, so the stage can be had in full", async () => {
+    atWidth("tablet");
+    const user = userEvent.setup();
+    render(<StudioView />);
+
+    const toggle = screen.getByRole("button", { name: "Inspector" });
+    await user.click(toggle);
+    await user.click(toggle);
+
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+  });
+});

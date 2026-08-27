@@ -10,6 +10,7 @@ import { HelpSheet } from "./help/HelpSheet";
 import { useBreakpoint } from "../useMediaQuery";
 import { DesktopShell } from "./shell/DesktopShell";
 import { PhoneShell } from "./shell/PhoneShell";
+import { TabletShell } from "./shell/TabletShell";
 import type { ShellProps, Tab } from "./shell/props";
 import { createStageClock } from "../stage/clock";
 import type { StageMode } from "../stage/StageEngine";
@@ -47,7 +48,7 @@ export function StudioView() {
   // FR-6.6: the Share tab is not editing a sequence, so the track folds to a
   // single row there — kept as state rather than derived from the tab, so a
   // user who opens it back up gets to keep it open.
-  const [trackCollapsed, setTrackCollapsed] = useState(false);
+  const [trackCollapsed, setTrackCollapsed] = useState(at !== "desktop");
   // FR-9.6: autosave is silent, and silence is indistinguishable from
   // failure — so the header says which of the three it is.
   const [saveState, setSaveState] = useState<"saved" | "saving" | "failed">(
@@ -264,7 +265,9 @@ export function StudioView() {
         </span>
       </header>
 
-      {at === "phone" ? <PhoneShell {...shell} /> : <DesktopShell {...shell} />}
+      {at === "phone" && <PhoneShell {...shell} />}
+      {at === "tablet" && <TabletShell {...shell} />}
+      {at === "desktop" && <DesktopShell {...shell} />}
 
       {help && (
         <HelpSheet
