@@ -360,6 +360,50 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
 - **FR-11.3** Validation gate: `pnpm check` = engine freshness (n/a v1), format,
   typecheck strict, full tests, production build.
 
+### FR-12 Responsive & touch
+
+> Added after the studio had shipped desktop-only. The original spec named a
+> single 1024×720 floor and no pointer other than a mouse; these are the rules
+> that replace that assumption. Nothing here reaches `src/domain` or
+> `src/render` — the layout is a shell concern, and the goldens are byte-proof
+> that it stayed one.
+
+- **FR-12.1** Three layouts, chosen by width alone: **phone** below 768px,
+  **tablet** 768–1023px, **desktop** 1024px and up. Desktop is the three-column
+  shell already specified in part 05 §1. One media query owns the choice; every
+  other adaptation that CSS can express stays in CSS.
+- **FR-12.2** At 360px nothing overflows horizontally, and at the sheet's
+  resting detent the stage keeps at least 40% of the viewport height — below
+  that the character stops being the thing the studio is about. A detent the
+  user pulls to themselves is their business; this governs where it rests.
+- **FR-12.3** On phone the inspector is a bottom sheet with three detents
+  (handle / half / tall). **No detent covers the stage entirely**, the tall one
+  included: FR-4.4 requires a mood to be judged against the character, and a
+  sheet that hid it would break the same rule the mood editor's scoped modal
+  exists to keep (part 05 §2). The detents are reachable without dragging, the
+  way every drag in this studio has a button beside it (part 05 §3).
+- **FR-12.4** Every drag-to-**reorder** works with a coarse pointer, activated
+  by a long press. The keyboard/button path beside each list (part 05 §3) is
+  unchanged and remains the accessible route; the drag sits on top of it.
+  Two boundaries, both deliberate. The long press is spent on the lift, so it
+  is **not** also the gesture for the rail's context menu — one press cannot
+  mean both, and the kebab (at its FR-12.5 hit area) is the touch path to the
+  menu. And dragging a mood from the tray onto the strip (FR-5.10) is an
+  insert, not a reorder: it stays on native drag and stays mouse-only, with the
+  strip's `+` as the path a finger has.
+- **FR-12.5** Under `(pointer: coarse)` every interactive target is at least
+  44×44 CSS px. A control may keep a smaller _drawn_ mark — the step grip is
+  6px wide and stays so — provided its hit area meets the floor.
+- **FR-12.6** Stage zoom is reachable by pinch as well as by the zoom pill,
+  through the same 25–200%, and writes the same view state — which still never
+  autosaves and never reaches an export. The second finger abandons the head
+  drag the first one began, wireframe included.
+- **FR-12.7** FR-8.6's follow survives touch. Because a finger only exists
+  while it is down, and FR-8.1 has a grab take the pose back from the cursor,
+  that rule becomes conditional on pointer type: a **mouse** press still
+  switches the follow off, a **touch** press does not — with the follow on, a
+  dragged finger feeds the aim; with it off, the same drag turns the head 1:1.
+
 ---
 
 <a id="part-03"></a>
@@ -876,7 +920,8 @@ dictionaries are one `i18n.ts`, not a directory.
 > UI pass closed, and the rail was 56px until its thumbnails were enlarged.
 >
 > **The F5 visual pass has been read** against a fresh `pnpm e2e` archive
-> (eleven frames under `docs/screenshots/`). §1–§4 hold as described, with one
+> (eleven frames under `docs/screenshots/` at the time; the responsive pass
+> took the archive to nineteen, phone and tablet included). §1–§4 hold as described, with one
 > defect found and fixed in the same pass: the background segmented control
 > clipped "Degradado" to "Degrada…" at the inspector's 360px, and now reads
 > "Lineal" / "Linear" — the pair the Share bullets below already name.
@@ -906,6 +951,13 @@ dictionaries are one `i18n.ts`, not a directory.
 
 ### 1. Layout
 
+> **Three of them now (FR-12).** The diagram below is the desktop shell, at
+> 1024px and up, and it is unchanged. Below that the same studio is arranged
+> two other ways, described after it. All three are drawn from one `ShellProps`
+> bag that `StudioView` fills: the state lives there, the shape lives in the
+> shell, and that split is the only reason three arrangements do not mean three
+> copies of the studio's behaviour.
+
 ```
 ┌─────┬───────────────────────────────┬───────────────────────────┐
 │ rail│  STAGE (canvas)               │  INSPECTOR                │
@@ -921,7 +973,40 @@ dictionaries are one `i18n.ts`, not a directory.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Rail (72px):** vertical bubble thumbnails (live mini-renders) at 56px,
+**Tablet, 768–1023px.** The rail and the track band stay; the inspector
+becomes a drawer that starts closed and **pushes** rather than covers. Drawn
+over the stage it hid half the character — the character is centred in its
+column, so an overlay taking the right half takes the right half of the face —
+and FR-4.4 wants the thing being judged in full. Pushed, the columns share the
+width: at 768 the stage still gets 336px, which is a 316px character. The
+button that opens it sits bottom-left of the stage, the one corner no stage
+overlay occupies.
+
+**Phone, below 768px.** The rail runs across the top as a strip that scrolls
+sideways; the stage takes what is left; the inspector is a bottom sheet at one
+of three heights (handle / half / tall). Sheet and stage are siblings dividing
+one column rather than one floating over the other, which is what makes FR-12.3
+structural: whatever height the sheet is at, the stage gets the rest and cannot
+be covered. The tall detent stops at 0.68 of the studio area — measured, not
+chosen: above it the status pill and the zoom pill between them cover the
+character, which passes every "is the stage visible" check while failing the
+rule the cap exists for.
+
+There is no track band on a phone. The track's two jobs split: the transport
+rides the top of the sheet, above the tab strip, where it is reachable from
+every tab and costs the stage nothing; laying a sequence out belongs to the
+Loops panel. As a stage overlay the transport covered the character exactly
+when the sheet was tall and the stage short — the one moment FR-12.3 is about.
+
+Stage chrome is keyed to the **stage column**, not to the window: the column is
+a query container (`container-type: size`, so `cqmin` can answer for the short
+side), the orientation readout and the drag hint hide below `@md`, and the
+render is sized `min(94cqmin, 40rem)`. Keyed to the viewport instead, the
+readout lost its first axis under the status pill at 390px _and_ at 820px with
+the tablet drawer open — same defect, two widths, which is what said the lever
+was wrong.
+
+- **Rail (72px on desktop and tablet):** vertical bubble thumbnails (live mini-renders) at 56px,
   active highlighted, `+` at bottom. The column is sized off the thumbnail
   rather than the other way round: the mini-render is the thing being read, so
   it takes the width and leaves the same 8px gutter either side the narrower
@@ -1495,13 +1580,29 @@ transition, a non-integer seed), which one file per code cannot express.
 
 ### 4b. Current state (re-derive; do not trust)
 
-As of the help sheet and the mark (F9): **44 Vitest files, 737 tests**, plus
-**1 Playwright spec** of **14 scenarios** — boot, panels, a playing loop and
+As of the responsive pass (FR-12): **45 Vitest files, 802 tests**, plus
+**1 Playwright spec** of **20 scenarios** — boot, panels, a playing loop and
 the rail menu, joined by the mood editor's focus behaviour, the gizmo, the
 wireframe, the Share preview, drag-to-scrub, drag-to-reorder, a 1024×720
-check that the track's first row and the inspector do not clip, and the help
-sheet's backdrop reaching every window edge. Production bundle 361.87 kB JS /
-39.35 kB CSS (108.56 / 7.80 gzipped).
+check that the track's first row and the inspector do not clip, the help
+sheet's backdrop reaching every window edge, and six the responsive work
+added: the phone shell at 390×844, the sheet's tall detent leaving the
+character visible, the tablet drawer at 820×1180 (with the export frame
+measured against the render it claims to frame), a reorder driven by a real
+held finger through CDP, the 44px floor under a coarse pointer, and a pinch.
+Production bundle 371.70 kB JS / 40.82 kB CSS (110.83 / 8.08 gzipped).
+
+Four of those six are worth naming for _how_ they measure rather than what.
+A stage overlay is checked for sharing pixels with another overlay, not only
+for fitting the column — overlap is what reads as clipping. The sheet's tall
+detent samples what is actually painted down the character's centre column,
+because a stage element that still exists while the render inside it is
+covered passes every visibility check. Both the tablet drawer and the boot
+case read their boxes inside one `evaluate` turn: the engine rewrites the
+host's `innerHTML` every frame (FR-11.2), so an `svg` Playwright resolves can
+be detached before it is measured, and `boundingBox()` came back null about
+one run in three. And the touch reorder drives CDP directly, since
+Playwright's touchscreen only taps.
 
 Five of those scenarios exist because jsdom cannot decide them. The playing
 loop asserts the **playhead has moved**: jsdom can prove the writer runs, not

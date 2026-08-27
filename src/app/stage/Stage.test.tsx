@@ -651,3 +651,150 @@ describe("follow intensity (FR-8.6)", () => {
     );
   });
 });
+
+/**
+ * FR-12.7: the follow survives touch.
+ *
+ * FR-8.1 has a grab take the pose back from the cursor, which is right for a
+ * mouse — a cursor exists whether or not it is pressed, so pressing means
+ * "mine now". A finger only exists while it is down, so the same rule would
+ * switch the follow off at the first touch and leave the toggle unusable. The
+ * rule is conditional on pointer type instead.
+ */
+describe("following with a finger (FR-12.7)", () => {
+  const toggle = () => screen.getByRole("button", { name: "Seguir el cursor" });
+
+  it("lets a mouse take the pose back from the follow, as before", async () => {
+    const user = userEvent.setup();
+    const el = renderStage();
+    await user.click(toggle());
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+
+    firePointer(el, "pointerdown", {
+      pointerId: 1,
+      clientX: 10,
+      clientY: 10,
+    });
+
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("keeps following when the pointer that pressed is a finger", async () => {
+    const user = userEvent.setup();
+    const el = renderStage();
+    await user.click(toggle());
+
+    firePointerType(el, "pointerdown", "touch", {
+      pointerId: 1,
+      clientX: 10,
+      clientY: 10,
+    });
+
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+  });
+});
+
+/** FR-12.6: pinch scales the stage the way the zoom pill does. */
+describe("pinch to zoom (FR-12.6)", () => {
+  const pinch = (el: Element, from: number, to: number) => {
+    firePointerType(el, "pointerdown", "touch", {
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    firePointerType(el, "pointerdown", "touch", {
+      pointerId: 2,
+      clientX: from,
+      clientY: 0,
+    });
+    firePointerType(el, "pointermove", "touch", {
+      pointerId: 2,
+      clientX: to,
+      clientY: 0,
+    });
+    firePointerType(el, "pointerup", "touch", {
+      pointerId: 2,
+      clientX: to,
+      clientY: 0,
+    });
+    firePointerType(el, "pointerup", "touch", {
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+  };
+
+  it("spreading two fingers zooms in", () => {
+    const onZoom = vi.fn();
+    const { el } = setupStage({ onZoom });
+    pinch(el, 100, 200);
+    expect(onZoom).toHaveBeenCalled();
+    expect(onZoom.mock.calls.at(-1)?.[0]).toBeGreaterThan(1);
+  });
+
+  it("pinching them together zooms out", () => {
+    const onZoom = vi.fn();
+    const { el } = setupStage({ onZoom });
+    pinch(el, 200, 100);
+    expect(onZoom.mock.calls.at(-1)?.[0]).toBeLessThan(1);
+  });
+
+  it("stays inside the same 25–200% the pill is held to", () => {
+    const onZoom = vi.fn();
+    const { el } = setupStage({ onZoom });
+    pinch(el, 100, 4000);
+    expect(onZoom.mock.calls.at(-1)?.[0]).toBeLessThanOrEqual(2);
+
+    onZoom.mockClear();
+    const second = setupStage({ onZoom });
+    pinch(second.el, 4000, 10);
+    expect(onZoom.mock.calls.at(-1)?.[0]).toBeGreaterThanOrEqual(0.25);
+  });
+
+  /**
+   * A second finger landing turns a head drag into a pinch. Without this the
+   * head lurches toward whichever finger the drag started under while the
+   * other one scales the view.
+   */
+  it("abandons the head drag the first finger started", () => {
+    const { el } = setupStage();
+    firePointerType(el, "pointerdown", "touch", {
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    firePointerType(el, "pointerdown", "touch", {
+      pointerId: 2,
+      clientX: 100,
+      clientY: 0,
+    });
+    firePointerType(el, "pointermove", "touch", {
+      pointerId: 1,
+      clientX: 90,
+      clientY: 90,
+    });
+
+    const last = engineOf().update.mock.calls.at(-1)?.[0] as {
+      headRotation: { x: number; y: number };
+      guide: boolean;
+    };
+    // The pose is untouched...
+    expect(last.headRotation).toEqual({ x: 0, y: 0, z: 0 });
+    // ...and so is the wireframe a drag brings up for its length (FR-8.4). It
+    // is the visible half of "a drag is in progress", and leaving it on is how
+    // an abandoned drag announces that it was never abandoned.
+    expect(last.guide).toBe(false);
+  });
+});
+
+/** Like `firePointer`, with the pointer type spelled out. */
+function firePointerType(
+  el: Element,
+  type: string,
+  pointerType: string,
+  props: Record<string, number>,
+) {
+  const ev = new Event(type, { bubbles: true, cancelable: true });
+  Object.assign(ev, { ...props, pointerType });
+  fireEvent(el, ev);
+}

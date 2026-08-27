@@ -1,27 +1,26 @@
-// StudioView: rail / stage / inspector shell (docs/05).
+// StudioView: the studio's state, and the shell that arranges it (docs/05,
+// FR-12.1). Every piece of view state lives here; where it is drawn is the
+// shell's business, which is what lets three layouts share one studio.
 import { useEffect, useMemo, useState } from "react";
 import { translator, type MessageKey } from "../i18n";
 import { effectiveKit } from "../../domain/document/mutate";
-import { Stage } from "../stage/Stage";
-import { LookPanel } from "./panels/LookPanel";
-import { MoodsPanel } from "./panels/MoodsPanel";
-import { LoopsPanel } from "./panels/LoopsPanel";
-import { SharePanel } from "./panels/SharePanel";
 import { useStudio } from "./store";
-import { PanelScroll } from "./ui";
-import { BubbleRail } from "./BubbleRail";
 import { BubbleMark } from "./BubbleMark";
 import { HelpSheet } from "./help/HelpSheet";
-import { Track } from "./Track";
+import { useBreakpoint } from "../useMediaQuery";
+import { DesktopShell } from "./shell/DesktopShell";
+import { PhoneShell } from "./shell/PhoneShell";
+import { TabletShell } from "./shell/TabletShell";
+import type { ShellProps, Tab } from "./shell/props";
 import { createStageClock } from "../stage/clock";
 import type { StageMode } from "../stage/StageEngine";
 import { createAutosaver, loadDocument } from "../persistence";
 import type { MoodSample } from "../../domain/playback/LoopPlayer";
 
-type Tab = "look" | "moods" | "loops" | "share";
-
 export function StudioView() {
   const [state, dispatch] = useStudio();
+  // FR-12.1: which of the three arrangements this window gets.
+  const at = useBreakpoint();
   const [tab, setTab] = useState<Tab>("look");
   // FR-6.2: playback is a three-state transport, not a boolean.
   const [transport, setTransport] = useState<{
@@ -49,7 +48,7 @@ export function StudioView() {
   // FR-6.6: the Share tab is not editing a sequence, so the track folds to a
   // single row there — kept as state rather than derived from the tab, so a
   // user who opens it back up gets to keep it open.
-  const [trackCollapsed, setTrackCollapsed] = useState(false);
+  const [trackCollapsed, setTrackCollapsed] = useState(at !== "desktop");
   // FR-9.6: autosave is silent, and silence is indistinguishable from
   // failure — so the header says which of the three it is.
   const [saveState, setSaveState] = useState<"saved" | "saving" | "failed">(
@@ -79,6 +78,25 @@ export function StudioView() {
     autosaver.push(state.doc);
     setSaveState("saving");
   }, [state.doc, autosaver]);
+
+  /**
+   * The debounce must not outlive the studio. Left running it fires into a
+   * tree that is gone — a write nobody asked for, and `setSaveState` on an
+   * unmounted component; under Vitest that lands after the environment is torn
+   * down, where React reaches for `window` and throws, which is how it
+   * surfaced: an intermittent unhandled error failing `pnpm check` while every
+   * test passed.
+   *
+   * Cancelling loses nothing FR-9.2 promises. The reload path is `pagehide`
+   * below, which flushes before the page goes; this is the other exit, and
+   * nothing is waiting on the far side of it.
+   */
+  useEffect(
+    () => () => {
+      autosaver.cancel();
+    },
+    [autosaver],
+  );
 
   // FR-9.2: a reload racing the 300ms debounce must not lose the last edit.
   useEffect(() => {
@@ -142,12 +160,17 @@ export function StudioView() {
     clock.seek(ms);
   };
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "look", label: t("tab.look") },
-    { id: "moods", label: t("tab.moods") },
-    { id: "loops", label: t("tab.loops") },
-    { id: "share", label: t("tab.share") },
-  ];
+  /**
+   * Switching tabs carries two side effects the strip itself should not know
+   * about: leaving Moods drops the preview, because it is that panel's live
+   * state and nothing else's (FR-6.1), and Share folds the track away, since
+   * it is not editing a sequence (FR-6.6).
+   */
+  const openTab = (next: Tab) => {
+    if (next !== "moods") setPreview(null);
+    setTab(next);
+    setTrackCollapsed(next === "share");
+  };
 
   if (kit === null) {
     return (
@@ -169,11 +192,61 @@ export function StudioView() {
     );
   }
 
+  /**
+   * Everything a shell arranges, in one bag (FR-12.1). The state stays here;
+   * the shell decides only where it is drawn, which is what lets a second and
+   * third arrangement exist without a second copy of any of this.
+   */
+  const shell: ShellProps = {
+    doc: state.doc,
+    bubble,
+    kit,
+    dispatch,
+    t,
+    lastError: state.lastError,
+    tab,
+    onTab: openTab,
+    mode: transport.mode,
+    selectedLoopId,
+    selectedStepId,
+    preview,
+    head,
+    zoom,
+    trackCollapsed,
+    clock,
+    onPlay: play,
+    onPause: pause,
+    onStop: stop,
+    onSelectLoop: selectLoop,
+    onSelectStep: setSelectedStepId,
+    onScrub: scrub,
+    onPreview: (sample) => {
+      setPreview(sample);
+      // Manual selection owns the live state (FR-6.1).
+      if (sample) {
+        setTransport((tr) =>
+          tr.mode === "playing" ? { ...tr, mode: "paused" } : tr,
+        );
+      }
+    },
+    onHead: setHead,
+    onZoom: setZoom,
+    onToggleTrackCollapsed: () => {
+      setTrackCollapsed((v) => !v);
+    },
+    overlayHost: inspector,
+    onOverlayHost: setInspector,
+    stageHost,
+    onStageHost: setStageHost,
+  };
+
   return (
     <div className="flex h-dvh flex-col bg-stage text-ink">
-      <header className="flex shrink-0 items-center gap-3 border-b border-line bg-panel px-4 py-2.5">
+      {/* The title truncates rather than wrapping: at 390px it wrapped to
+          three lines and took 80px of height the stage needs (FR-12.2). */}
+      <header className="flex shrink-0 items-center gap-2 border-b border-line bg-panel px-3 py-2 md:gap-3 md:px-4 md:py-2.5">
         <BubbleMark size={28} />
-        <h1 className="text-sm font-semibold tracking-tight">
+        <h1 className="min-w-0 truncate text-sm font-semibold tracking-tight">
           {t("app.title")}
         </h1>
         <span aria-hidden="true" className="mx-1 h-4.5 w-px bg-line" />
@@ -199,7 +272,7 @@ export function StudioView() {
                 dispatch({ type: "locale", locale: l });
               }}
               aria-pressed={state.doc.locale === l}
-              className={`rounded-[6px] px-2 py-0.5 text-xs uppercase transition-colors duration-150 ease-out ${
+              className={`touch-target rounded-[6px] px-2 py-0.5 text-xs uppercase transition-colors duration-150 ease-out ${
                 state.doc.locale === l
                   ? "bg-primary text-white"
                   : "text-ink-dim hover:text-ink"
@@ -211,138 +284,9 @@ export function StudioView() {
         </span>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <BubbleRail
-          bubbles={state.doc.bubbles}
-          activeId={bubble.id}
-          dispatch={dispatch}
-          t={t}
-        />
-
-        {/* `relative`: the Share panel draws the export frame here, over the
-            stage, as a sibling of the engine's host (docs/05 §1).
-
-            The zoom rides as a CSS variable rather than a prop threaded into
-            both, because the frame is portalled into this element from a panel
-            that knows nothing about the stage: one custom property on their
-            common ancestor is what keeps the two the same size, which is the
-            whole claim the frame makes (FR-10.6). */}
-        <main
-          ref={setStageHost}
-          className="relative min-w-0 flex-1 overflow-hidden"
-          style={{ "--stage-zoom": String(zoom) } as React.CSSProperties}
-        >
-          <Stage
-            bubble={bubble}
-            kit={kit}
-            loopId={selectedLoopId}
-            mode={transport.mode}
-            preview={preview}
-            t={t}
-            clock={clock}
-            head={head}
-            onHead={setHead}
-            zoom={zoom}
-            onZoom={setZoom}
-            onPause={pause}
-          />
-        </main>
-
-        {/* `relative`: the mood editor is a modal scoped to this column, so
-            the stage stays visible behind it (docs/05 §2). */}
-        <aside
-          ref={setInspector}
-          className="relative flex w-90 shrink-0 flex-col border-l border-line bg-panel"
-        >
-          <div
-            role="tablist"
-            className="flex shrink-0 gap-0.5 border-b border-line p-2"
-          >
-            {tabs.map((x) => (
-              <button
-                key={x.id}
-                role="tab"
-                type="button"
-                aria-selected={tab === x.id}
-                onClick={() => {
-                  if (x.id !== "moods") setPreview(null);
-                  setTab(x.id);
-                  setTrackCollapsed(x.id === "share");
-                }}
-                className={`min-w-0 flex-1 truncate rounded-field px-2 py-1.5 text-xs transition-colors duration-150 ease-out ${
-                  tab === x.id
-                    ? "bg-primary text-white"
-                    : "text-ink-dim hover:bg-white/6 hover:text-ink"
-                }`}
-              >
-                {x.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col">
-            {state.lastError && (
-              <p
-                role="alert"
-                className="m-3 mb-0 shrink-0 rounded-field border border-danger/30 bg-danger/15 px-2.5 py-1.5 text-xs text-danger"
-              >
-                {state.lastError.code === "E_REF"
-                  ? t("error.ref")
-                  : t("error.generic")}
-              </p>
-            )}
-
-            {tab === "look" && (
-              <PanelScroll>
-                <LookPanel bubble={bubble} dispatch={dispatch} t={t} />
-              </PanelScroll>
-            )}
-            {tab === "moods" && (
-              <MoodsPanel
-                kit={kit}
-                dispatch={dispatch}
-                t={t}
-                bubble={bubble}
-                overlayHost={inspector}
-                onPreview={(sample) => {
-                  setPreview(sample);
-                  // Manual selection owns the live state (FR-6.1).
-                  if (sample) {
-                    setTransport((tr) =>
-                      tr.mode === "playing" ? { ...tr, mode: "paused" } : tr,
-                    );
-                  }
-                }}
-              />
-            )}
-            {tab === "loops" && (
-              <LoopsPanel
-                kit={kit}
-                dispatch={dispatch}
-                t={t}
-                selectedLoopId={selectedLoopId}
-                onSelectLoop={selectLoop}
-                selectedStepId={selectedStepId}
-                onSelectStep={setSelectedStepId}
-              />
-            )}
-            {tab === "share" && (
-              <PanelScroll>
-                <SharePanel
-                  bubble={bubble}
-                  kit={kit}
-                  doc={state.doc}
-                  dispatch={dispatch}
-                  overlayHost={inspector}
-                  stageHost={stageHost}
-                  head={head}
-                  t={t}
-                />
-              </PanelScroll>
-            )}
-          </div>
-        </aside>
-      </div>
+      {at === "phone" && <PhoneShell {...shell} />}
+      {at === "tablet" && <TabletShell {...shell} />}
+      {at === "desktop" && <DesktopShell {...shell} />}
 
       {help && (
         <HelpSheet
@@ -352,29 +296,6 @@ export function StudioView() {
           }}
         />
       )}
-
-      {/* FR-6.6: below all three columns, not floating over one of them. */}
-      <Track
-        bubble={bubble}
-        kit={kit}
-        loopId={selectedLoopId}
-        mode={transport.mode}
-        clock={clock}
-        dispatch={dispatch}
-        t={t}
-        collapsed={trackCollapsed}
-        tray={tab === "moods"}
-        selectedStepId={selectedStepId}
-        onToggleCollapsed={() => {
-          setTrackCollapsed((v) => !v);
-        }}
-        onSelectStep={setSelectedStepId}
-        onScrub={scrub}
-        onPlay={play}
-        onPause={pause}
-        onStop={stop}
-        onSelectLoop={selectLoop}
-      />
     </div>
   );
 }

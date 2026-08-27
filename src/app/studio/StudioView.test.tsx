@@ -1,7 +1,7 @@
 // FR-9 studio shell smoke test (jsdom), the locale switch and the document
 // field that persists it included (FR-9.4). rAF is stubbed; the engine is
 // exercised in unit tests, here we verify the UI tree and interactions.
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   cleanup,
   fireEvent,
@@ -26,6 +26,15 @@ beforeEach(() => {
   vi.stubGlobal("requestAnimationFrame", () => 0);
   vi.stubGlobal("cancelAnimationFrame", () => {});
 });
+
+/**
+ * Unmount after the last case too, not only before the next one. `cleanup` in
+ * `beforeEach` alone leaves the final render of the file mounted when the
+ * environment is torn down, and a studio that is still mounted still has its
+ * autosave debounce pending — which then fires into a dead tree and fails the
+ * run as an unhandled error, with every test passing.
+ */
+afterEach(cleanup);
 
 /** Opens the rail context menu for the nth bubble (docs/05 §1). */
 async function openRailMenu(
@@ -362,16 +371,7 @@ describe("StudioView", () => {
     const rows = within(rail).getAllByRole("listitem");
     const [first, second] = rows;
     if (!first || !second) throw new Error("rail should hold two bubbles");
-    const data = new Map<string, string>();
-    const dataTransfer = {
-      setData: (k: string, v: string) => data.set(k, v),
-      getData: (k: string) => data.get(k) ?? "",
-      effectAllowed: "",
-      dropEffect: "",
-    };
-    fireEvent.dragStart(first, { dataTransfer });
-    fireEvent.dragOver(second, { dataTransfer });
-    fireEvent.drop(second, { dataTransfer });
+    reorderDrag(first, second);
 
     expect(names()).toEqual(["Beta", "Alpha"]);
   });
@@ -421,6 +421,32 @@ describe("StudioView header (FR-9.6, FR-9.7)", () => {
         "Guardado",
       );
     });
+  });
+
+  /**
+   * The debounce outlives the component otherwise, and fires into a tree that
+   * is gone: `setSaveState` on an unmounted studio, and a write nobody asked
+   * for. Under Vitest it lands after the environment is torn down, where React
+   * reaches for `window` and throws — which is how it was found, as an
+   * intermittent unhandled error that failed `pnpm check` while all 802 tests
+   * passed.
+   *
+   * Cancelling loses nothing FR-9.2 promises: the reload path is `pagehide`,
+   * which flushes before the page goes, and is covered above.
+   */
+  it("leaves nothing scheduled when the studio unmounts (FR-9.2)", () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = render(<StudioView />);
+      // Mounting pushes the document, so the debounce is in flight by now.
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      unmount();
+
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("says so when storage refuses the write, rather than looking saved", async () => {
@@ -474,3 +500,26 @@ describe("StudioView header (FR-9.6, FR-9.7)", () => {
     expect(mark.getAttribute("aria-hidden")).toBe("true");
   });
 });
+
+/**
+ * A mouse reorder drag (FR-12.4): press, move past the slop, release over the
+ * target. jsdom has neither PointerEvent nor layout, so the events are plain
+ * ones with the fields the hook reads, and the element under the pointer is
+ * supplied outright.
+ */
+function reorderDrag(from: Element, to: Element) {
+  (document as unknown as Record<string, unknown>).elementFromPoint = () => to;
+  const at = (type: string, y: number) => {
+    const ev = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(ev, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 0,
+      clientY: y,
+    });
+    fireEvent(from, ev);
+  };
+  at("pointerdown", 0);
+  at("pointermove", 40);
+  at("pointerup", 40);
+}

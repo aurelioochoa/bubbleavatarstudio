@@ -2,7 +2,15 @@
 // anything, the snapshot backgrounds and live preview (FR-10.1), and the loop
 // picker the character export carries (FR-10.3). Driven through StudioView so
 // the panel is exercised with a real store.
-import { describe, expect, it, vi, beforeEach, beforeAll } from "vitest";
+import {
+  describe,
+  expect,
+  it,
+  vi,
+  beforeEach,
+  beforeAll,
+  afterEach,
+} from "vitest";
 import {
   cleanup,
   fireEvent,
@@ -37,6 +45,15 @@ beforeEach(() => {
   vi.stubGlobal("requestAnimationFrame", () => 0);
   vi.stubGlobal("cancelAnimationFrame", () => {});
 });
+
+/**
+ * Unmount after the last case too, not only before the next one. `cleanup` in
+ * `beforeEach` alone leaves the final render of the file mounted when the
+ * environment is torn down, and a studio that is still mounted still has its
+ * autosave debounce pending — which then fires into a dead tree and fails the
+ * run as an unhandled error, with every test passing.
+ */
+afterEach(cleanup);
 
 async function upload(file: File) {
   const user = userEvent.setup();

@@ -224,6 +224,7 @@ export function LoopsPanel({
               aside={
                 <input
                   type="checkbox"
+                  className="touch-target"
                   checked={loop.blink.enabled}
                   aria-label={t("loops.blink")}
                   onChange={(e) => {

@@ -137,7 +137,7 @@ export function Segmented<T extends string>({
           }}
           className={`rounded-[6px] transition-colors duration-150 ease-out ${
             compact
-              ? "grid h-5.5 w-7.5 place-items-center"
+              ? "touch-target grid h-5.5 w-7.5 place-items-center"
               : "min-w-0 flex-1 basis-[4.5rem] truncate px-2 py-1 text-xs"
           } ${
             value === o.value
@@ -173,7 +173,7 @@ export function IconButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`grid h-7 w-7 shrink-0 place-items-center rounded-field text-xs transition-colors duration-150 ease-out disabled:opacity-30 ${
+      className={`touch-target grid h-7 w-7 shrink-0 place-items-center rounded-field text-xs transition-colors duration-150 ease-out disabled:opacity-30 ${
         danger
           ? "text-danger hover:bg-danger/15"
           : "text-ink-dim hover:bg-white/10 hover:text-ink"

@@ -712,7 +712,10 @@ function StepChip({
       data-testid="step-chip"
       data-step-id={step.id}
       style={{ flexGrow: step.holdMs, flexShrink: 1, flexBasis: 0 }}
-      className="relative min-w-0 data-[dragging]:opacity-40"
+      /* `has-data-`: the drag props sit on the button inside, so the attribute
+         that says "lifted" lands there while the sizing lives here. Keyed on
+         the `li` itself, the rule never matched and a lifted chip never dimmed. */
+      className="relative min-w-0 has-data-[dragging]:opacity-40"
     >
       <button
         type="button"

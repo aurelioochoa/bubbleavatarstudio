@@ -179,6 +179,18 @@
     background-color: var(--color-panel-3);
   }
 
+  /* FR-12.5: a slider's hit area is its height, and 18px of it is a miss with
+     a finger. The thumb and the track keep their drawn size; only the room
+     around them grows, and only where the pointer is coarse. */
+  @media (pointer: coarse) {
+    input[type="range"] {
+      height: 2.75rem;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      margin-top: -5px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -187,4 +199,72 @@
       animation-duration: 0.01ms !important;
     }
   }
+}
+
+/**
+ * FR-12.5: a 44px hit area for a control that must stay small to look right —
+ * the rail's kebab, the step chip's 6px resize grip, a checkbox. The overlay
+ * is a pseudo-element centred on the control, so nothing about the layout or
+ * the drawn mark moves; it simply becomes catchable.
+ *
+ * Only under a coarse pointer. A mouse hits a 16px target precisely, and
+ * invisible 44px boxes on a desktop would swallow presses meant for whatever
+ * sits beside them.
+ */
+/**
+ * FR-12.5: the 44px floor, stated once.
+ *
+ * Thirty controls were under it, spread across every panel, and thirty class
+ * edits would have been thirty chances to miss one and no rule at all for the
+ * thirty-first. This is the same argument the single `:focus-visible` rule
+ * above makes: an invariant that holds everywhere is cheaper to state than to
+ * repeat. Only the height is set — width is nearly always the panel's, and the
+ * few controls that are narrow as well as short opt into `.touch-target`.
+ *
+ * `.touch-target` is the opt-out: a control that must keep its drawn size gets
+ * an invisible overlay instead (see below), and growing it here as well would
+ * undo the point of it.
+ */
+@media (pointer: coarse) {
+  button:not(.touch-target),
+  select:not(.touch-target),
+  [role="tab"]:not(.touch-target),
+  [role="radio"]:not(.touch-target),
+  [role="menuitem"]:not(.touch-target),
+  input:not(.touch-target):not([type="range"]) {
+    min-height: 44px;
+  }
+}
+
+@media (pointer: coarse) {
+  .touch-target {
+    position: relative;
+  }
+  .touch-target::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 100%;
+    height: 100%;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/**
+ * The stage column, as a query container on *both* axes.
+ *
+ * Tailwind's `@container` is `container-type: inline-size`, which leaves
+ * `cqmin` resolving against the width alone — the long side on a tall narrow
+ * column, which is exactly the shape a phone stage and a tablet with its
+ * drawer open both have. The render is sized off the short side (docs/05 §1),
+ * so the container has to be able to answer for its height too.
+ *
+ * The overlays' `@md:` variants query this same element, which is what keys
+ * stage chrome to the column it is drawn in rather than to the window.
+ */
+.stage-box {
+  container-type: size;
 }

@@ -157,6 +157,9 @@ export type MessageKey =
   | "loops.modeOnce"
   | "loops.modePingpong"
   | "track.title"
+  | "sheet.label"
+  | "sheet.grip"
+  | "inspector.toggle"
   | "track.timeline"
   | "track.elapsed"
   | "track.expand"
@@ -412,6 +415,9 @@ const es: Record<MessageKey, string> = {
   "loops.modeOnce": "Una vez",
   "loops.modePingpong": "Ida y vuelta",
   "track.title": "Pista",
+  "sheet.label": "Inspector",
+  "sheet.grip": "Alto del inspector",
+  "inspector.toggle": "Inspector",
   "track.timeline": "Línea de tiempo",
   "track.elapsed": "Tiempo transcurrido",
   "track.expand": "Ampliar secuencia",
@@ -681,6 +687,9 @@ const en: Record<MessageKey, string> = {
   "loops.modeOnce": "Once",
   "loops.modePingpong": "Ping-pong",
   "track.title": "Track",
+  "sheet.label": "Inspector",
+  "sheet.grip": "Inspector height",
+  "inspector.toggle": "Inspector",
   "track.timeline": "Timeline",
   "track.elapsed": "Elapsed",
   "track.expand": "Expand sequence",

@@ -22,6 +22,48 @@ async function shoot(page: import("@playwright/test").Page, name: string) {
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
 }
 
+/**
+ * The stage's overlays, checked for the two ways they go wrong in a narrow
+ * column: spilling past its edges, and sharing pixels with each other. The
+ * second is what reads as clipping — the orientation readout sat under the
+ * status pill and lost its first axis, twice, at two different widths.
+ *
+ * Measured against the stage column rather than the window, because that is
+ * what the overlays are actually laid out in: a drawer opening beside the
+ * stage narrows it without the viewport changing at all.
+ */
+async function stageOverlays(page: import("@playwright/test").Page) {
+  return page.evaluate(() => {
+    const host = document.querySelector('[aria-label="bubble stage"]');
+    if (!host) return null;
+    const stage = host.parentElement;
+    if (!stage) return null;
+    const room = stage.getBoundingClientRect();
+    const boxes = [...stage.children]
+      .filter((el) => el !== host)
+      .map((el) => el.getBoundingClientRect())
+      .filter((b) => b.width > 0 && b.width < room.width - 2);
+
+    const over = boxes.filter(
+      (b) => b.left < room.left - 1 || b.right > room.right + 1,
+    ).length;
+    let overlapping = 0;
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        if (
+          a.left < b.right - 1 &&
+          b.left < a.right - 1 &&
+          a.top < b.bottom - 1 &&
+          b.top < a.bottom - 1
+        )
+          overlapping++;
+      }
+    return { over, overlapping };
+  });
+}
+
 test("boot: studio shell renders with a starter bubble", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -469,4 +511,349 @@ test("triad and strength: axis colours resolve, and strength scales the turn", a
   await expect.poll(yaw, { timeout: 4000 }).toBeLessThan(atFull / 2);
 
   await shoot(page, "stage-triad");
+});
+
+/**
+ * FR-12.1 / FR-12.2 / FR-12.3: the phone shell. A real viewport is the only
+ * place these can be judged — jsdom has no layout, so "nothing overflows" and
+ * "the stage still has room" are claims only a browser can settle.
+ *
+ * 390×844 is an iPhone 14/15 in portrait, the narrowest shape worth naming.
+ */
+test("phone: the studio folds to a stage and a sheet at 390×844", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  // The three columns are gone; the rail runs across and the inspector is a
+  // sheet the stage sits above.
+  await expect(page.getByTestId("sheet")).toBeVisible();
+  await expect(page.locator("nav")).toHaveAttribute(
+    "data-orientation",
+    "horizontal",
+  );
+  expect(await page.locator("aside").count()).toBe(0);
+
+  // FR-6.2 is still reachable from every tab.
+  await expect(page.getByTestId("phone-transport")).toBeVisible();
+
+  // The header is chrome, not content: three lines of wrapped title is 80px
+  // the stage does not get.
+  const head = await page.locator("header").boundingBox();
+  expect(head?.height ?? 999).toBeLessThanOrEqual(56);
+
+  // The stage's own overlays have to fit the width they are given; the
+  // orientation readout and the toggle row used to collide and clip at 390px.
+  expect(await stageOverlays(page)).toEqual({ over: 0, overlapping: 0 });
+
+  // FR-12.2: nothing overflows sideways, anywhere.
+  const overflows = await page.evaluate(() => {
+    const d = document.documentElement;
+    const wide = (el: Element) => el.scrollWidth > el.clientWidth + 1;
+    return {
+      page: wide(d),
+      sheet: wide(document.querySelector('[data-testid="sheet"]') as Element),
+      rail: wide(document.querySelector("nav") as Element),
+    };
+  });
+  expect(overflows).toEqual({ page: false, sheet: false, rail: false });
+
+  // FR-12.2: at the resting detent the stage keeps 40% of the studio area —
+  // the room below the header, which is what the shell actually divides.
+  const header = await page.locator("header").boundingBox();
+  const stage = await page.getByLabel("bubble stage").boundingBox();
+  if (!header || !stage) throw new Error("phone shell not laid out");
+  expect(stage.height / (844 - header.height)).toBeGreaterThanOrEqual(0.4);
+
+  await shoot(page, "phone-390");
+});
+
+/**
+ * FR-12.3: the sheet's tall detent must still leave the character visible —
+ * FR-4.4 says a mood is judged against it, and a sheet that could cover the
+ * stage would undo on a phone what the scoped mood editor protects on desktop.
+ */
+test("phone: the sheet never covers the stage, even pulled all the way up", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  // The grip is the no-drag path (docs/05 §3): pressing it cycles detents.
+  const grip = page.getByRole("button", { name: "Alto del inspector" });
+  await grip.click(); // half → tall
+  await page.waitForTimeout(250);
+
+  // Measured as area of the character left uncovered, not as "is the stage
+  // element still there". A stage box that exists while the render inside it
+  // is hidden behind an overlay passes every visibility check and fails the
+  // rule this test is named after — which is exactly what happened once.
+  const clear = await page.evaluate(() => {
+    const svg = document
+      .querySelector('[aria-label="bubble stage"]')
+      ?.querySelector("svg");
+    if (!svg) return 0;
+    const box = svg.getBoundingClientRect();
+    if (box.height <= 0) return 0;
+    // Sample the character's own centre column: whatever the topmost element
+    // is there, it should be the render, not something drawn over it.
+    const hits = [0.35, 0.5, 0.65].map((f) => {
+      const el = document.elementFromPoint(
+        box.x + box.width / 2,
+        box.y + box.height * f,
+      );
+      return el?.closest("svg") === svg;
+    });
+    return hits.filter(Boolean).length;
+  });
+  expect(clear).toBe(3);
+
+  await shoot(page, "phone-sheet-tall");
+});
+
+/**
+ * FR-12.1: the tablet shell at 820×1180 (iPad Air, portrait). The claim worth
+ * measuring here is the one that motivated the drawer: standing the inspector
+ * beside the rail at this width would leave the stage narrower than the
+ * character needs, so it opens over the stage and covers at most half of it.
+ */
+test("tablet: the inspector is a drawer over the stage at 820×1180", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto("/");
+
+  // Closed to begin with: the stage has the column to itself.
+  expect(await page.getByRole("tab").count()).toBe(0);
+  const full = await page.getByLabel("bubble stage").boundingBox();
+
+  await page.getByRole("button", { name: "Inspector" }).click();
+  await expect(page.getByRole("tab", { name: "Aspecto" })).toBeVisible();
+
+  // The drawer takes width from the stage rather than covering it. Measured
+  // as overlap with the drawn character, not as the drawer's own width: an
+  // overlay half the stage wide covers half a centred character, which passed
+  // a width check and hid the face.
+  // Measured inside one `evaluate` turn rather than with `boundingBox()`: the
+  // engine rewrites the host's `innerHTML` every frame (FR-11.2), so the `svg`
+  // Playwright resolves can be detached by the time it is measured, and the
+  // box comes back null perhaps one run in three. The boot case reads the same
+  // numbers the same way, for the same reason.
+  const laid = await page.evaluate(() => {
+    const host = document.querySelector('[aria-label="bubble stage"]');
+    const drawerEl = document.querySelector("aside");
+    const svg = host?.querySelector("svg");
+    if (!host || !drawerEl || !svg) return null;
+    const stage = host.getBoundingClientRect();
+    const drawn = svg.getBoundingClientRect();
+    const drawer = drawerEl.getBoundingClientRect();
+    return {
+      stageWidth: stage.width,
+      drawnRight: drawn.x + drawn.width,
+      drawerLeft: drawer.x,
+    };
+  });
+  if (!laid || !full) throw new Error("tablet shell not laid out");
+
+  expect(laid.stageWidth).toBeLessThan(full.width);
+  expect(laid.drawnRight).toBeLessThanOrEqual(laid.drawerLeft + 1);
+
+  // And the stage's own overlays fit the column the drawer left them.
+  expect(await stageOverlays(page)).toEqual({ over: 0, overlapping: 0 });
+
+  /* FR-10.6: the export frame covers exactly the box the render occupies, or
+     it is decorative. This is the shape that used to break it — a column
+     taller than it is wide, where sizing off a percentage of the height drew
+     a frame twice the character's height. Both read `min(94cqmin, 40rem)`
+     now, and the stage column answers for both its axes. */
+  await page.getByRole("tab", { name: "Compartir" }).click();
+  const frame = await page.evaluate(() => {
+    const host = document.querySelector('[aria-label="bubble stage"]');
+    const svg = host?.querySelector("svg");
+    const box = document.querySelector('[data-testid="export-frame"]');
+    if (!svg || !box) return null;
+    const a = svg.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    return {
+      dw: Math.abs(a.width - b.width),
+      dh: Math.abs(a.height - b.height),
+    };
+  });
+  expect(frame).not.toBeNull();
+  expect(frame?.dw).toBeLessThanOrEqual(1);
+  expect(frame?.dh).toBeLessThanOrEqual(1);
+
+  await shoot(page, "tablet-820");
+});
+
+/**
+ * FR-12.4: the reorder drag with a finger. This is the case the whole rewrite
+ * exists for — native HTML5 drag never fires from a touchscreen, so before it
+ * the rail, the mood grid and the step strip could not be reordered by touch
+ * at all, and nothing in jsdom could tell us so.
+ *
+ * Driven through CDP rather than Playwright's touchscreen, which only taps:
+ * `Input.dispatchTouchEvent` produces the real pointer stream, `pointerType`
+ * included, which is what the hold-versus-scroll rule turns on.
+ */
+test.describe("touch", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("reorders the rail with a held finger, and not with a quick swipe", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Nueva burbuja" }).click();
+
+    const order = () =>
+      page
+        .locator("nav [data-reorder-id]")
+        .evaluateAll((els) =>
+          els.map((e) => e.getAttribute("data-reorder-id")),
+        );
+    const before = await order();
+    expect(before).toHaveLength(2);
+
+    const centre = async (i: number) => {
+      const box = await page
+        .locator("nav [data-reorder-id]")
+        .nth(i)
+        .boundingBox();
+      if (!box) throw new Error("rail item not laid out");
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    const cdp = await page.context().newCDPSession(page);
+    type TouchPhase = "touchStart" | "touchMove" | "touchEnd" | "touchCancel";
+    const touch = async (type: TouchPhase, at: { x: number; y: number }) => {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type,
+        touchPoints: type === "touchEnd" ? [] : [{ x: at.x, y: at.y, id: 1 }],
+      });
+    };
+
+    // A quick swipe is a scroll, not a lift.
+    //
+    // Corroboration rather than proof: with the hold set to zero this half
+    // still passes, because Chrome turns the swipe into a pan and cancels the
+    // pointer before our rule is ever consulted. That is the right outcome and
+    // a second line of defence, but the rule itself is pinned in
+    // dragReorder.test.tsx, where the hold can be moved and watched to fail.
+    const [a, b] = [await centre(0), await centre(1)];
+    await touch("touchStart", a);
+    await touch("touchMove", b);
+    expect(await page.locator("nav [data-dragging]").count()).toBe(0);
+    await touch("touchEnd", b);
+    expect(await order()).toEqual(before);
+
+    // Held first, it lifts.
+    await touch("touchStart", a);
+    await page.waitForTimeout(600);
+    await touch("touchMove", b);
+    expect(await page.locator("nav [data-dragging]").count()).toBe(1);
+    await touch("touchEnd", b);
+
+    expect(await order()).toEqual([before[1], before[0]]);
+  });
+});
+
+/**
+ * FR-12.5: every interactive target is at least 44×44 CSS px under a coarse
+ * pointer. A control may keep a smaller *drawn* mark — the step grip is 6px
+ * wide and stays so — provided its hit area meets the floor, which is why the
+ * measurement takes the larger of the element's own box and the `::after`
+ * overlay `.touch-target` gives it.
+ */
+test.describe("touch targets", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("every control a finger can reach is at least 44px (FR-12.5)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    expect(
+      await page.evaluate(() => matchMedia("(pointer: coarse)").matches),
+    ).toBe(true);
+
+    const tooSmall = async () =>
+      page.evaluate(() => {
+        const out: string[] = [];
+        const controls = document.querySelectorAll(
+          "button, input, select, [role=tab], [role=radio], [role=menuitem]",
+        );
+        for (const el of controls) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          const after = getComputedStyle(el, "::after");
+          const grown = after.content !== "none";
+          const w = grown
+            ? Math.max(r.width, parseFloat(after.width) || 0)
+            : r.width;
+          const h = grown
+            ? Math.max(r.height, parseFloat(after.height) || 0)
+            : r.height;
+          if (w < 44 || h < 44) {
+            const name =
+              el.getAttribute("aria-label") ??
+              el.textContent?.trim().slice(0, 20) ??
+              el.tagName;
+            out.push(
+              `${String(Math.round(w))}x${String(Math.round(h))} ${name}`,
+            );
+          }
+        }
+        return out;
+      });
+
+    const seen: string[] = [];
+    seen.push(...(await tooSmall()));
+    for (const tab of ["Ánimos", "Ciclos", "Compartir"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      await page.waitForTimeout(200);
+      seen.push(...(await tooSmall()));
+    }
+    expect(seen).toEqual([]);
+
+    // Archived separately from phone-390: that one runs with a fine pointer,
+    // where the controls keep their compact desktop sizes. This is what a real
+    // phone shows.
+    await page.getByRole("tab", { name: "Aspecto" }).click();
+    await shoot(page, "phone-touch");
+  });
+
+  /**
+   * FR-12.6: pinch reaches the zoom the pill reaches. Two real touch points
+   * through CDP, because this is exactly the gesture jsdom can only mime — it
+   * has no notion of two pointers being a scale rather than two drags.
+   */
+  test("pinching the stage zooms it (FR-12.6)", async ({ page }) => {
+    await page.goto("/");
+    const zoom = page.getByLabel("Zoom", { exact: true });
+    await expect(zoom).toHaveValue("100");
+
+    const box = await page.getByLabel("bubble stage").boundingBox();
+    if (!box) throw new Error("stage not laid out");
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+
+    const cdp = await page.context().newCDPSession(page);
+    type TouchPhase = "touchStart" | "touchMove" | "touchEnd";
+    const at = (spread: number) => [
+      { x: cx - spread, y: cy, id: 1 },
+      { x: cx + spread, y: cy, id: 2 },
+    ];
+    const send = async (type: TouchPhase, points: ReturnType<typeof at>) => {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type,
+        touchPoints: type === "touchEnd" ? [] : points,
+      });
+    };
+
+    await send("touchStart", at(40));
+    await send("touchMove", at(80));
+    await send("touchEnd", at(80));
+
+    // Doubling the span doubles the zoom, and 200% is where the range stops.
+    await expect(zoom).toHaveValue("200");
+  });
 });

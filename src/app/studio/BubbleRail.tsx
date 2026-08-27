@@ -15,6 +15,12 @@ export interface BubbleRailProps {
   activeId: string;
   dispatch: React.Dispatch<Action>;
   t: (k: MessageKey) => string;
+  /**
+   * FR-12.1: a column beside the stage, or a strip above it. Only the axis
+   * changes — the thumbnails, the menu and the add button are the same rail
+   * either way, which is why this is a prop rather than a second component.
+   */
+  orientation?: "vertical" | "horizontal";
 }
 
 /**
@@ -30,7 +36,9 @@ export function BubbleRail({
   activeId,
   dispatch,
   t,
+  orientation = "vertical",
 }: BubbleRailProps) {
+  const across = orientation === "horizontal";
   const [menuFor, setMenuFor] = useState<string | null>(null);
   // docs/05 §1: the rail drags; the menu's move up/down stays the fallback.
   const drag = useDragReorder(
@@ -43,9 +51,22 @@ export function BubbleRail({
   return (
     <nav
       aria-label={t("rail.bubbles")}
-      className="flex w-18 shrink-0 flex-col items-center gap-2 border-r border-line bg-panel py-3"
+      data-orientation={orientation}
+      className={
+        across
+          ? // The strip scrolls sideways rather than wrapping: a rail that
+            // grows a second row would take the height the stage needs.
+            "flex shrink-0 flex-row items-center gap-2 overflow-x-auto border-b border-line bg-panel px-3 py-2"
+          : "flex w-18 shrink-0 flex-col items-center gap-2 border-r border-line bg-panel py-3"
+      }
     >
-      <ul className="flex w-full flex-col items-center gap-2">
+      <ul
+        className={
+          across
+            ? "flex shrink-0 flex-row items-center gap-2"
+            : "flex w-full flex-col items-center gap-2"
+        }
+      >
         {bubbles.map((b, i) => (
           <RailItem
             key={b.id}
@@ -160,7 +181,7 @@ function RailItem({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={onToggleMenu}
-        className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border border-line bg-panel text-[9px] leading-none text-ink-dim opacity-60 transition-opacity duration-150 ease-out hover:opacity-100 focus-visible:opacity-100"
+        className="touch-target absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border border-line bg-panel text-[9px] leading-none text-ink-dim opacity-60 transition-opacity duration-150 ease-out hover:opacity-100 focus-visible:opacity-100"
       >
         ⋯
       </button>

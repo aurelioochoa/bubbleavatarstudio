@@ -48,6 +48,11 @@ export interface StageProps {
   onPause: () => void;
 }
 
+interface Point {
+  x: number;
+  y: number;
+}
+
 /** The zoom the stage opens at, and the range its control offers. */
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 2;
@@ -88,6 +93,12 @@ export function Stage({
   // pose held when the last drag began — not the resting pose. Kept in a ref
   // and outside dragRef, which is cleared on pointerup.
   const preDragRef = useRef({ x: 0, y: 0, z: 0 });
+  /** Every pointer currently down on the stage, so a second one can be told
+   *  from the first (FR-12.6). */
+  const points = useRef(new Map<number, Point>());
+  /** The pinch in progress: how far apart the fingers began, and the zoom
+   *  they began from, so the scale is proportional rather than incremental. */
+  const pinch = useRef<{ span: number; zoom: number } | null>(null);
   // FR-8.2 / FR-8.4: the rotation pad and the projection guide, both off until
   // asked for. Overlays live beside the engine host, never inside it.
   const [gizmo, setGizmo] = useState(false);
@@ -268,11 +279,29 @@ export function Stage({
   ]);
 
   const onPointerDown = (e: React.PointerEvent) => {
+    points.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // FR-12.6: the second finger down turns the gesture into a pinch, and the
+    // head drag the first one started is abandoned — otherwise the head lurches
+    // toward whichever finger it began under while the other scales the view.
+    if (points.current.size === 2) {
+      const [a, b] = [...points.current.values()] as [Point, Point];
+      pinch.current = { span: Math.hypot(a.x - b.x, a.y - b.y), zoom };
+      dragRef.current = null;
+      setDragging(false);
+      return;
+    }
     // sx/sy seed the pitch and the yaw from where this drag starts, so each
     // axis continues from its own value rather than from the resting pose.
+    //
     // Direct manipulation wins (FR-8.1): grabbing the character takes it back
-    // from the cursor rather than fighting the follow for the same pose.
-    setFollow(false);
+    // from the cursor rather than fighting the follow for the same pose. Only
+    // not for a finger, though (FR-12.7). A cursor exists whether or not it is
+    // pressed, so pressing it means "mine now"; a finger exists only while it
+    // is down, and the same rule would switch the follow off at the first
+    // touch and leave the toggle unusable. The touch is the exception rather
+    // than the mouse the rule, because a pen hovers too and should behave the
+    // way a cursor does.
+    if (e.pointerType !== "touch") setFollow(false);
     dragRef.current = { px: e.clientX, py: e.clientY, sx: head.x, sy: head.y };
     setDragging(true);
     setEverDragged(true);
@@ -285,6 +314,19 @@ export function Stage({
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (points.current.has(e.pointerId))
+      points.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // FR-12.6: two fingers scale, and the same 25–200% the pill is held to.
+    const spread = pinch.current;
+    if (spread && points.current.size === 2) {
+      const [a, b] = [...points.current.values()] as [Point, Point];
+      const span = Math.hypot(a.x - b.x, a.y - b.y);
+      if (spread.span > 0) {
+        const next = (spread.zoom * span) / spread.span;
+        onZoom(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next)));
+      }
+      return;
+    }
     const d = dragRef.current;
     if (!d) return;
     const dx = e.clientX - d.px;
@@ -305,7 +347,12 @@ export function Stage({
     });
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
+    points.current.delete(e.pointerId);
+    // A pinch ends when it stops being two fingers; the one still down does
+    // not become a head drag, because the drag it would continue was never
+    // started — lifting one finger of a pinch should settle, not lurch.
+    if (points.current.size < 2) pinch.current = null;
     dragRef.current = null;
     setDragging(false);
   };
@@ -332,7 +379,7 @@ export function Stage({
 
       <div
         ref={hostRef}
-        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:aspect-square [&>svg]:h-[calc(min(94%,40rem)*var(--stage-zoom,1))] [&>svg]:w-auto [&>svg]:max-w-[calc(94%*var(--stage-zoom,1))] active:cursor-grabbing"
+        className="relative grid h-full w-full cursor-grab touch-none place-items-center text-accent outline-none [&>svg]:aspect-square [&>svg]:h-[calc(min(94cqmin,40rem)*var(--stage-zoom,1))] [&>svg]:w-auto active:cursor-grabbing"
         role="img"
         aria-label="bubble stage"
         tabIndex={0}
@@ -349,7 +396,11 @@ export function Stage({
         <div
           role="group"
           aria-label={t("stage.orientation")}
-          className="flex h-7 items-center gap-2.5 rounded-full border border-line bg-panel/80 px-3 text-[10.5px] tabular-nums text-ink-dim backdrop-blur-md"
+          /* FR-12.1: in a narrow column the readout and the status pill share
+             a line they cannot both fit on, and the readout loses its first
+             axis under the pill. The three angles are still in the rotation
+             pad, which is where they were authored. */
+          className="hidden h-7 items-center gap-2.5 rounded-full border border-line bg-panel/80 px-3 text-[10.5px] tabular-nums text-ink-dim backdrop-blur-md @md:flex"
         >
           {AXES.map((a) => (
             <span key={a.axis}>
@@ -412,7 +463,7 @@ export function Stage({
               preDragRef.current = head;
               onHead({ x: 0, y: 0, z: 0 });
             }}
-            className="grid h-7.5 w-7.5 place-items-center rounded-full border border-line bg-panel/80 text-ink-dim backdrop-blur-md transition-colors duration-150 ease-out hover:text-ink"
+            className="touch-target grid h-7.5 w-7.5 place-items-center rounded-full border border-line bg-panel/80 text-ink-dim backdrop-blur-md transition-colors duration-150 ease-out hover:text-ink"
           >
             <ResetIcon />
           </button>
@@ -446,7 +497,7 @@ export function Stage({
             const v = Number(e.target.value);
             if (Number.isFinite(v) && v > 0) onZoom(v / 100);
           }}
-          className="w-11 rounded-full bg-panel-2 px-1.5 py-0.5 text-right text-ink tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-primary"
+          className="touch-target w-11 rounded-full bg-panel-2 px-1.5 py-0.5 text-right text-ink tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-primary"
         />
         <span className="pr-1">%</span>
       </div>
@@ -518,7 +569,9 @@ export function Stage({
 
       {/* An affordance hint, so it goes once the affordance has been used. */}
       {!everDragged && (
-        <p className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 text-[10.5px] text-ink-dim opacity-70">
+        /* Hidden in a narrow column: it names Esc, which a phone has no key
+           for, and it runs straight through the zoom pill. */
+        <p className="pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 items-center gap-2 text-[10.5px] text-ink-dim opacity-70 @md:flex">
           <DragIcon />
           {t("stage.dragHint")}
         </p>
@@ -561,7 +614,7 @@ function OverlayToggle({
       title={label}
       aria-pressed={pressed}
       onClick={onClick}
-      className={`grid h-8 w-8 place-items-center rounded-full border border-line backdrop-blur-md transition-colors duration-150 ease-out ${
+      className={`touch-target grid h-8 w-8 place-items-center rounded-full border border-line backdrop-blur-md transition-colors duration-150 ease-out ${
         pressed
           ? "bg-primary text-white"
           : "bg-panel/80 text-ink-dim hover:text-ink"

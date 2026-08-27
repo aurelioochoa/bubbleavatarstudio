@@ -13,6 +13,7 @@ export function AmbientSection({ bubble, dispatch, t }: SectionProps) {
           {t("look.ambientEnabled")}
           <input
             type="checkbox"
+            className="touch-target"
             checked={ambient.enabled}
             aria-label={t("look.ambientEnabled")}
             onChange={(e) => {
@@ -25,7 +26,7 @@ export function AmbientSection({ bubble, dispatch, t }: SectionProps) {
         </label>
       }
     >
-      <div className="grid grid-cols-2 gap-2">
+      <div className="touch-target grid grid-cols-2 gap-2">
         <NumberField
           label={t("look.bodyAmplitude")}
           value={ambient.bodyAmplitude}

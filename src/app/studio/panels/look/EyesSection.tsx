@@ -112,6 +112,7 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
           {t("look.linked")}
           <input
             type="checkbox"
+            className="touch-target"
             checked={face.linked}
             aria-label={t("look.linked")}
             onChange={(e) => {
@@ -123,7 +124,7 @@ export function EyesSection({ bubble, dispatch, t }: SectionProps) {
     >
       {/* Above the two it drives, as in the body's card: a size is reached for
           more often than the dimensions it is made of. */}
-      <div className="flex items-end gap-2.5">
+      <div className="touch-target flex items-end gap-2.5">
         <span className="flex min-w-0 flex-1 pb-1.5">
           <RangeInput
             label={t("look.eyeSizeSlider")}

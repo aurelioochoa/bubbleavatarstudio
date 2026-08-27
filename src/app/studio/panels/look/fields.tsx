@@ -86,7 +86,7 @@ export function NumberField({
     <label className="flex min-w-0 flex-col gap-1">
       <span
         data-testid={`scrub-${label}`}
-        className="flex cursor-ew-resize touch-none items-center gap-1 truncate text-[10px] text-ink-dim select-none"
+        className="flex cursor-ew-resize touch-none items-center gap-1 truncate text-[10px] text-ink-dim select-none pointer-coarse:py-3"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endScrub}
@@ -95,7 +95,7 @@ export function NumberField({
         <span className="truncate">{label}</span>
         <ScrubIcon />
       </span>
-      <span className="flex h-7 items-center rounded-field border border-line bg-stage pr-1.5 pl-2">
+      <span className="flex h-7 items-center rounded-field border border-line bg-stage pr-1.5 pl-2 pointer-coarse:h-11">
         <input
           type="number"
           value={value}
@@ -107,7 +107,7 @@ export function NumberField({
             const v = Number(e.target.value);
             if (Number.isFinite(v)) onChange(v);
           }}
-          className="min-w-0 flex-1 bg-transparent text-right text-xs tabular-nums text-ink outline-none"
+          className="h-full min-w-0 flex-1 bg-transparent text-right text-xs tabular-nums text-ink outline-none"
         />
         <span className="w-3 shrink-0 text-right text-[9.5px] text-ink-dim">
           {unit ?? ""}
@@ -190,7 +190,7 @@ export function ColorField({
       {/* The hairline is a sibling rather than a border on the input: a
           colour close to the panel's own — a near-black eye — would otherwise
           read as an empty box rather than as a swatch. */}
-      <span className="relative block h-7.5 w-full">
+      <span className="relative block h-7.5 w-full pointer-coarse:h-11">
         <input
           type="color"
           value={value}
