@@ -360,6 +360,40 @@ audio lip-sync, marketplace, mobile-native editors. (Revisit post-v1.)
 - **FR-11.3** Validation gate: `pnpm check` = engine freshness (n/a v1), format,
   typecheck strict, full tests, production build.
 
+### FR-12 Responsive & touch
+
+> Added after the studio had shipped desktop-only. The original spec named a
+> single 1024×720 floor and no pointer other than a mouse; these are the rules
+> that replace that assumption. Nothing here reaches `src/domain` or
+> `src/render` — the layout is a shell concern, and the goldens are byte-proof
+> that it stayed one.
+
+- **FR-12.1** Three layouts, chosen by width alone: **phone** below 768px,
+  **tablet** 768–1023px, **desktop** 1024px and up. Desktop is the three-column
+  shell already specified in part 05 §1. One media query owns the choice; every
+  other adaptation that CSS can express stays in CSS.
+- **FR-12.2** At 360px nothing overflows horizontally, and the stage keeps at
+  least 40% of the viewport height — below that the character stops being the
+  thing the studio is about.
+- **FR-12.3** On phone the inspector is a bottom sheet with three detents
+  (handle / half / tall). The tall detent still leaves the stage visible:
+  FR-4.4 requires a mood to be judged against the character, and a sheet that
+  covered it would break the same rule the mood editor's scoped modal exists to
+  keep (part 05 §2).
+- **FR-12.4** Every drag-to-reorder works with a coarse pointer, activated by a
+  long press. The keyboard/button path beside each list (part 05 §3) is
+  unchanged and remains the accessible route; the drag sits on top of it.
+- **FR-12.5** Under `(pointer: coarse)` every interactive target is at least
+  44×44 CSS px. A control may keep a smaller _drawn_ mark — the step grip is
+  6px wide and stays so — provided its hit area meets the floor.
+- **FR-12.6** Stage zoom is reachable by pinch as well as by the zoom pill, and
+  writes the same view state, which still never autosaves or reaches an export.
+- **FR-12.7** FR-8.6's follow survives touch. Because a finger only exists
+  while it is down, and FR-8.1 has a grab take the pose back from the cursor,
+  that rule becomes conditional on pointer type: a **mouse** press still
+  switches the follow off, a **touch** press does not — with the follow on, a
+  dragged finger feeds the aim; with it off, the same drag turns the head 1:1.
+
 ---
 
 <a id="part-03"></a>
