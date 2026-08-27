@@ -652,3 +652,73 @@ test("tablet: the inspector is a drawer over the stage at 820×1180", async ({
 
   await shoot(page, "tablet-820");
 });
+
+/**
+ * FR-12.4: the reorder drag with a finger. This is the case the whole rewrite
+ * exists for — native HTML5 drag never fires from a touchscreen, so before it
+ * the rail, the mood grid and the step strip could not be reordered by touch
+ * at all, and nothing in jsdom could tell us so.
+ *
+ * Driven through CDP rather than Playwright's touchscreen, which only taps:
+ * `Input.dispatchTouchEvent` produces the real pointer stream, `pointerType`
+ * included, which is what the hold-versus-scroll rule turns on.
+ */
+test.describe("touch", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("reorders the rail with a held finger, and not with a quick swipe", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Nueva burbuja" }).click();
+
+    const order = () =>
+      page
+        .locator("nav [data-reorder-id]")
+        .evaluateAll((els) =>
+          els.map((e) => e.getAttribute("data-reorder-id")),
+        );
+    const before = await order();
+    expect(before).toHaveLength(2);
+
+    const centre = async (i: number) => {
+      const box = await page
+        .locator("nav [data-reorder-id]")
+        .nth(i)
+        .boundingBox();
+      if (!box) throw new Error("rail item not laid out");
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    const cdp = await page.context().newCDPSession(page);
+    type TouchPhase = "touchStart" | "touchMove" | "touchEnd" | "touchCancel";
+    const touch = async (type: TouchPhase, at: { x: number; y: number }) => {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type,
+        touchPoints: type === "touchEnd" ? [] : [{ x: at.x, y: at.y, id: 1 }],
+      });
+    };
+
+    // A quick swipe is a scroll, not a lift.
+    //
+    // Corroboration rather than proof: with the hold set to zero this half
+    // still passes, because Chrome turns the swipe into a pan and cancels the
+    // pointer before our rule is ever consulted. That is the right outcome and
+    // a second line of defence, but the rule itself is pinned in
+    // dragReorder.test.tsx, where the hold can be moved and watched to fail.
+    const [a, b] = [await centre(0), await centre(1)];
+    await touch("touchStart", a);
+    await touch("touchMove", b);
+    expect(await page.locator("nav [data-dragging]").count()).toBe(0);
+    await touch("touchEnd", b);
+    expect(await order()).toEqual(before);
+
+    // Held first, it lifts.
+    await touch("touchStart", a);
+    await page.waitForTimeout(600);
+    await touch("touchMove", b);
+    expect(await page.locator("nav [data-dragging]").count()).toBe(1);
+    await touch("touchEnd", b);
+
+    expect(await order()).toEqual([before[1], before[0]]);
+  });
+});

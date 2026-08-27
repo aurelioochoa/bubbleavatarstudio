@@ -660,12 +660,12 @@ describe("Track step reordering (FR-5.2)", () => {
     // The step list left the inspector for the track, and its drag came with
     // it. The ← → buttons in the step editor are still the keyboard path.
     const { dispatch } = setup({ kit: threeStepKit });
-    const dataTransfer = transfer();
+    // `dragProps` sits on the chip's button, not on its `li`.
     const grab = (i: number) =>
-      within(screen.getAllByTestId("step-chip")[i]).getAllByRole("button")[0];
-    fireDrag(grab(0), "dragstart", { dataTransfer });
-    fireDrag(grab(2), "dragover", { dataTransfer });
-    fireDrag(grab(2), "drop", { dataTransfer });
+      within(screen.getAllByTestId("step-chip")[i]).getAllByRole(
+        "button",
+      )[0] as Element;
+    reorderDrag(grab(0), grab(2));
     expect(dispatch).toHaveBeenCalledWith({
       type: "step/reorder",
       loopId: "loop_t",
@@ -728,3 +728,26 @@ describe("Track loop summary (FR-5.8)", () => {
     );
   });
 });
+
+/**
+ * A mouse reorder drag (FR-12.4): press, move past the slop, release over the
+ * target. jsdom has neither PointerEvent nor layout, so the events are plain
+ * ones with the fields the hook reads, and the element under the pointer is
+ * supplied outright.
+ */
+function reorderDrag(from: Element, to: Element) {
+  (document as unknown as Record<string, unknown>).elementFromPoint = () => to;
+  const at = (type: string, y: number) => {
+    const ev = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(ev, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 0,
+      clientY: y,
+    });
+    fireEvent(from, ev);
+  };
+  at("pointerdown", 0);
+  at("pointermove", 40);
+  at("pointerup", 40);
+}

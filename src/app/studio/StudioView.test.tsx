@@ -362,16 +362,7 @@ describe("StudioView", () => {
     const rows = within(rail).getAllByRole("listitem");
     const [first, second] = rows;
     if (!first || !second) throw new Error("rail should hold two bubbles");
-    const data = new Map<string, string>();
-    const dataTransfer = {
-      setData: (k: string, v: string) => data.set(k, v),
-      getData: (k: string) => data.get(k) ?? "",
-      effectAllowed: "",
-      dropEffect: "",
-    };
-    fireEvent.dragStart(first, { dataTransfer });
-    fireEvent.dragOver(second, { dataTransfer });
-    fireEvent.drop(second, { dataTransfer });
+    reorderDrag(first, second);
 
     expect(names()).toEqual(["Beta", "Alpha"]);
   });
@@ -474,3 +465,26 @@ describe("StudioView header (FR-9.6, FR-9.7)", () => {
     expect(mark.getAttribute("aria-hidden")).toBe("true");
   });
 });
+
+/**
+ * A mouse reorder drag (FR-12.4): press, move past the slop, release over the
+ * target. jsdom has neither PointerEvent nor layout, so the events are plain
+ * ones with the fields the hook reads, and the element under the pointer is
+ * supplied outright.
+ */
+function reorderDrag(from: Element, to: Element) {
+  (document as unknown as Record<string, unknown>).elementFromPoint = () => to;
+  const at = (type: string, y: number) => {
+    const ev = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(ev, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 0,
+      clientY: y,
+    });
+    fireEvent(from, ev);
+  };
+  at("pointerdown", 0);
+  at("pointermove", 40);
+  at("pointerup", 40);
+}

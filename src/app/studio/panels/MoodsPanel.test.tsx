@@ -522,17 +522,27 @@ describe("mood editor (FR-4.1, FR-4.3, FR-4.4)", () => {
   });
 });
 /** jsdom's drag events carry no dataTransfer; supply the parts the hook reads. */
+/**
+ * A mouse reorder drag (FR-12.4): press, move past the slop, release over the
+ * target. jsdom has neither PointerEvent nor layout, so the events are plain
+ * ones with the fields the hook reads, and the element under the pointer is
+ * supplied outright.
+ */
 function dragCard(from: Element, to: Element) {
-  const data = new Map<string, string>();
-  const dataTransfer = {
-    setData: (k: string, v: string) => data.set(k, v),
-    getData: (k: string) => data.get(k) ?? "",
-    effectAllowed: "",
-    dropEffect: "",
+  (document as unknown as Record<string, unknown>).elementFromPoint = () => to;
+  const at = (type: string, y: number) => {
+    const ev = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(ev, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 0,
+      clientY: y,
+    });
+    fireEvent(from, ev);
   };
-  fireEvent.dragStart(from, { dataTransfer });
-  fireEvent.dragOver(to, { dataTransfer });
-  fireEvent.drop(to, { dataTransfer });
+  at("pointerdown", 0);
+  at("pointermove", 40);
+  at("pointerup", 40);
 }
 
 const rowOf = (el: Element): Element => {
