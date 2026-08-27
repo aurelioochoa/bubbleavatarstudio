@@ -34,6 +34,9 @@
   the resting pose on the server before it ever starts a frame loop.
 - **Export what you need.** A portable `*.bubble-avatar.json`, an SVG or PNG
   snapshot, or a ZIP with all of it.
+- **Works on a phone.** One studio, three layouts — columns on a desktop, a
+  drawer on a tablet, a stage over a bottom sheet on a phone — with the gestures
+  a finger needs: hold to reorder, drag to turn the head, pinch to zoom.
 - **Bilingual.** Spanish-first, with full English parity.
 
 ## Overview
@@ -61,10 +64,20 @@ and guide.
 
 ![The studio in use](docs/media/demo.gif)
 
-> The banner is generated art. Everything in the recording is the actual
-> application, driven through Playwright against the production build —
-> `pnpm demo` re-records it, `docs/media/demo.mp4` is the same take at full
-> resolution, and `docs/screenshots/` holds the frames `pnpm e2e` archives.
+The same studio on a phone. The rail becomes a strip, the inspector a sheet you
+drag between three heights, and the character stays visible above whatever you
+are editing — which is the whole point of it, since a mood is judged against
+the character it is drawn on.
+
+<p align="center">
+  <img src="docs/media/phone.webp" alt="The studio on a phone" width="260">
+</p>
+
+> The banner is generated art. Everything else here is the actual application,
+> driven through Playwright against the production build — `pnpm demo`
+> re-records the walkthrough, `docs/media/demo.mp4` is the same take at full
+> resolution, and the phone frame is one of the captures `pnpm e2e` archives
+> into `docs/screenshots/`.
 
 ## Quick start
 
@@ -106,7 +119,7 @@ all of it pure TypeScript, React being the only runtime dependency.
 | -------------- | -------------------------------------------------------------------------------------- |
 | `src/domain/`  | Document types, validation, mutations, geometry, easing, playback, the starter library |
 | `src/render/`  | Scene composition and byte-stable SVG serialization                                    |
-| `src/app/`     | The studio shell: rail, stage, inspector, rAF engine, autosave, i18n                   |
+| `src/app/`     | The studio shell: three layouts, stage, inspector, rAF engine, autosave, i18n          |
 | `src/export/`  | Portable JSON, SVG/PNG snapshots, ZIP packaging                                        |
 | `src/runtime/` | The SSR-safe `<BubbleAvatar/>` component                                               |
 
