@@ -1,0 +1,24 @@
+services:
+  # `docker compose up` — the production build, served as static files.
+  studio:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # `docker compose --profile dev up dev` — Vite with HMR against the repo on
+  # the host. The profile is what keeps a bare `up` on the studio above.
+  dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      target: dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      # Anonymous volume: keeps the image's installed tree from being shadowed
+      # by the host's node_modules (or by its absence).
+      - /app/node_modules

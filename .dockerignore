@@ -1,0 +1,21 @@
+# Build output and caches — the image builds its own.
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+node_modules/.vite
+
+# Not inputs to a build.
+.git/
+.github/
+.claude/
+.zcode/
+docs/
+*.local
+.DS_Store
+
+# NOTE: e2e/ and playwright.*.config.ts are deliberately NOT ignored —
+# tsconfig.json includes them, so `tsc -b` inside `pnpm build` fails without
+# them even though the image never runs Playwright.
