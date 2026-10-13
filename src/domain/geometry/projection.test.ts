@@ -109,6 +109,48 @@ describe("projectFace", () => {
     }
   });
 
+  it("reaches the back at a half turn with every nonzero perspective", () => {
+    for (const perspective of [0.05, 0.25, 0.6, 1]) {
+      for (const axis of ["x", "y"] as const) {
+        for (const degrees of [-180, 180]) {
+          const p = projectFace({
+            ...SIZE,
+            perspective,
+            rotation: { ...FLAT, [axis]: degrees },
+          });
+          expect(p.project(0, 0).x).toBeCloseTo(0, 6);
+          expect(p.project(0, 0).y).toBeCloseTo(0, 6);
+          expect(p.project(0, 0).depth).toBeCloseTo(-SIZE.depth / 2, 6);
+        }
+      }
+    }
+  });
+
+  it("continues smoothly through the wrapped half turn on both axes", () => {
+    for (const perspective of [0, 0.05, 0.25, 0.6, 1]) {
+      for (const axis of ["x", "y"] as const) {
+        const at = (degrees: number) =>
+          projectFace({
+            ...SIZE,
+            perspective,
+            rotation: { ...FLAT, [axis]: degrees },
+          }).project(30, -10);
+        const before = at(179.99);
+        const after = at(-179.99);
+        expect(
+          Math.hypot(
+            before.x - after.x,
+            before.y - after.y,
+            before.depth - after.depth,
+          ),
+        ).toBeLessThan(0.04);
+        expect(at(180)).toEqual(at(-180));
+        expect(at(210)).toEqual(at(-150));
+        expect(at(360)).toEqual(at(0));
+      }
+    }
+  });
+
   it("keeps the silhouette the envelope of the surface", () => {
     // scaleX and project() have to describe the same head. They were computed
     // by two different blends, so they drifted apart as the turn grew: at half

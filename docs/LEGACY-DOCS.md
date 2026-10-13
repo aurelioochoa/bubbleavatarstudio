@@ -2995,3 +2995,17 @@ Resolution of the open questions:
 
 Defect 3 is therefore closed as answered rather than fixed, and all four
 defects this document raised are now resolved.
+
+### 2026-09-08 — matte bubble surface
+
+Black-box observation of https://avatars.bible-strong.app/: the deployed default
+character has a flat, matte blue fill; the off-centre, foreshortened eyes carry
+its sense of volume. Observed the rendered page only, without upstream source.
+Our surface now uses a softer matte ramp while retaining directional lighting.
+The three render goldens intentionally change only gradient values: crown
+lightening changes from `0.34 - luma * 0.16` to `0.16 - luma * 0.08`, edge
+darkening from `0.20 + luma * 0.22` to `0.12 + luma * 0.12`, rim becomes base
+darkened by `0.07`, and radius increases from `0.78` to `0.90`. This removes
+the bright contour stripe and broadens the transition. Geometry and poses
+are unchanged. Body-coloured extras now serialize their existing shared-light
+gradient instead of silently falling back to flat paint.

@@ -81,10 +81,14 @@ export interface Shading {
  * and every golden leave it off, which is why they are unaffected by it.
  */
 export interface GuideRender {
-  /** Silhouette of the turned ellipsoid: an ellipse under the body's scale. */
+  /** Exact body silhouette, including its breathing scale. */
   outline: { path: string; transform: string };
-  /** Equator and meridian of the front hemisphere, sampled through project(). */
+  /** Near-facing latitude and meridian segments of the swept solid. */
   arcs: string[];
+  /** Far-facing segments, drawn with a quieter dashed stroke. */
+  backArcs: string[];
+  /** Breathing scale applied once to the mesh, preserving cached geometry. */
+  transform: string;
 }
 
 /**
@@ -286,8 +290,8 @@ function shadingFor(
   const lit = luminance(fill);
   // Pale characters need a deeper terminator, dark ones a stronger crown, or
   // the shading either blows out or disappears.
-  const crown = lighten(fill, 0.34 - lit * 0.16);
-  const edge = darken(fill, 0.2 + lit * 0.22);
+  const crown = lighten(fill, 0.16 - lit * 0.08);
+  const edge = darken(fill, 0.12 + lit * 0.12);
   // The crown's travel is a rotation, not a ramp. The old linear term carried
   // the lit centre clean off the shape past ~140° of yaw (cx reached -0.02 at
   // 150°), so the body flattened into a dead silhouette at exactly the angles
@@ -303,11 +307,11 @@ function shadingFor(
   const roll = -rollDeg * DEG;
   const cx = 0.5 + offX * Math.cos(roll) - offY * Math.sin(roll);
   const cy = 0.5 + offX * Math.sin(roll) + offY * Math.cos(roll);
-  // The rim sits on the far side of the key light, which is where the gradient
-  // runs out — so the last stop is the one that lands on the shadowed contour.
-  const rim = lighten(fill, 0.12 + (1 - lit) * 0.14);
+  // A restrained bounce light softens the contour without the bright stripe
+  // of a glossy material. Keep it below the authored base colour.
+  const rim = darken(fill, 0.07);
   const id = `bs-${hashId(`${fill}:${fmt(cx)}:${fmt(cy)}`)}`;
-  return { id, cx, cy, radius: 0.78, crown, base: fill, edge, rim };
+  return { id, cx, cy, radius: 0.9, crown, base: fill, edge, rim };
 }
 
 /** Short stable id so two avatars on one page never share a gradient. */
@@ -432,23 +436,23 @@ function guideFor(
   bodyScale: number,
   body: { path: string; transform: string },
 ): GuideRender {
+  const mesh = solidMesh({
+    shape: surface.shape,
+    lobes: surface.lobes,
+    wobble: surface.wobble,
+    seed: surface.seed,
+    width: surface.width,
+    height: surface.height,
+    roundness: surface.roundness,
+    depth: surface.depth,
+    rotation: headRotation,
+    perspective: surface.perspective,
+  });
   return {
     outline: { path: body.path, transform: body.transform },
-    arcs: solidMesh(
-      {
-        shape: surface.shape,
-        lobes: surface.lobes,
-        wobble: surface.wobble,
-        seed: surface.seed,
-        width: surface.width,
-        height: surface.height,
-        roundness: surface.roundness,
-        depth: surface.depth,
-        rotation: headRotation,
-        perspective: surface.perspective,
-      },
-      bodyScale,
-    ),
+    arcs: mesh.map((line) => line.front).filter(Boolean),
+    backArcs: mesh.map((line) => line.back).filter(Boolean),
+    transform: `scale(${fmtScale(bodyScale)} ${fmtScale(bodyScale)})`,
   };
 }
 

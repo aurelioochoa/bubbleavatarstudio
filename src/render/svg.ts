@@ -1,8 +1,19 @@
 // Scene → deterministic SVG string (docs/04). Byte-stable: fixed attribute
 // order, 2-decimal numbers, no whitespace variance. Shared by stage,
 // snapshots and the SSR-safe runtime.
-import type { Scene } from "./scene";
+import type { Scene, Shading } from "./scene";
 import { fmt } from "../domain/geometry/primitives";
+
+function shadingDefinition(shading: Shading): string {
+  return (
+    `<defs><radialGradient id="${shading.id}" cx="${fmt(shading.cx)}" cy="${fmt(shading.cy)}" r="${fmt(shading.radius)}">` +
+    `<stop offset="0" stop-color="${shading.crown}"/>` +
+    `<stop offset="0.55" stop-color="${shading.base}"/>` +
+    `<stop offset="0.93" stop-color="${shading.edge}"/>` +
+    `<stop offset="1" stop-color="${shading.rim}"/>` +
+    `</radialGradient></defs>`
+  );
+}
 
 function eyeElement(id: string, eye: Scene["eyes"]["left"]): string {
   const w = Math.max(eye.width, 0);
@@ -65,14 +76,7 @@ export function sceneToSvg(
   const shading = scene.body.shading;
   // objectBoundingBox units: the gradient tracks the silhouette whatever its
   // size, so one definition works for every character.
-  const shadeDefs = shading
-    ? `<defs><radialGradient id="${shading.id}" cx="${fmt(shading.cx)}" cy="${fmt(shading.cy)}" r="${fmt(shading.radius)}">` +
-      `<stop offset="0" stop-color="${shading.crown}"/>` +
-      `<stop offset="0.55" stop-color="${shading.base}"/>` +
-      `<stop offset="0.93" stop-color="${shading.edge}"/>` +
-      `<stop offset="1" stop-color="${shading.rim}"/>` +
-      `</radialGradient></defs>`
-    : "";
+  const shadeDefs = shading ? shadingDefinition(shading) : "";
   const bodyFill = shading ? `url(#${shading.id})` : scene.body.fill;
   const extras = scene.extras
     .map((e) => {
@@ -80,7 +84,12 @@ export function sceneToSvg(
       // render keeps its minimal markup.
       const opacity =
         e.opacity >= 1 ? "" : ` opacity="${fmt(Math.max(e.opacity, 0))}"`;
-      return `<path d="${e.path}" fill="${e.fill}" transform="${e.transform}"${opacity}/>`;
+      const definition = e.shading ? shadingDefinition(e.shading) : "";
+      const fill = e.shading ? `url(#${e.shading.id})` : e.fill;
+      return (
+        definition +
+        `<path d="${e.path}" fill="${fill}" transform="${e.transform}"${opacity}/>`
+      );
     })
     .join("");
   // The face is cut off by the body rather than faded out at the limb, which
@@ -100,10 +109,21 @@ export function sceneToSvg(
   // FR-8.4: stage chrome rather than character, so it takes its colour from
   // whatever the host sets — the accent token stays in styles.css.
   const g = scene.guide;
+  const guideClipId = g ? `guide-${shading?.id ?? "body"}` : "";
+  // Non-scaling strokes stay readable when the stage is zoomed or narrowed.
+  const guidePath = (d: string) =>
+    `<path d="${d}" vector-effect="non-scaling-stroke"/>`;
   const guide = g
-    ? `<g id="guide" fill="none" stroke="currentColor" stroke-width="1.25" opacity="0.55">` +
-      `<path d="${g.outline.path}" transform="${g.outline.transform}"/>` +
-      g.arcs.map((d) => `<path d="${d}"/>`).join("") +
+    ? `<defs><clipPath id="${guideClipId}"><path d="${g.outline.path}" transform="${g.outline.transform}"/></clipPath></defs>` +
+      `<g id="guide" aria-hidden="true" pointer-events="none" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">` +
+      `<g clip-path="url(#${guideClipId})">` +
+      `<g transform="${g.transform}">` +
+      `<g data-guide="back" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.24">` +
+      g.backArcs.map(guidePath).join("") +
+      `</g><g data-guide="front" stroke-width="1" opacity="0.6">` +
+      g.arcs.map(guidePath).join("") +
+      `</g></g></g>` +
+      `<path data-guide="outline" d="${g.outline.path}" transform="${g.outline.transform}" stroke-width="1.1" opacity="0.7" vector-effect="non-scaling-stroke"/>` +
       "</g>"
     : "";
 
@@ -130,9 +150,9 @@ export function sceneToSvg(
     shadeDefs +
     `<path id="body" d="${scene.body.path}" fill="${bodyFill}" transform="${scene.body.transform}"/>` +
     clipDefs +
+    guide +
     extras +
     eyes +
-    guide +
     "</g></g></svg>"
   );
 }

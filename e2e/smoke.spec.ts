@@ -234,20 +234,72 @@ test("gizmo: the rotation pad poses the head and survives a frame", async ({
   await expect(pad).toContainText("0°");
 });
 
-test("guide: the projection overlay is opt-in and reaches the SVG", async ({
-  page,
-}) => {
-  await page.goto("/");
-  const stage = page.getByLabel("bubble stage");
-  await expect(stage.locator("#guide")).toHaveCount(0);
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 390, height: 844 },
+]) {
+  test(`guide: complete, clipped projection overlay at ${String(viewport.width)}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const stage = page.getByLabel("bubble stage");
+    const toggle = page.getByRole("button", { name: "Guía de proyección" });
+    await expect(stage.locator("#guide")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Guía de proyección" }).click();
-  await expect(stage.locator("#guide")).toHaveCount(1);
-  await shoot(page, "stage-guide");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(stage.locator("#guide")).toHaveCount(1);
+    await expect(stage.locator('[data-guide="front"] > path')).toHaveCount(11);
+    await expect(stage.locator('[data-guide="back"]')).toHaveAttribute(
+      "stroke-dasharray",
+      "3 4",
+    );
 
-  await page.getByRole("button", { name: "Guía de proyección" }).click();
-  await expect(stage.locator("#guide")).toHaveCount(0);
-});
+    const layering = await stage.evaluate((host) => {
+      const guide = host.querySelector("#guide");
+      const eye = host.querySelector("#eye-left");
+      const body = host.querySelector("#body");
+      const clipped = guide?.querySelector("[clip-path]");
+      const id = clipped?.getAttribute("clip-path")?.slice(5, -1);
+      const outline = id ? host.querySelector(`[id="${id}"] path`) : null;
+      return {
+        behindEyes:
+          !!guide &&
+          !!eye &&
+          !!(
+            guide.compareDocumentPosition(eye) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+          ),
+        followsBody:
+          outline?.getAttribute("d") === body?.getAttribute("d") &&
+          outline?.getAttribute("transform") ===
+            body?.getAttribute("transform"),
+        steadyStrokes: [
+          ...(guide?.querySelectorAll("[data-guide] path") ?? []),
+        ].every(
+          (path) => path.getAttribute("vector-effect") === "non-scaling-stroke",
+        ),
+        nonInteractive: guide?.getAttribute("pointer-events") === "none",
+      };
+    });
+    expect(layering).toEqual({
+      behindEyes: true,
+      followsBody: true,
+      steadyStrokes: true,
+      nonInteractive: true,
+    });
+    expect(await stageOverlays(page)).toEqual({ over: 0, overlapping: 0 });
+    await shoot(
+      page,
+      viewport.width === 1280 ? "stage-guide" : "stage-guide-phone",
+    );
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(stage.locator("#guide")).toHaveCount(0);
+  });
+}
 
 test("share: the panel previews the character and lists the loops it ships", async ({
   page,

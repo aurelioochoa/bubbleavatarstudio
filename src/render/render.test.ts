@@ -110,6 +110,15 @@ describe("backgrounds (FR-10)", () => {
 describe("volume: the surface is shaded", () => {
   const bubble: Bubble = doc.bubbles[0];
 
+  it("keeps a matte surface without a bright stripe at the shadow edge", () => {
+    const shading = restingScene(bubble, 0).body.shading;
+    if (!shading) throw new Error("Missing body shading");
+    expect(luminance(shading.rim)).toBeLessThan(luminance(shading.base));
+    expect(luminance(shading.crown) - luminance(shading.edge)).toBeLessThan(
+      0.22,
+    );
+  });
+
   it("fills the body with a lit-to-shadow gradient rather than a flat colour", () => {
     const svg = sceneToSvg(restingScene(bubble, 0));
     expect(svg).toContain("radialGradient");
@@ -281,6 +290,24 @@ describe("volume: the face sits on a surface (FR-8.2)", () => {
     // The unmodified fixture only leans into the turn a quarter of the way.
     const shy = at({ x: 0, y: 85, z: 0 }, base);
     expect(shy.eyes.right.opacity).toBe(1);
+  });
+
+  it("shows the back across the Y wrap at the starter perspective", () => {
+    const starter = createBubble("Full turn");
+    expect(starter.body.surface.perspective).toBe(0.6);
+    const before = at({ x: 0, y: 179.99, z: 0 }, starter);
+    const after = at({ x: 0, y: -179.99, z: 0 }, starter);
+    for (const side of ["left", "right"] as const) {
+      expect(before.eyes[side].opacity).toBe(0);
+      expect(after.eyes[side].opacity).toBe(0);
+      expect(Math.abs(before.eyes[side].x - after.eyes[side].x)).toBeLessThan(
+        0.04,
+      );
+    }
+    expect(before.body.transform).toBe(after.body.transform);
+    expect(at({ x: 0, y: 180, z: 0 }, starter)).toEqual(
+      at({ x: 0, y: -180, z: 0 }, starter),
+    );
   });
 });
 
@@ -472,6 +499,35 @@ describe("projection guide (FR-8.4)", () => {
       { guide: true },
     );
     expect(turned.guide?.arcs[0]).not.toBe(face.guide?.arcs[0]);
+  });
+
+  it("clips the grid to the exact body and distinguishes its far surface", () => {
+    const scene = restingScene(
+      bubble,
+      0,
+      { x: 25, y: 40, z: 0 },
+      { guide: true },
+    );
+    const svg = sceneToSvg(scene);
+    expect(scene.guide?.backArcs.length).toBeGreaterThan(0);
+    expect(svg).toContain(
+      `<path d="${scene.body.path}" transform="${scene.body.transform}"/>`,
+    );
+    expect(svg).toContain('clip-path="url(#guide-');
+    expect(svg).toContain(
+      'data-guide="back" stroke-width="0.8" stroke-dasharray="3 4"',
+    );
+    expect(svg).toContain('data-guide="front"');
+    expect(svg).toContain('vector-effect="non-scaling-stroke"');
+    expect(svg).toContain('pointer-events="none"');
+  });
+
+  it("keeps the eyes and extras unobstructed above the guide", () => {
+    const svg = sceneToSvg(restingScene(bubble, 0, FACING, { guide: true }));
+    expect(svg.indexOf('id="body"')).toBeLessThan(svg.indexOf('id="guide"'));
+    expect(svg.indexOf('id="guide"')).toBeLessThan(
+      svg.indexOf('id="eye-left"'),
+    );
   });
 
   it("stays byte-stable like everything else the renderer emits", () => {
@@ -900,6 +956,9 @@ describe("volume: body-coloured extras share the body's volume", () => {
     // rather than restarting in the middle of the lobe.
     expect(lobe?.shading?.id).not.toBe(scene.body.shading?.id);
     expect(lobe?.shading?.crown).toBe(scene.body.shading?.crown);
+    const svg = sceneToSvg(scene);
+    expect(svg).toContain(`<radialGradient id="${lobe?.shading?.id}"`);
+    expect(svg).toContain(`fill="url(#${lobe?.shading?.id})"`);
   });
 
   it("leaves an accent-coloured extra flat, because it is another material", () => {

@@ -100,7 +100,7 @@ export interface SolidOutlineOptions extends SurfaceShapeOptions {
   depth: number;
   /** Head rotation in degrees. `z` is roll and belongs to the head group. */
   rotation: { x: number; y: number; z: number };
-  /** Scales the angle, exactly as `projectFace` does. */
+  /** Softens front-facing turns, exactly as `projectFace` does. */
   perspective: number;
   azimuths?: number | undefined;
   knots?: number | undefined;
@@ -279,10 +279,20 @@ export function solidRadii(o: SolidOutlineOptions): Float64Array {
 
 /** Latitude rings the wireframe draws. */
 const MESH_PARALLELS = 5;
-/** Great circles through the poles. Each spans both sides of the solid. */
+/** Distinct planes through the poles, spaced across a half turn. */
 const MESH_MERIDIANS = 6;
 /** Points along each mesh line. */
-const MESH_SAMPLES = 40;
+const MESH_SAMPLES = 96;
+
+export interface SolidMeshLine {
+  /** Near-facing stretches of one grid line. */
+  front: string;
+  /** Far-facing stretches, styled separately by the stage renderer. */
+  back: string;
+}
+
+let meshMemoKey = "";
+let meshMemoValue: SolidMeshLine[] = [];
 
 /**
  * A lat/long wireframe over the solid, as SVG path data.
@@ -292,42 +302,130 @@ const MESH_SAMPLES = 40;
  * ellipsoid instead, every character wore the same sphere — which is the
  * opposite of what a wireframe is there to say.
  *
- * Both halves of every line are kept. A near-hemisphere-only mesh reads as a
- * bowl; it is seeing the lines run round the back that makes it read as solid.
+ * Surface normals split each line into near and far stretches. Keeping both
+ * makes the volume readable; distinguishing them keeps it from looking flat.
  */
-export function solidMesh(o: SolidOutlineOptions, scale = 1): string[] {
+export function solidMesh(o: SolidOutlineOptions, scale = 1): SolidMeshLine[] {
+  const key = JSON.stringify([o, scale]);
+  if (key === meshMemoKey) return meshMemoValue;
+  const mesh = buildMesh(o, scale);
+  meshMemoKey = key;
+  meshMemoValue = mesh;
+  return mesh;
+}
+
+function buildMesh(o: SolidOutlineOptions, scale: number): SolidMeshLine[] {
   const s = buildSweep(o, MESH_SAMPLES * 2, MESH_SAMPLES);
   const nProfile = s.profile.length;
   const nRing = s.ring.length;
 
+  const interpolate = (points: Point[], index: number): Point => {
+    const wrapped = ((index % points.length) + points.length) % points.length;
+    const i = Math.floor(wrapped);
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const t = wrapped - i;
+    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+  };
+
+  const sample = (profile: number, ring: number) => {
+    const p = interpolate(s.profile, profile);
+    const r = interpolate(s.ring, ring);
+    const q = sweptPoint(s, p, r);
+    // Tangents to the actual swept surface, rather than an ellipsoid's z:
+    // a cone's slope and an organic body's valleys also affect visibility.
+    const before = sweptPoint(s, interpolate(s.profile, profile - 0.25), r);
+    const after = sweptPoint(s, interpolate(s.profile, profile + 0.25), r);
+    const left = sweptPoint(s, p, interpolate(s.ring, ring - 0.25));
+    const right = sweptPoint(s, p, interpolate(s.ring, ring + 0.25));
+    const u = {
+      x: after.x - before.x,
+      y: after.y - before.y,
+      z: after.z - before.z,
+    };
+    const v = { x: right.x - left.x, y: right.y - left.y, z: right.z - left.z };
+    const normal = {
+      x: u.y * v.z - u.z * v.y,
+      y: u.z * v.x - u.x * v.z,
+      z: u.x * v.y - u.y * v.x,
+    };
+    const outward = normal.x * q.x + normal.y * q.y + normal.z * q.z;
+    const length = Math.hypot(normal.x, normal.y, normal.z);
+    return {
+      x: q.x * scale,
+      y: q.y * scale,
+      facing: length > 1e-10 ? (normal.z * (outward < 0 ? -1 : 1)) / length : 0,
+    };
+  };
+
   const trace = (
-    at: (i: number) => { x: number; y: number },
+    at: (i: number) => ReturnType<typeof sample>,
     n: number,
-  ): string =>
-    Array.from({ length: n }, (_, i) => {
-      const q = at(i);
-      return `${i === 0 ? "M" : "L"} ${fmt(q.x * scale)} ${fmt(q.y * scale)}`;
-    }).join(" ");
+  ): SolidMeshLine => {
+    const paths = { front: "", back: "" };
+    const coord = (p: { x: number; y: number }) => `${fmt(p.x)} ${fmt(p.y)}`;
+    let previous = at(0);
+    let side: keyof SolidMeshLine = previous.facing >= 0 ? "front" : "back";
+    paths[side] = `M ${coord(previous)}`;
+    for (let i = 1; i <= n; i++) {
+      const next = at(i);
+      const nextSide = next.facing >= 0 ? "front" : "back";
+      if (nextSide !== side) {
+        const t = previous.facing / (previous.facing - next.facing);
+        const edge = {
+          x: previous.x + (next.x - previous.x) * t,
+          y: previous.y + (next.y - previous.y) * t,
+        };
+        paths[side] += ` L ${coord(edge)}`;
+        paths[nextSide] += ` M ${coord(edge)}`;
+        side = nextSide;
+      }
+      paths[side] += ` L ${coord(next)}`;
+      previous = next;
+    }
+    return { front: paths.front.trim(), back: paths.back.trim() };
+  };
 
-  const lines: string[] = [];
+  const lines: SolidMeshLine[] = [];
+  const top = s.profile.reduce(
+    (best, p, i) => (p.y < s.profile[best].y ? i : best),
+    0,
+  );
+  const bottom = s.profile.reduce(
+    (best, p, i) => (p.y > s.profile[best].y ? i : best),
+    0,
+  );
+  const span = (bottom - top + nProfile) % nProfile;
 
-  // Parallels: one closed cross-section at each of several heights. The poles
-  // are skipped, where a ring is a dot.
+  const profileAtHeight = (height: number): number => {
+    for (let step = 1; step <= span; step++) {
+      const before = interpolate(s.profile, top + step - 1);
+      const after = interpolate(s.profile, top + step);
+      if (after.y >= height) {
+        const t =
+          after.y === before.y ? 0 : (height - before.y) / (after.y - before.y);
+        return top + step - 1 + t;
+      }
+    }
+    return top + span;
+  };
+
+  // Walk the right profile from its top pole to its bottom pole. Starting at
+  // index zero (the rightmost point) only sampled the lower hemisphere.
   for (let i = 1; i <= MESH_PARALLELS; i++) {
-    // The profile runs right side, bottom, left side, top; sampling the first
-    // half walks it from one pole to the other exactly once.
-    const idx = Math.round((nProfile / 2) * (i / (MESH_PARALLELS + 1)));
-    const p = s.profile[idx];
-    lines.push(trace((j) => sweptPoint(s, p, s.ring[j % nRing]), nRing + 1));
+    const height =
+      s.profile[top].y +
+      ((s.profile[bottom].y - s.profile[top].y) * i) / (MESH_PARALLELS + 1);
+    const profile = profileAtHeight(height);
+    lines.push(trace((j) => sample(profile, j % nRing), nRing));
   }
 
-  // Meridians: the whole profile swept to one azimuth, so each is the
-  // character's own outline stood up at that angle.
+  // A full profile already spans opposite azimuths: spacing planes across
+  // 360 degrees repeated every meridian twice. Offset them from the contour
+  // so an upright guide does not double-stroke the outline either.
   for (let m = 0; m < MESH_MERIDIANS; m++) {
-    const ring = s.ring[Math.round((nRing * m) / MESH_MERIDIANS) % nRing];
-    lines.push(
-      trace((i) => sweptPoint(s, s.profile[i % nProfile], ring), nProfile + 1),
-    );
+    const ring = (nRing * (m + 0.5)) / (2 * MESH_MERIDIANS);
+    lines.push(trace((i) => sample(i % nProfile, ring), nProfile));
   }
 
   return lines;

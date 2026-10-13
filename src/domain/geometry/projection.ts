@@ -7,6 +7,7 @@
 //
 // Convention: a positive yaw turns the character toward the viewer's right, so
 // its right side rotates away and its left side comes into view.
+import { wrapDeg } from "./angles";
 
 /**
  * How deep a pre-v3 surface was, as a fraction of its smaller in-plane radius.
@@ -38,19 +39,10 @@ export interface ProjectionInput {
    */
   depth: number;
   /**
-   * How much of the commanded rotation the face actually takes: 0 keeps it
-   * flat (a sticker the turn never reaches), 1 applies the full turn.
-   *
-   * It scales the *angle*, not the result. Blending the identity with the
-   * rotated position — the obvious reading of "0 flat, 1 full" — is only a
-   * rotation near 0; the two disagree more the further the head turns, and at
-   * half a turn they point opposite ways and cancel. That collapsed the face
-   * frame toward the origin instead of carrying it around the head (at the
-   * default 0.6, to a fifth of its size), which is why a full-range turn
-   * stacked both eyes in the middle of the skull. A scaled angle is a real
-   * rotation at every setting, so nothing ever shrinks; and since a rotation
-   * by `perspective * angle` matches the blend to first order, small turns
-   * look as they always did.
+   * Strength of near-front turns: 0 keeps the projection flat, 1 follows the
+   * commanded angle exactly. Nonzero settings soften turns up to 90 degrees,
+   * then smoothly catch up to a full half turn so the back remains reachable
+   * and crossing +180/-180 never mirrors the face to the opposite side.
    */
   perspective: number;
   rotation: { x: number; y: number; z: number };
@@ -65,15 +57,34 @@ export interface Turn {
 }
 
 /**
- * The turn a rotation actually applies. `perspective` scales the *angle* — see
- * ProjectionInput above for why that is not the same as blending the result.
+ * Preserve the authored perspective for front-facing poses while closing the
+ * full rotation. Multiplying a wrapped angle by perspective alone leaves a
+ * seam: at 0.6, +180 and -180 become +108 and -108, two different orientations.
+ * Smoothstep adds the missing turn after 90 degrees, with matching slopes at
+ * both ends. At zero perspective the explicitly flat mode stays flat.
+ */
+function perspectiveAngle(degrees: number, perspective: number): number {
+  if (perspective === 0) return 0;
+  const angle = wrapDeg(degrees);
+  const progress = Math.max(0, (Math.abs(angle) - 90) / 90);
+  const catchUp = progress * progress * (3 - 2 * progress);
+  return (
+    (angle * perspective +
+      Math.sign(angle) * 180 * (1 - perspective) * catchUp) *
+    DEG
+  );
+}
+
+/**
+ * Shared periodic turn for the face, silhouette and guide mesh. Keeping the
+ * adjustment in angle space makes the rotation rigid at every perspective.
  */
 export function turnAngles(
   perspective: number,
   rotation: { x: number; y: number },
 ): Turn {
-  const yaw = rotation.y * perspective * DEG;
-  const pitch = rotation.x * perspective * DEG;
+  const yaw = perspectiveAngle(rotation.y, perspective);
+  const pitch = perspectiveAngle(rotation.x, perspective);
   return {
     cosYaw: Math.cos(yaw),
     sinYaw: Math.sin(yaw),

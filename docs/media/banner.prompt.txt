@@ -1,0 +1,13 @@
+Generated with the built-in image_gen tool.
+
+Use case: product-mockup.
+Asset type: replacement wide README banner for Bubble Avatar Studio, approximately 3:1 landscape.
+Primary request: create a completely new photorealistic banner for Bubble Avatar Studio. A convincing studio product photograph of physical bubble-avatar sculptures, rather than cartoon illustration.
+Scene/backdrop: dark navy seamless tabletop and background with subtle surface grain, ample restrained negative space on the left for the project title. No grid, no floating objects.
+Subject: a small group of tactile rounded avatar objects grounded on the tabletop on the right: a prominent periwinkle rounded body with two simple dark vertical capsule eyes and no mouth; a smaller cyan round avatar; a peach rounded cube; and one soft mint capsule. Keep simple expressive geometry consistent with a procedural bubble avatar application. Modest varied orientations show real volume. These are tangible objects with believable soft silicone/ceramic materials, subtle surface microtexture, very slight imperfections, contact shadows, realistic reflections and restrained highlights.
+Style/medium: premium photorealistic still-life product photography, camera at tabletop height, 70mm lens, the main avatar crisp and background gently out of focus. Real light and material response, no plastic toy CGI gloss, no illustrative outlines.
+Composition/framing: wide editorial banner; text on left occupies about 40 percent, sculptures on right about 55 percent. Carefully balanced and spacious. Keep every sculpture and all text inside generous safe margins.
+Lighting/mood: soft large studio key from upper left, subtle cool fill, believable shadow falloff, quiet dark background; clean and welcoming.
+Color palette: midnight navy, periwinkle blue, cyan, mint and peach from the project's existing visual identity.
+Text (verbatim): "Bubble Avatar" on first line, "Studio" on second line. Only these words. Large clean sans serif, off-white first line, periwinkle second line; sharp legible typography. No subtitles, badges, feature counts or other text.
+Constraints: a new composition, photorealistic materials, coherent perspective, no watermark, no browser interface, no fake screenshots.

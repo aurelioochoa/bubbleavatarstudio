@@ -1,8 +1,8 @@
 // Solid silhouettes (FR-2.8, with FR-2.6 and FR-8.2 behind it): the body is a
 // solid that turns, not a flat outline that squashes.
 import { describe, expect, it } from "vitest";
-import { isAnalyticSolid, solidOutline, solidRadii } from "./solid";
-import { surfacePoints } from "./shapes";
+import { isAnalyticSolid, solidMesh, solidOutline, solidRadii } from "./solid";
+import { SHAPE_FAMILIES, surfacePoints } from "./shapes";
 import { projectFace } from "./projection";
 
 const SIZE = { width: 220, height: 200, depth: 170, roundness: 0.9 };
@@ -15,6 +15,92 @@ const at = (
   perspective: 1,
   rotation: FLAT,
   ...extra,
+});
+
+describe("solidMesh · a complete, readable projection guide", () => {
+  const points = (path: string) =>
+    [...path.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((m) => ({
+      x: Number(m[1]),
+      y: Number(m[2]),
+    }));
+
+  it("spaces latitude rings across the full height, including the equator", () => {
+    const mesh = solidMesh(at());
+    const heights = mesh
+      .slice(0, 5)
+      .map((line) => points(line.front + " " + line.back)[0].y);
+    expect(heights).toEqual([-66.67, -33.33, 0, 33.33, 66.67]);
+  });
+
+  it("draws six distinct meridian planes through a combined turn", () => {
+    const mesh = solidMesh(at({ rotation: { x: 25, y: 40, z: 0 } }));
+    const signatures = mesh.slice(5).map((line) =>
+      points(line.front + " " + line.back)
+        .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+        .sort()
+        .join(";"),
+    );
+    expect(new Set(signatures).size).toBe(6);
+  });
+
+  it("separates near and far surface segments using outward normals", () => {
+    const meridian = solidMesh(at({ roundness: 1 }))[5];
+    expect(points(meridian.front).length).toBeGreaterThan(2);
+    expect(points(meridian.back).length).toBeGreaterThan(2);
+    expect(
+      Math.min(...points(meridian.front).map((p) => p.x)),
+    ).toBeGreaterThanOrEqual(-0.01);
+    expect(
+      Math.max(...points(meridian.back).map((p) => p.x)),
+    ).toBeLessThanOrEqual(0.01);
+  });
+
+  it.each(SHAPE_FAMILIES)(
+    "keeps %s finite at the poles, behind the head and at extreme depths",
+    (shape) => {
+      for (const depth of [1, 170, 400]) {
+        for (const [x, y] of [
+          [0, 0],
+          [90, 0],
+          [-90, 90],
+          [25, 40],
+          [0, 180],
+          [180, -180],
+        ]) {
+          const mesh = solidMesh(
+            at({
+              shape,
+              depth,
+              wobble: 0.6,
+              lobes: 5,
+              seed: 3,
+              rotation: { x, y, z: 0 },
+            }),
+          );
+          expect(mesh).toHaveLength(11);
+          for (const line of mesh) {
+            const path = line.front + " " + line.back;
+            expect(path).not.toMatch(/NaN|Infinity/);
+            expect(points(path).length).toBeGreaterThan(2);
+          }
+        }
+      }
+    },
+  );
+
+  it("invalidates cached mesh geometry when shape, depth or rotation changes", () => {
+    const options = at();
+    const first = solidMesh(options);
+    expect(solidMesh(options)).toEqual(first);
+    for (const change of [
+      { depth: 20 },
+      { shape: "cube" as const },
+      { rotation: { x: 35, y: 20, z: 0 } },
+    ]) {
+      expect(solidMesh({ ...options, ...change })).not.toEqual(first);
+      expect(solidMesh(options)).toEqual(first);
+    }
+  });
 });
 
 /**
